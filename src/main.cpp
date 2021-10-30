@@ -6,7 +6,7 @@ const char* file = "c8_test.c8";
 
 int main(int argc, char** argv) {
 
-    Chip8 emu(file);
+    Chip8 emu(argv[1]);
 
     emu.run();
 }

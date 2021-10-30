@@ -5,6 +5,7 @@
 #include <bitset>
 #include <fstream>
 #include <ctime>
+#include <unordered_map>
 
 const uint8_t fontset[] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -24,6 +25,13 @@ const uint8_t fontset[] = {
     0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
     0xF0, 0x80, 0xF0, 0x80, 0x80 // F
 };
+
+std::unordered_map<int, uint8_t> keybinds = { { SDLK_1, 0x1 }, { SDLK_2, 0x2 }, { SDLK_3, 0x3 },
+                                              { SDLK_4, 0xC }, { SDLK_q, 0x4 }, { SDLK_w, 0x5 },
+                                              { SDLK_e, 0x6 }, { SDLK_r, 0xD }, { SDLK_a, 0x7 },
+                                              { SDLK_s, 0x8 }, { SDLK_d, 0x9 }, { SDLK_f, 0xE },
+                                              { SDLK_z, 0xA }, { SDLK_x, 0x0 }, { SDLK_c, 0xB },
+                                              { SDLK_v, 0xF } };
 
 // helpful functions
 uint8_t  get8(uint16_t op) { return op & 0xFF; }
@@ -220,7 +228,7 @@ void Chip8::execute() {
 
         graphics.clear();
 
-        should_draw = true;
+        // should_draw = true;
         break;
     }
     case op::RET: {
@@ -244,95 +252,91 @@ void Chip8::execute() {
         break;
     }
     case op::IF_IMM: {
-        if (V[val[1]] == imm8) {
+        if (Vx == imm8) {
             PC += 2;
         }
         break;
     }
     case op::IF_NOT_IMM: {
-        if (V[val[1]] != imm8) {
+        if (Vx != imm8) {
             PC += 2;
         }
         break;
     }
     case op::IF_REG: {
-        if (V[val[1]] == V[val[2]]) {
+        if (Vx == Vy) {
             PC += 2;
         }
         break;
     }
     case op::SET_IMM: {
-        V[val[1]] = imm8;
+        Vx = imm8;
         break;
     }
     case op::ADD_IMM: {
-        V[val[1]] += imm8;
+        Vx += imm8;
         break;
     }
     case op::SET_REG: {
-        V[val[1]] = V[val[2]];
+        Vx = Vy;
         break;
     }
     case op::OR: {
-        V[val[1]] |= V[val[2]];
+        Vx |= Vy;
         break;
     }
     case op::AND: {
-        V[val[1]] &= V[val[2]];
+        Vx &= Vy;
         break;
     }
     case op::XOR: {
-        V[val[1]] ^= V[val[2]];
+        Vx ^= Vy;
         break;
     }
     case op::ADD_REG: {
-        auto original = V[val[1]];
-        V[val[1]] += V[val[2]];
+        auto original = Vx;
+        Vx += Vy;
         // no overflow case
-        if (original < V[val[1]]) {
-            V[15] = 0;
+        if (original < Vx) {
+            V[0xF] = 0;
         }
         else {
-            V[15] = 1;
+            V[0xF] = 1;
         }
         break;
     }
     case op::SUB_REG: {
-        auto original = V[val[1]];
-        V[val[1]] -= V[val[2]];
-        // no borrow case
-        if (original > V[val[1]]) {
-            V[15] = 1;
+        if (Vx > Vy) {
+            V[0xF] = 1;
         }
         else {
-            V[15] = 0;
+            V[0xF] = 0;
         }
+        Vx -= Vy;
         break;
     }
     case op::RSHIFT: {
-        V[15] = V[val[1]] & 0x1;
-        V[val[1]] >>= 1;
+        V[0xF] = Vx & 0x1;
+        Vx >>= 1;
         break;
     }
     case op::SUB_REG2: {
-        auto original = V[val[2]];
-        V[val[2]] -= V[val[1]];
-        // no borrow case
-        if (original > V[val[2]]) {
-            V[15] = 1;
+        if (Vy > Vx) {
+            V[0xF] = 1;
         }
         else {
-            V[15] = 0;
+            V[0xF] = 0;
         }
+        Vx = Vy - Vx;
         break;
     }
     case op::LSHIFT: {
-        V[15] = V[val[1]] >> 7;
-        V[val[1]] <<= 1;
+        V[0xF] = Vx >> 7;
+        Vx <<= 1;
         break;
     }
     case op::IF_NOT_REG: {
-        if (V[val[1]] != V[val[2]]) {
+        if (Vx != Vy) {
             PC += 2;
         }
         break;
@@ -342,18 +346,18 @@ void Chip8::execute() {
         break;
     }
     case op::JMP_OFFSET: {
-        PC = V[0] + imm12;
+        PC = V[0x0] + imm12;
         break;
     }
     case op::RAND_BITSET: {
         uint8_t r = std::rand() & 0xFF;
-        V[val[1]] = r & imm8;
+        Vx        = r & imm8;
         break;
     }
     case op::DRAW: {
 
-        auto x = V[val[1]];
-        auto y = V[val[2]];
+        auto x = Vx;
+        auto y = Vy;
         auto n = val[3];
 
         if (n == 0)
@@ -373,7 +377,7 @@ void Chip8::execute() {
                 uint8_t currX = (x + j) % 64;
 
                 // 7 - j because 0 actually is least significant bit
-                if (!pixel_unset && graphics[currY][currX] && line[7 - j]) {
+                if (!pixel_unset && graphics(currY, currX) && line[7 - j]) {
                     pixel_unset = true;
                 }
                 graphics(currY, currX) ^= line[7 - j];
@@ -381,27 +385,27 @@ void Chip8::execute() {
         }
 
         if (pixel_unset)
-            V[15] = 1;
+            V[0xF] = 1;
         else
-            V[15] = 0;
+            V[0xF] = 0;
 
         should_draw = true;
         break;
     }
     case op::SKIP_KEY: {
-        if (keys[val[1]]) {
+        if (keys[Vx]) {
             PC += 2;
         }
         break;
     }
     case op::SKIP_NOT_KEY: {
-        if (!keys[val[1]]) {
+        if (!keys[Vx]) {
             PC += 2;
         }
         break;
     }
     case op::DELAY: {
-        V[val[1]] = delay_timer;
+        Vx = delay_timer;
         break;
     }
     case op::GET_KEY: {
@@ -410,8 +414,8 @@ void Chip8::execute() {
             update_keys();
             for (auto i = 0; i < 16; ++i) {
                 if (keys[i]) {
-                    V[val[1]] = static_cast<uint8_t>(i);
-                    wait      = false;
+                    Vx   = static_cast<uint8_t>(i);
+                    wait = false;
                     break;
                 }
             }
@@ -419,26 +423,26 @@ void Chip8::execute() {
         break;
     }
     case op::SET_DELAY: {
-        delay_timer = V[val[1]];
+        delay_timer = Vx;
         break;
     }
     case op::SET_SOUND: {
-        sound_timer = V[val[1]];
+        sound_timer = Vx;
         break;
     }
     case op::ADD_I: {
-        I += V[val[1]];
+        I += Vx;
         break;
     }
     case op::SET_I_SPRITE: {
-        uint8_t c = V[val[1]];
+        uint8_t c = Vx;
         I         = c * 5;
         break;
     }
     case op::STORE_BCD: {
-        uint8_t first  = V[val[1]] / 100;
-        uint8_t second = (V[val[1]] / 10) % 10;
-        uint8_t third  = V[val[1]] % 10;
+        uint8_t first  = Vx / 100;
+        uint8_t second = (Vx / 10) % 10;
+        uint8_t third  = Vx % 10;
 
         memory[I]     = (first);
         memory[I + 1] = (second);
@@ -473,155 +477,21 @@ bool Chip8::update_keys() {
     bool keep_running = true;
 
     while (SDL_PollEvent(&event)) {
-        switch (event.type) {
-        case SDL_KEYDOWN: {
-            switch (event.key.keysym.sym) {
-            case SDLK_1: {
-                keys[0] = true;
-                break;
+        // check to see if each event is one of our keys
+        if (keybinds.contains(event.key.keysym.sym)) {
+            auto index = keybinds[event.key.keysym.sym];
+
+            // if so, get index and set keys[index] accordingly
+            if (event.type == SDL_KEYDOWN) {
+                keys[index] = true;
             }
-            case SDLK_2: {
-                keys[1] = true;
-                break;
+            else if (event.type == SDL_KEYUP) {
+                keys[index] = false;
             }
-            case SDLK_3: {
-                keys[2] = true;
-                break;
-            }
-            case SDLK_4: {
-                keys[3] = true;
-                break;
-            }
-            case SDLK_q: {
-                keys[4] = true;
-                break;
-            }
-            case SDLK_w: {
-                keys[5] = true;
-                break;
-            }
-            case SDLK_e: {
-                keys[6] = true;
-                break;
-            }
-            case SDLK_r: {
-                keys[7] = true;
-                break;
-            }
-            case SDLK_a: {
-                keys[8] = true;
-                break;
-            }
-            case SDLK_s: {
-                keys[9] = true;
-                break;
-            }
-            case SDLK_d: {
-                keys[10] = true;
-                break;
-            }
-            case SDLK_f: {
-                keys[11] = true;
-                break;
-            }
-            case SDLK_z: {
-                keys[12] = true;
-                break;
-            }
-            case SDLK_x: {
-                keys[13] = true;
-                break;
-            }
-            case SDLK_c: {
-                keys[14] = true;
-                break;
-            }
-            case SDLK_v: {
-                keys[15] = true;
-                break;
-            }
-            case SDLK_ESCAPE: {
-                keep_running = false;
-                break;
-            }
-            default: {
-                break;
-            }
-            }
-            break;
         }
-        case SDL_KEYUP: {
-            switch (event.key.keysym.sym) {
-            case SDLK_1: {
-                keys[0] = false;
-                break;
-            }
-            case SDLK_2: {
-                keys[1] = false;
-                break;
-            }
-            case SDLK_3: {
-                keys[2] = false;
-                break;
-            }
-            case SDLK_4: {
-                keys[3] = false;
-                break;
-            }
-            case SDLK_q: {
-                keys[4] = false;
-                break;
-            }
-            case SDLK_w: {
-                keys[5] = false;
-                break;
-            }
-            case SDLK_e: {
-                keys[6] = false;
-                break;
-            }
-            case SDLK_r: {
-                keys[7] = false;
-                break;
-            }
-            case SDLK_a: {
-                keys[8] = false;
-                break;
-            }
-            case SDLK_s: {
-                keys[9] = false;
-                break;
-            }
-            case SDLK_d: {
-                keys[10] = false;
-                break;
-            }
-            case SDLK_f: {
-                keys[11] = false;
-                break;
-            }
-            case SDLK_z: {
-                keys[12] = false;
-                break;
-            }
-            case SDLK_x: {
-                keys[13] = false;
-                break;
-            }
-            case SDLK_c: {
-                keys[14] = false;
-                break;
-            }
-            case SDLK_v: {
-                keys[15] = false;
-                break;
-            }
-            default: {
-                break;
-            }
-            }
-            break;
-        }
+        // exit condition
+        else if (event.key.keysym.sym == SDLK_ESCAPE && event.type == SDL_KEYDOWN) {
+            keep_running = false;
         }
     }
     return keep_running;
@@ -639,7 +509,13 @@ void Chip8::update_timers() {
 }
 
 bool Chip8::cycle() {
+    static Timer<714> freq;
+
+    while (!freq.update())
+        ;
+
     update_timers();
+
     // fetch
     fetch();
     // decode

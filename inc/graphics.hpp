@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include <array>
+#include <vector>
 
 class Graphics {
 private:
@@ -7,6 +8,8 @@ private:
     SDL_Renderer* renderer;
 
     std::array<std::array<bool, 64>, 32> pixels = {};
+
+    std::vector<SDL_Rect> rects;
 
 public:
     Graphics();
@@ -19,6 +22,4 @@ public:
     auto operator()(int y, int x) const { return pixels[y][x]; }
 
     auto& operator()(int y, int x) { return pixels[y][x]; }
-
-    auto& operator[](int y) { return pixels[y]; }
 };
