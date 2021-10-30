@@ -2,7 +2,7 @@
 #include <bitset>
 #include <iostream>
 
-const char* file = "test_opcode.ch8";
+const char* file = "c8_test.c8";
 
 int main(int argc, char** argv) {
 

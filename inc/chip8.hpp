@@ -2,9 +2,9 @@
 #include <array>
 #include <stack>
 #include <cstdlib>
-#include <ctime>
 #include <string>
 #include "graphics.hpp"
+#include "timer.hpp"
 
 enum class op
 {
@@ -69,6 +69,8 @@ class Chip8 {
     uint8_t delay_timer;
     uint8_t sound_timer;
 
+    Timer<60> timer;
+
     bool should_draw;
 
     void fetch();
@@ -78,8 +80,9 @@ class Chip8 {
     bool cycle();
 
     bool update_keys();
+    void update_timers();
 
-    void read_file(const std::string& name);
+    void read_file(const char* name);
 
 public:
     Chip8(const char* file_name);

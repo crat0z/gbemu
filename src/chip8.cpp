@@ -4,6 +4,7 @@
 #include <iostream>
 #include <bitset>
 #include <fstream>
+#include <ctime>
 
 const uint8_t fontset[] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -40,7 +41,7 @@ Chip8::Chip8(const char* file_name) : memory({}), V({ 0 }), PC(0x200), val({ 0 }
     }
 }
 
-void Chip8::read_file(const std::string& name) {
+void Chip8::read_file(const char* name) {
     std::ifstream file;
     file.open(name, std::ios_base::binary);
     file.seekg(0, std::ios::end);
@@ -626,7 +627,19 @@ bool Chip8::update_keys() {
     return keep_running;
 }
 
+void Chip8::update_timers() {
+    if (timer.update()) {
+        if (delay_timer > 0) {
+            delay_timer--;
+        }
+        if (sound_timer > 0) {
+            sound_timer--;
+        }
+    }
+}
+
 bool Chip8::cycle() {
+    update_timers();
     // fetch
     fetch();
     // decode
