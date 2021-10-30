@@ -24,123 +24,33 @@ const uint8_t fontset[] = {
     0xF0, 0x80, 0xF0, 0x80, 0x80 // F
 };
 
+// helpful functions
 uint8_t  get8(uint16_t op) { return op & 0xFF; }
 uint16_t get12(uint16_t op) { return op & 0xFFF; }
 uint16_t swap_byte_order(uint16_t s) { return (s >> 8) | (s << 8); }
 
-void CPU::init(const std::string& file_name) {
+Chip8::Chip8(const char* file_name) : memory({}), V({ 0 }), PC(0x200), val({ 0 }), keys({ 0 }) {
+    std::srand(std::time(nullptr));
 
     read_file(file_name);
 
-    // more init stuff i guess
+    // copy font data
     for (auto i = 0; i < 80; ++i) {
         memory[i] = fontset[i];
     }
-
-    window = SDL_CreateWindow("emu", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1280, 640,
-                              SDL_WINDOW_SHOWN);
-
-    // Setup renderer
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 }
 
-void CPU::read_file(const std::string& name) {
+void Chip8::read_file(const std::string& name) {
     std::ifstream file;
     file.open(name, std::ios_base::binary);
     file.seekg(0, std::ios::end);
     size_t size = file.tellg();
     file.seekg(0, std::ios::beg);
-    file.read(reinterpret_cast<char*>(&memory[0x200]), size);
+    file.read(reinterpret_cast<char*>(memory.data() + 0x200), size);
     file.close();
 }
 
-void CPU::draw_graphics() {
-    should_draw = false;
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-
-    SDL_RenderClear(renderer);
-    // each square is 20x20
-    SDL_Rect rect;
-    rect.w = 20;
-    rect.h = 20;
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-
-    for (auto y = 0; y < 32; ++y) {
-        for (auto x = 0; x < 64; ++x) {
-            if (graphics[y][x]) {
-                rect.y = y * 20;
-                rect.x = x * 20;
-                SDL_RenderFillRect(renderer, &rect);
-            }
-        }
-    }
-
-    SDL_RenderPresent(renderer);
-}
-
-char getch() {
-    char           buf = 0;
-    struct termios old = { 0 };
-    if (tcgetattr(0, &old) < 0)
-        perror("tcsetattr()");
-    old.c_lflag &= ~ICANON;
-    old.c_lflag &= ~ECHO;
-    old.c_cc[VMIN]  = 1;
-    old.c_cc[VTIME] = 0;
-    if (tcsetattr(0, TCSANOW, &old) < 0)
-        perror("tcsetattr ICANON");
-    if (read(0, &buf, 1) < 0)
-        perror("read()");
-    old.c_lflag |= ICANON;
-    old.c_lflag |= ECHO;
-    if (tcsetattr(0, TCSADRAIN, &old) < 0)
-        perror("tcsetattr ~ICANON");
-    return (buf);
-}
-
-uint8_t get_key() {
-    while (true) {
-        char c = getch();
-        switch (c) {
-        case '1':
-            return 0x0;
-        case '2':
-            return 0x1;
-        case '3':
-            return 0x2;
-        case '4':
-            return 0x3;
-        case 'q':
-            return 0x4;
-        case 'w':
-            return 0x5;
-        case 'e':
-            return 0x6;
-        case 'r':
-            return 0x7;
-        case 'a':
-            return 0x8;
-        case 's':
-            return 0x9;
-        case 'd':
-            return 0xA;
-        case 'f':
-            return 0xB;
-        case 'z':
-            return 0xC;
-        case 'x':
-            return 0xD;
-        case 'c':
-            return 0xE;
-        case 'v':
-            return 0xF;
-        }
-    }
-}
-
-void CPU::fetch() {
+void Chip8::fetch() {
     opcode = *reinterpret_cast<uint16_t*>(&memory[PC]);
 
     // CHIP8 is big endian, swap byte order
@@ -152,7 +62,7 @@ void CPU::fetch() {
     }
 }
 
-op CPU::decode() {
+op Chip8::decode() {
 
     switch (val[0]) {
     case 0x0: {
@@ -288,9 +198,15 @@ op CPU::decode() {
     return op::UNKNOWN;
 }
 
-void CPU::execute() {
+void Chip8::execute() {
+    // immediates commonly used
     auto imm8  = get8(opcode);
     auto imm12 = get12(opcode);
+
+    // references to typical Vx, Vy parameters
+    auto& Vx = V[val[1]];
+    auto& Vy = V[val[2]];
+
     switch (operation) {
         // for call/jump instructions, we unconditionally add 2 to PC every cycle
         // so by adjusting by -2, we can skip a conditional check
@@ -300,12 +216,8 @@ void CPU::execute() {
         break;
     }
     case op::CLEAR: {
-        // clear screen TODO
-        for (auto& line : graphics) {
-            for (auto& pixel : line) {
-                pixel = false;
-            }
-        }
+
+        graphics.clear();
 
         should_draw = true;
         break;
@@ -463,7 +375,7 @@ void CPU::execute() {
                 if (!pixel_unset && graphics[currY][currX] && line[7 - j]) {
                     pixel_unset = true;
                 }
-                graphics[currY][currX] ^= line[7 - j];
+                graphics(currY, currX) ^= line[7 - j];
             }
         }
 
@@ -553,9 +465,11 @@ void CPU::execute() {
     }
 }
 
-void CPU::update_keys() {
+bool Chip8::update_keys() {
     // handle keys
     static SDL_Event event;
+
+    bool keep_running = true;
 
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
@@ -623,6 +537,10 @@ void CPU::update_keys() {
             }
             case SDLK_v: {
                 keys[15] = true;
+                break;
+            }
+            case SDLK_ESCAPE: {
+                keep_running = false;
                 break;
             }
             default: {
@@ -705,9 +623,10 @@ void CPU::update_keys() {
         }
         }
     }
+    return keep_running;
 }
 
-void CPU::cycle() {
+bool Chip8::cycle() {
     // fetch
     fetch();
     // decode
@@ -715,10 +634,17 @@ void CPU::cycle() {
     // execute
     execute();
 
-    if (should_draw)
-        draw_graphics();
-
-    update_keys();
+    if (should_draw) {
+        should_draw = false;
+        graphics.draw();
+    }
 
     PC += 2;
+
+    return update_keys();
+}
+
+void Chip8::run() {
+    while (cycle())
+        ;
 }

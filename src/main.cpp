@@ -6,10 +6,7 @@ const char* file = "test_opcode.ch8";
 
 int main(int argc, char** argv) {
 
-    CPU emu;
-    emu.init(file);
+    Chip8 emu(file);
 
-    while (true) {
-        emu.cycle();
-    }
+    emu.run();
 }

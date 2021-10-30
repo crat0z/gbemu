@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <string>
-#include <SDL2/SDL.h>
+#include "graphics.hpp"
 
 enum class op
 {
@@ -46,43 +46,43 @@ enum class op
     REG_LOAD // FX65 fills V0 to VX with values starting from address I
 };
 
-class CPU {
-    uint8_t delay_timer;
-    uint8_t sound_timer;
+class Chip8 {
 
-    bool should_draw;
-
-    op operation;
-
-    uint16_t opcode;
-    uint16_t I;
-    uint16_t PC;
+    Graphics graphics;
 
     std::array<uint8_t, 4096> memory = {};
     std::array<uint8_t, 16>   V      = {};
+
+    uint16_t I;
+    uint16_t PC;
 
     std::array<uint8_t, 4> val  = {};
     std::array<bool, 16>   keys = {};
 
     std::stack<uint16_t> stack;
 
+    // current operation
+    op operation;
+
+    uint16_t opcode;
+
+    uint8_t delay_timer;
+    uint8_t sound_timer;
+
+    bool should_draw;
+
     void fetch();
     op   decode();
     void execute();
 
-    SDL_Window*   window;
-    SDL_Renderer* renderer;
+    bool cycle();
+
+    bool update_keys();
+
+    void read_file(const std::string& name);
 
 public:
-    CPU() : memory({}), V({ 0 }), PC(0x200), val({ 0 }), keys({ 0 }) {
-        std::srand(std::time(nullptr));
-    }
-    void                                 draw_graphics();
-    std::array<std::array<bool, 64>, 32> graphics = {};
+    Chip8(const char* file_name);
 
-    void init(const std::string& file_name);
-
-    void cycle();
-    void read_file(const std::string& name);
-    void update_keys();
+    void run();
 };
