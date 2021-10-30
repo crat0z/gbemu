@@ -69,7 +69,11 @@ class Chip8 {
     uint8_t delay_timer;
     uint8_t sound_timer;
 
-    Timer<60> timer;
+    // for delay and sound timer
+    Timer timer;
+
+    // for CPU freq
+    Timer freq;
 
     bool should_draw;
 

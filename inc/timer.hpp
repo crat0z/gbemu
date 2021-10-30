@@ -1,29 +1,25 @@
 #include <chrono>
 
-template<size_t N>
 class Timer {
-    typedef std::chrono::steady_clock                       clock;
-    typedef std::chrono::duration<double, std::ratio<1, N>> duration;
+    typedef std::chrono::steady_clock clock;
 
     clock::time_point start;
 
     double count;
 
+    double period_ns;
+
 public:
-    Timer() : start{ clock::now() }, count{ 0 } {}
+    Timer(size_t freq) : start{ clock::now() }, count{ 0 }, period_ns(1000000000.0 / freq) {}
 
     bool update() {
-        // how many ticks have gone by since starting?
-        duration elapsed = clock::now() - start;
+        // how many nanosecond ticks have gone by since starting?
+        std::chrono::duration<double, std::nano> elapsed = clock::now() - start;
 
-        // compare to our own counter, increment ours if the real time
-        // is greater than our counter, return true if so
         if (elapsed.count() > count) {
-            count += 1.0;
+            count = elapsed.count() + period_ns;
             return true;
         }
-        else {
-            return false;
-        }
+        return false;
     }
 };
