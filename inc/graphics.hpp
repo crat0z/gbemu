@@ -9,10 +9,14 @@ private:
 
     std::array<std::array<bool, 64>, 32> pixels = {};
 
-    std::vector<SDL_Rect> rects;
+    std::vector<SDL_FRect> rects;
+
+    int size_x, size_y;
+
+    float scale;
 
 public:
-    Graphics();
+    Graphics(int x, int y);
 
     void draw();
 

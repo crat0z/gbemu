@@ -38,8 +38,15 @@ uint8_t  get8(uint16_t op) { return op & 0xFF; }
 uint16_t get12(uint16_t op) { return op & 0xFFF; }
 uint16_t swap_byte_order(uint16_t s) { return (s >> 8) | (s << 8); }
 
-Chip8::Chip8(const char* file_name)
-        : memory({}), V({ 0 }), PC(0x200), val({ 0 }), keys({ 0 }), timer{ 60 }, freq{ 714 } {
+Chip8::Chip8(const std::string& file_name, size_t f, int x, int y)
+        : memory({}),
+          V({ 0 }),
+          PC(0x200),
+          val({ 0 }),
+          keys({ 0 }),
+          timer{ 60 },
+          freq{ f },
+          graphics(x, y) {
     std::srand(std::time(nullptr));
 
     read_file(file_name);
@@ -50,7 +57,7 @@ Chip8::Chip8(const char* file_name)
     }
 }
 
-void Chip8::read_file(const char* name) {
+void Chip8::read_file(const std::string& name) {
     std::ifstream file;
     file.open(name, std::ios_base::binary);
     file.seekg(0, std::ios::end);
@@ -511,6 +518,8 @@ void Chip8::update_timers() {
 
 bool Chip8::cycle() {
 
+    // maybe put update_timers() into loop
+    // but then we'd ever so slightly delay execution
     while (!freq.update())
         ;
 

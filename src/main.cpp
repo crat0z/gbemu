@@ -1,12 +1,28 @@
-#include "chip8.hpp"
-#include <bitset>
 #include <iostream>
+#include "chip8.hpp"
+#include "structopt.hpp"
 
-const char* file = "c8_test.c8";
+struct Options {
+    std::optional<size_t> cpu_freq = 741;
+    std::optional<int>    x_res    = 1280;
+    std::optional<int>    y_res    = 640;
+    std::string           filename;
+};
+
+STRUCTOPT(Options, cpu_freq, x_res, y_res, filename);
 
 int main(int argc, char** argv) {
 
-    Chip8 emu(argv[1]);
+    try {
+        auto options = structopt::app("chip8emu").parse<Options>(argc, argv);
 
-    emu.run();
+        Chip8 emu(options.filename, *options.cpu_freq, *options.x_res, *options.y_res);
+
+        emu.run();
+    }
+
+    catch (structopt::exception& e) {
+        std::cout << e.what() << "\n";
+        std::cout << e.help();
+    }
 }
