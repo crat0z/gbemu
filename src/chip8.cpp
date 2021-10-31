@@ -236,7 +236,7 @@ void Chip8::execute() {
 
         graphics.clear();
 
-        // should_draw = true;
+        should_draw = true;
         break;
     }
     case op::RET: {
@@ -302,6 +302,7 @@ void Chip8::execute() {
         break;
     }
     case op::ADD_REG: {
+
         auto original = Vx;
         Vx += Vy;
         // no overflow case
@@ -486,17 +487,18 @@ bool Chip8::update_keys() {
 
     while (SDL_PollEvent(&event)) {
         // check to see if each event is one of our keys
-        if (keybinds.contains(event.key.keysym.sym)) {
-            auto index = keybinds[event.key.keysym.sym];
 
-            // if so, get index and set keys[index] accordingly
+        auto res = keybinds.find(event.key.keysym.sym);
+
+        if (res != keybinds.end()) {
             if (event.type == SDL_KEYDOWN) {
-                keys[index] = true;
+                keys[res->second] = true;
             }
             else if (event.type == SDL_KEYUP) {
-                keys[index] = false;
+                keys[res->second] = false;
             }
         }
+
         // exit condition
         else if (event.key.keysym.sym == SDLK_ESCAPE && event.type == SDL_KEYDOWN) {
             keep_running = false;
