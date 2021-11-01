@@ -1,11 +1,12 @@
-#include "chip8.hpp"
-#include <unistd.h>
-#include <termios.h>
 #include <iostream>
 #include <bitset>
 #include <fstream>
 #include <ctime>
 #include <unordered_map>
+
+#include "chip8.hpp"
+
+constexpr uint16_t entry = 0x200;
 
 const uint8_t fontset[] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -33,15 +34,12 @@ std::unordered_map<int, uint8_t> keybinds = { { SDLK_1, 0x1 }, { SDLK_2, 0x2 }, 
                                               { SDLK_z, 0xA }, { SDLK_x, 0x0 }, { SDLK_c, 0xB },
                                               { SDLK_v, 0xF } };
 
-// helpful functions
-uint8_t  get8(uint16_t op) { return op & 0xFF; }
-uint16_t get12(uint16_t op) { return op & 0xFFF; }
 uint16_t swap_byte_order(uint16_t s) { return (s >> 8) | (s << 8); }
 
 Chip8::Chip8(const std::string& file_name, size_t f, int x, int y)
         : memory({}),
           V({ 0 }),
-          PC(0x200),
+          PC(entry),
           val({ 0 }),
           keys({ 0 }),
           timer{ 60 },
@@ -63,7 +61,7 @@ void Chip8::read_file(const std::string& name) {
     file.seekg(0, std::ios::end);
     size_t size = file.tellg();
     file.seekg(0, std::ios::beg);
-    file.read(reinterpret_cast<char*>(memory.data() + 0x200), size);
+    file.read(reinterpret_cast<char*>(memory.data() + entry), size);
     file.close();
 }
 
@@ -88,33 +86,33 @@ op Chip8::decode() {
         else if (val[2] == 0xE)
             return op::CLEAR;
         else
-            return op::CALL;
+            return op::CALL_M;
     }
     case 0x1: {
-        return op::GOTO;
+        return op::JMP;
     }
     case 0x2: {
-        return op::CALL_SUB;
+        return op::CALL;
     }
     case 0x3: {
-        return op::IF_IMM;
+        return op::CONDI;
     }
     case 0x4: {
-        return op::IF_NOT_IMM;
+        return op::NCONDI;
     }
     case 0x5: {
-        return op::IF_REG;
+        return op::CONDR;
     }
     case 0x6: {
-        return op::SET_IMM;
+        return op::MOVI;
     }
     case 0x7: {
-        return op::ADD_IMM;
+        return op::ADDI;
     }
     case 0x8: {
         switch (val[3]) {
         case 0x0: {
-            return op::SET_REG;
+            return op::MOVR;
         }
         case 0x1: {
             return op::OR;
@@ -126,16 +124,16 @@ op Chip8::decode() {
             return op::XOR;
         }
         case 0x4: {
-            return op::ADD_REG;
+            return op::ADDR;
         }
         case 0x5: {
-            return op::SUB_REG;
+            return op::SUBR;
         }
         case 0x6: {
             return op::RSHIFT;
         }
         case 0x7: {
-            return op::SUB_REG2;
+            return op::NSUBR;
         }
         case 0xE: {
             return op::LSHIFT;
@@ -144,18 +142,19 @@ op Chip8::decode() {
             return op::UNKNOWN;
         }
         }
+        break;
     }
     case 0x9: {
-        return op::IF_NOT_REG;
+        return op::NCONDR;
     }
     case 0xA: {
-        return op::SET_I;
+        return op::SETI;
     }
     case 0xB: {
         return op::JMP_OFFSET;
     }
     case 0xC: {
-        return op::RAND_BITSET;
+        return op::RAND;
     }
     case 0xD: {
         return op::DRAW;
@@ -163,12 +162,16 @@ op Chip8::decode() {
     case 0xE: {
         switch (val[3]) {
         case 0xE: {
-            return op::SKIP_KEY;
+            return op::CONDKEY;
         }
         case 0x1: {
-            return op::SKIP_NOT_KEY;
+            return op::NCONDKEY;
+        }
+        default: {
+            return op::UNKNOWN;
         }
         }
+        break;
     }
     case 0xF: {
         switch (val[3]) {
@@ -179,37 +182,39 @@ op Chip8::decode() {
             return op::GET_KEY;
         }
         case 0x8: {
-            return op::SET_SOUND;
+            return op::SETS;
         }
         case 0xE: {
             return op::ADD_I;
         }
         case 0x9: {
-            return op::SET_I_SPRITE;
+            return op::SETIFONT;
         }
         case 0x3: {
-            return op::STORE_BCD;
+            return op::BCD;
         }
         case 0x5: {
             switch (val[2]) {
             case 0x1: {
-                return op::SET_DELAY;
+                return op::SETD;
             }
             case 0x5: {
-                return op::REG_DUMP;
+                return op::DUMP;
             }
             case 0x6: {
-                return op::REG_LOAD;
+                return op::LOAD;
             }
             default: {
                 return op::UNKNOWN;
             }
             }
+            break;
         }
         default: {
             return op::UNKNOWN;
         }
         }
+        break;
     }
     }
     return op::UNKNOWN;
@@ -217,8 +222,9 @@ op Chip8::decode() {
 
 void Chip8::execute() {
     // immediates commonly used
-    auto imm8  = get8(opcode);
-    auto imm12 = get12(opcode);
+    auto imm4  = opcode & 0xF;
+    auto imm8  = opcode & 0xFF;
+    auto imm12 = opcode & 0xFFF;
 
     // references to typical Vx, Vy parameters
     auto& Vx = V[val[1]];
@@ -227,7 +233,7 @@ void Chip8::execute() {
     switch (operation) {
         // for call/jump instructions, we unconditionally add 2 to PC every cycle
         // so by adjusting by -2, we can skip a conditional check
-    case op::CALL: {
+    case op::CALL_M: {
         stack.emplace(PC);
         PC = (imm12)-2;
         break;
@@ -249,43 +255,43 @@ void Chip8::execute() {
         stack.pop();
         break;
     }
-    case op::GOTO: {
+    case op::JMP: {
         PC = (imm12)-2;
         break;
     }
-    case op::CALL_SUB: {
+    case op::CALL: {
         // save PC
         stack.emplace(PC);
         PC = (imm12)-2;
         break;
     }
-    case op::IF_IMM: {
+    case op::CONDI: {
         if (Vx == imm8) {
             PC += 2;
         }
         break;
     }
-    case op::IF_NOT_IMM: {
+    case op::NCONDI: {
         if (Vx != imm8) {
             PC += 2;
         }
         break;
     }
-    case op::IF_REG: {
+    case op::CONDR: {
         if (Vx == Vy) {
             PC += 2;
         }
         break;
     }
-    case op::SET_IMM: {
+    case op::MOVI: {
         Vx = imm8;
         break;
     }
-    case op::ADD_IMM: {
+    case op::ADDI: {
         Vx += imm8;
         break;
     }
-    case op::SET_REG: {
+    case op::MOVR: {
         Vx = Vy;
         break;
     }
@@ -301,7 +307,7 @@ void Chip8::execute() {
         Vx ^= Vy;
         break;
     }
-    case op::ADD_REG: {
+    case op::ADDR: {
 
         auto original = Vx;
         Vx += Vy;
@@ -314,7 +320,7 @@ void Chip8::execute() {
         }
         break;
     }
-    case op::SUB_REG: {
+    case op::SUBR: {
         if (Vx > Vy) {
             V[0xF] = 1;
         }
@@ -329,7 +335,7 @@ void Chip8::execute() {
         Vx >>= 1;
         break;
     }
-    case op::SUB_REG2: {
+    case op::NSUBR: {
         if (Vy > Vx) {
             V[0xF] = 1;
         }
@@ -344,13 +350,13 @@ void Chip8::execute() {
         Vx <<= 1;
         break;
     }
-    case op::IF_NOT_REG: {
+    case op::NCONDR: {
         if (Vx != Vy) {
             PC += 2;
         }
         break;
     }
-    case op::SET_I: {
+    case op::SETI: {
         I = imm12;
         break;
     }
@@ -358,7 +364,7 @@ void Chip8::execute() {
         PC = V[0x0] + imm12;
         break;
     }
-    case op::RAND_BITSET: {
+    case op::RAND: {
         uint8_t r = std::rand() & 0xFF;
         Vx        = r & imm8;
         break;
@@ -367,7 +373,7 @@ void Chip8::execute() {
 
         auto x = Vx;
         auto y = Vy;
-        auto n = val[3];
+        auto n = imm4;
 
         if (n == 0)
             n = 16;
@@ -401,13 +407,13 @@ void Chip8::execute() {
         should_draw = true;
         break;
     }
-    case op::SKIP_KEY: {
+    case op::CONDKEY: {
         if (keys[Vx]) {
             PC += 2;
         }
         break;
     }
-    case op::SKIP_NOT_KEY: {
+    case op::NCONDKEY: {
         if (!keys[Vx]) {
             PC += 2;
         }
@@ -431,11 +437,11 @@ void Chip8::execute() {
         }
         break;
     }
-    case op::SET_DELAY: {
+    case op::SETD: {
         delay_timer = Vx;
         break;
     }
-    case op::SET_SOUND: {
+    case op::SETS: {
         sound_timer = Vx;
         break;
     }
@@ -443,12 +449,12 @@ void Chip8::execute() {
         I += Vx;
         break;
     }
-    case op::SET_I_SPRITE: {
+    case op::SETIFONT: {
         uint8_t c = Vx;
         I         = c * 5;
         break;
     }
-    case op::STORE_BCD: {
+    case op::BCD: {
         uint8_t first  = Vx / 100;
         uint8_t second = (Vx / 10) % 10;
         uint8_t third  = Vx % 10;
@@ -458,14 +464,14 @@ void Chip8::execute() {
         memory[I + 2] = (third);
         break;
     }
-    case op::REG_DUMP: {
+    case op::DUMP: {
         auto ptr = I;
         for (auto i = 0; i <= val[1]; ++i) {
             memory[ptr++] = (V[i]);
         }
         break;
     }
-    case op::REG_LOAD: {
+    case op::LOAD: {
         auto ptr = I;
         for (auto i = 0; i <= val[1]; ++i) {
             V[i] = static_cast<uint8_t>(memory[ptr++]);
@@ -473,7 +479,7 @@ void Chip8::execute() {
         break;
     }
     case op::UNKNOWN: {
-        std::cout << "Unknown opcode: " << std::hex << opcode;
+        std::cout << "Unknown opcode: " << std::hex << opcode << '\n';
         break;
     }
     }
