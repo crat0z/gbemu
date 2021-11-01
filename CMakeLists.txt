@@ -2,5 +2,17 @@ set(CMAKE_WARN_DEPRECATED FALSE)
 cmake_minimum_required (VERSION 3.16)
 
 project(chip8emu)
+# temporary stuff, until fedora gets 2.0.17
+set(SDL_JACK OFF)
+set(SDL_PIPEWIRE OFF)
+set(SDL_ESD OFF)
+set(SDL_RPI OFF)
+set(SDL2_INCLUDE_DIR ${chip8emu_SOURCE_DIR}/deps/SDL/include)
+
+add_subdirectory(deps/SDL)
 
 add_subdirectory(src)
+
+target_include_directories(chip8emu PUBLIC ${SDL2_INCLUDE_DIR})
+
+target_link_libraries(chip8emu SDL2)

@@ -1,4 +1,5 @@
 #include "graphics.hpp"
+#include <cmath>
 
 constexpr float X_PIXELS = 64.0;
 constexpr float Y_PIXELS = 32.0;
