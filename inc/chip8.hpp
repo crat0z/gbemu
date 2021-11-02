@@ -69,10 +69,12 @@ class Chip8 {
     uint8_t sound_timer;
 
     // for delay and sound timer
-    Timer timer;
+    // CETimer<60> timer;
 
     // for CPU freq
-    Timer freq;
+    CETimer<600> timer;
+
+    size_t cycle_count;
 
     bool should_draw;
 
@@ -88,7 +90,7 @@ class Chip8 {
     void read_file(const std::string& name);
 
 public:
-    Chip8(const std::string& file_name, size_t f, int x, int y);
+    Chip8(const std::string& file_name, size_t f);
 
     void run();
 };

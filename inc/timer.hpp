@@ -1,5 +1,29 @@
 #include <chrono>
 
+// constexpr timer
+template<int64_t f>
+class CETimer {
+    typedef std::chrono::steady_clock clock;
+
+public:
+    CETimer() {}
+
+    bool update() {
+
+        static auto start = clock::now();
+
+        static std::chrono::duration<int64_t, std::ratio<1, f>> duration{ 1 };
+
+        static auto next_tick = start + duration;
+
+        if (clock::now() > next_tick) {
+            next_tick += duration;
+            return true;
+        }
+        return false;
+    }
+};
+
 class Timer {
     typedef std::chrono::steady_clock clock;
 

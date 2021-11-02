@@ -13,13 +13,14 @@ private:
 
     int size_x, size_y;
 
-    float scale;
+    void prepare_imgui();
+    void prepare_game_gfx();
 
 public:
-    Graphics(int x, int y);
+    Graphics();
+    ~Graphics();
 
     void draw();
-
     void clear();
 
     // other overloads too cuz why not

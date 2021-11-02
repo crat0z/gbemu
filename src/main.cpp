@@ -1,6 +1,7 @@
 #include <iostream>
 #include "chip8.hpp"
 #include "structopt.hpp"
+#include <bitset>
 
 struct Options {
     std::optional<size_t> cpu_freq = 741;
@@ -16,7 +17,7 @@ int main(int argc, char** argv) {
     try {
         auto options = structopt::app("chip8emu").parse<Options>(argc, argv);
 
-        Chip8 emu(options.filename, *options.cpu_freq, *options.x_res, *options.y_res);
+        Chip8 emu(options.filename, *options.cpu_freq);
 
         emu.run();
     }

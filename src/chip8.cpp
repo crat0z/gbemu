@@ -3,6 +3,8 @@
 #include <fstream>
 #include <ctime>
 #include <unordered_map>
+#include <thread>
+#include <future>
 
 #include "chip8.hpp"
 
@@ -36,15 +38,15 @@ std::unordered_map<int, uint8_t> keybinds = { { SDLK_1, 0x1 }, { SDLK_2, 0x2 }, 
 
 uint16_t swap_byte_order(uint16_t s) { return (s >> 8) | (s << 8); }
 
-Chip8::Chip8(const std::string& file_name, size_t f, int x, int y)
+Chip8::Chip8(const std::string& file_name, size_t f)
         : memory({}),
           V({ 0 }),
           PC(entry),
           val({ 0 }),
           keys({ 0 }),
-          timer{ 60 },
-          freq{ f },
-          graphics(x, y) {
+          timer{},
+          cycle_count{ 0 },
+          graphics() {
     std::srand(std::time(nullptr));
 
     read_file(file_name);
@@ -514,24 +516,23 @@ bool Chip8::update_keys() {
 }
 
 void Chip8::update_timers() {
-    if (timer.update()) {
-        if (delay_timer > 0) {
-            delay_timer--;
-        }
-        if (sound_timer > 0) {
-            sound_timer--;
-        }
+    if (delay_timer > 0) {
+        delay_timer--;
+    }
+    if (sound_timer > 0) {
+        sound_timer--;
     }
 }
 
 bool Chip8::cycle() {
 
-    // maybe put update_timers() into loop
-    // but then we'd ever so slightly delay execution
-    while (!freq.update())
+    // 600Hz
+    while (!timer.update())
         ;
 
-    update_timers();
+    if (cycle_count % 10 == 1) {
+        update_timers();
+    }
 
     // fetch
     fetch();
@@ -540,17 +541,32 @@ bool Chip8::cycle() {
     // execute
     execute();
 
-    if (should_draw) {
-        should_draw = false;
-        graphics.draw();
-    }
-
     PC += 2;
+
+    cycle_count++;
 
     return update_keys();
 }
 
 void Chip8::run() {
+
+    std::promise<void> exit;
+
+    std::future<void> signal = exit.get_future();
+
+    auto gfx_thread = [&](std::future<void> exit) {
+        while (exit.wait_for(std::chrono::nanoseconds(1)) == std::future_status::timeout) {
+            graphics.draw();
+        }
+    };
+
+    std::thread thread(gfx_thread, std::move(signal));
+
     while (cycle())
         ;
+
+    // set promise value, signal to gfx thread to end
+    exit.set_value();
+
+    thread.join();
 }

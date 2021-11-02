@@ -3,6 +3,8 @@ cmake_minimum_required (VERSION 3.16)
 
 project(chip8emu)
 
+set(MY_INCLUDES ${chip8emu_SOURCE_DIR}/inc)
+
 # temporary stuff, until fedora gets 2.0.17
 set(SDL_JACK OFF)
 set(SDL_PIPEWIRE OFF)
@@ -22,6 +24,6 @@ target_include_directories(imgui PUBLIC ${IMGUI_PATH} PUBLIC ${IMGUI_BACKENDS} P
 
 add_subdirectory(src)
 
-target_include_directories(chip8emu PUBLIC ${SDL2_INCLUDE_DIR} PUBLIC ${IMGUI_PATH} PUBLIC ${IMGUI_BACKENDS})
+target_include_directories(chip8emu PUBLIC ${SDL2_INCLUDE_DIR} PUBLIC ${IMGUI_PATH} PUBLIC ${IMGUI_BACKENDS} PUBLIC ${MY_INCLUDES})
 
 target_link_libraries(chip8emu SDL2 imgui)

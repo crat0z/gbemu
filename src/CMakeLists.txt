@@ -1,8 +1,8 @@
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -march=native")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -march=native -lpthread")
 
-include_directories(${chip8emu_SOURCE_DIR}/inc)
+# include_directories(${chip8emu_SOURCE_DIR}/inc)
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 
-add_executable(chip8emu main.cpp chip8.cpp graphics.cpp gui.cpp)
+add_executable(chip8emu main.cpp chip8.cpp graphics.cpp)
 
