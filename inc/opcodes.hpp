@@ -3,7 +3,7 @@
 
 #include <string>
 
-enum class op_new
+enum class op
 {
     UNKNOWN,
     SYS, // 0NNN calls code at address NNN
@@ -43,10 +43,10 @@ enum class op_new
     LOAD // FX65 fills V0 to VX with values starting from address I
 };
 
-op_new decode(uint16_t opcode);
+op decode(uint16_t opcode);
 
 std::string opcode_instruction(uint16_t opcode);
 
-const char* opcode_description(op_new opcode);
+const char* opcode_description(op opcode);
 
 #endif

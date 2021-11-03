@@ -51,7 +51,7 @@ void Chip8::read_file(const std::string& name) {
     file.close();
 }
 
-void Chip8::fetch() {
+uint16_t Chip8::fetch() {
     opcode = *reinterpret_cast<uint16_t*>(&memory[PC]);
 
     // CHIP8 is big endian, swap byte order
@@ -61,6 +61,8 @@ void Chip8::fetch() {
     for (auto i = 0; i < 4; ++i) {
         val[i] = (opcode >> (4 * (3 - i))) & 0xF;
     }
+
+    return opcode;
 }
 
 op Chip8::decode() {
@@ -70,35 +72,35 @@ op Chip8::decode() {
         if (val[3] == 0xE)
             return op::RET;
         else if (val[2] == 0xE)
-            return op::CLEAR;
+            return op::CLS;
         else
-            return op::CALL_M;
+            return op::SYS;
     }
     case 0x1: {
-        return op::JMP;
+        return op::JP;
     }
     case 0x2: {
         return op::CALL;
     }
     case 0x3: {
-        return op::CONDI;
+        return op::SE_I;
     }
     case 0x4: {
-        return op::NCONDI;
+        return op::SNE_I;
     }
     case 0x5: {
-        return op::CONDR;
+        return op::SE_R;
     }
     case 0x6: {
-        return op::MOVI;
+        return op::LD_I;
     }
     case 0x7: {
-        return op::ADDI;
+        return op::ADD_I;
     }
     case 0x8: {
         switch (val[3]) {
         case 0x0: {
-            return op::MOVR;
+            return op::LD_R;
         }
         case 0x1: {
             return op::OR;
@@ -110,19 +112,19 @@ op Chip8::decode() {
             return op::XOR;
         }
         case 0x4: {
-            return op::ADDR;
+            return op::ADD_R;
         }
         case 0x5: {
-            return op::SUBR;
+            return op::SUB;
         }
         case 0x6: {
-            return op::RSHIFT;
+            return op::SHR;
         }
         case 0x7: {
-            return op::NSUBR;
+            return op::SUBN;
         }
         case 0xE: {
-            return op::LSHIFT;
+            return op::SHL;
         }
         default: {
             return op::UNKNOWN;
@@ -131,27 +133,27 @@ op Chip8::decode() {
         break;
     }
     case 0x9: {
-        return op::NCONDR;
+        return op::SNE_R;
     }
     case 0xA: {
-        return op::SETI;
+        return op::LD_I2;
     }
     case 0xB: {
-        return op::JMP_OFFSET;
+        return op::JP_V0;
     }
     case 0xC: {
-        return op::RAND;
+        return op::RND;
     }
     case 0xD: {
-        return op::DRAW;
+        return op::DRW;
     }
     case 0xE: {
         switch (val[3]) {
         case 0xE: {
-            return op::CONDKEY;
+            return op::SKP;
         }
         case 0x1: {
-            return op::NCONDKEY;
+            return op::SKNP;
         }
         default: {
             return op::UNKNOWN;
@@ -162,27 +164,27 @@ op Chip8::decode() {
     case 0xF: {
         switch (val[3]) {
         case 0x7: {
-            return op::DELAY;
+            return op::LD_DT;
         }
         case 0xA: {
-            return op::GET_KEY;
+            return op::LD_K;
         }
         case 0x8: {
-            return op::SETS;
+            return op::LD_ST;
         }
         case 0xE: {
-            return op::ADD_I;
+            return op::ADD_I2;
         }
         case 0x9: {
-            return op::SETIFONT;
+            return op::LD_F;
         }
         case 0x3: {
-            return op::BCD;
+            return op::LD_B;
         }
         case 0x5: {
             switch (val[2]) {
             case 0x1: {
-                return op::SETD;
+                return op::LD_DT2;
             }
             case 0x5: {
                 return op::DUMP;
@@ -219,12 +221,12 @@ void Chip8::execute() {
     switch (operation) {
         // for call/jump instructions, we unconditionally add 2 to PC every cycle
         // so by adjusting by -2, we can skip a conditional check
-    case op::CALL_M: {
+    case op::SYS: {
         stack.emplace(PC);
         PC = (imm12)-2;
         break;
     }
-    case op::CLEAR: {
+    case op::CLS: {
 
         for (auto& line : framebuffer) {
             for (auto& pixel : line) {
@@ -245,7 +247,7 @@ void Chip8::execute() {
         stack.pop();
         break;
     }
-    case op::JMP: {
+    case op::JP: {
         PC = (imm12)-2;
         break;
     }
@@ -255,33 +257,33 @@ void Chip8::execute() {
         PC = (imm12)-2;
         break;
     }
-    case op::CONDI: {
+    case op::SE_I: {
         if (Vx == imm8) {
             PC += 2;
         }
         break;
     }
-    case op::NCONDI: {
+    case op::SNE_I: {
         if (Vx != imm8) {
             PC += 2;
         }
         break;
     }
-    case op::CONDR: {
+    case op::SE_R: {
         if (Vx == Vy) {
             PC += 2;
         }
         break;
     }
-    case op::MOVI: {
+    case op::LD_I: {
         Vx = imm8;
         break;
     }
-    case op::ADDI: {
+    case op::ADD_I: {
         Vx += imm8;
         break;
     }
-    case op::MOVR: {
+    case op::LD_R: {
         Vx = Vy;
         break;
     }
@@ -297,7 +299,7 @@ void Chip8::execute() {
         Vx ^= Vy;
         break;
     }
-    case op::ADDR: {
+    case op::ADD_R: {
 
         auto original = Vx;
         Vx += Vy;
@@ -310,7 +312,7 @@ void Chip8::execute() {
         }
         break;
     }
-    case op::SUBR: {
+    case op::SUB: {
         if (Vx > Vy) {
             V[0xF] = 1;
         }
@@ -320,12 +322,12 @@ void Chip8::execute() {
         Vx -= Vy;
         break;
     }
-    case op::RSHIFT: {
+    case op::SHR: {
         V[0xF] = Vx & 0x1;
         Vx >>= 1;
         break;
     }
-    case op::NSUBR: {
+    case op::SUBN: {
         if (Vy > Vx) {
             V[0xF] = 1;
         }
@@ -335,31 +337,31 @@ void Chip8::execute() {
         Vx = Vy - Vx;
         break;
     }
-    case op::LSHIFT: {
+    case op::SHL: {
         V[0xF] = Vx >> 7;
         Vx <<= 1;
         break;
     }
-    case op::NCONDR: {
+    case op::SNE_R: {
         if (Vx != Vy) {
             PC += 2;
         }
         break;
     }
-    case op::SETI: {
+    case op::LD_I2: {
         I = imm12;
         break;
     }
-    case op::JMP_OFFSET: {
+    case op::JP_V0: {
         PC = V[0x0] + imm12;
         break;
     }
-    case op::RAND: {
+    case op::RND: {
         uint8_t r = std::rand() & 0xFF;
         Vx        = r & imm8;
         break;
     }
-    case op::DRAW: {
+    case op::DRW: {
 
         auto x = Vx;
         auto y = Vy;
@@ -397,23 +399,23 @@ void Chip8::execute() {
         should_draw = true;
         break;
     }
-    case op::CONDKEY: {
+    case op::SKP: {
         if (keys[Vx]) {
             PC += 2;
         }
         break;
     }
-    case op::NCONDKEY: {
+    case op::SKNP: {
         if (!keys[Vx]) {
             PC += 2;
         }
         break;
     }
-    case op::DELAY: {
+    case op::LD_DT: {
         Vx = delay_timer;
         break;
     }
-    case op::GET_KEY: {
+    case op::LD_K: {
         bool wait = true;
         while (wait) {
 
@@ -427,24 +429,24 @@ void Chip8::execute() {
         }
         break;
     }
-    case op::SETD: {
+    case op::LD_DT2: {
         delay_timer = Vx;
         break;
     }
-    case op::SETS: {
+    case op::LD_ST: {
         sound_timer = Vx;
         break;
     }
-    case op::ADD_I: {
+    case op::ADD_I2: {
         I += Vx;
         break;
     }
-    case op::SETIFONT: {
+    case op::LD_F: {
         uint8_t c = Vx;
         I         = c * 5;
         break;
     }
-    case op::BCD: {
+    case op::LD_B: {
         uint8_t first  = Vx / 100;
         uint8_t second = (Vx / 10) % 10;
         uint8_t third  = Vx % 10;
