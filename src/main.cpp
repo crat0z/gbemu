@@ -1,5 +1,5 @@
 #include <iostream>
-#include "chip8.hpp"
+#include "gui.hpp"
 #include "structopt.hpp"
 #include <bitset>
 
@@ -17,9 +17,9 @@ int main(int argc, char** argv) {
     try {
         auto options = structopt::app("chip8emu").parse<Options>(argc, argv);
 
-        Chip8 emu(options.filename, *options.cpu_freq);
+        GUI instance(options.filename);
 
-        emu.run();
+        instance.run();
     }
 
     catch (structopt::exception& e) {

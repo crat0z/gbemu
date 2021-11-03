@@ -22,8 +22,10 @@ file(GLOB IMGUI_SOURCES ${IMGUI_PATH}/*.cpp ${IMGUI_BACKENDS}/imgui_impl_sdl.cpp
 add_library(imgui STATIC ${IMGUI_SOURCES})
 target_include_directories(imgui PUBLIC ${IMGUI_PATH} PUBLIC ${IMGUI_BACKENDS} PUBLIC ${SDL2_INCLUDE_DIR})
 
+add_subdirectory(deps/fmt)
+
 add_subdirectory(src)
 
 target_include_directories(chip8emu PUBLIC ${SDL2_INCLUDE_DIR} PUBLIC ${IMGUI_PATH} PUBLIC ${IMGUI_BACKENDS} PUBLIC ${MY_INCLUDES})
 
-target_link_libraries(chip8emu SDL2 imgui)
+target_link_libraries(chip8emu SDL2 imgui fmt::fmt)

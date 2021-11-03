@@ -22,6 +22,12 @@ public:
         }
         return false;
     }
+
+    // just run the timer until it stops returning true, for now
+    void reset() {
+        while (update())
+            ;
+    }
 };
 
 class Timer {

@@ -1,9 +1,12 @@
+#ifndef CHIP8_HPP
+#define CHIP8_HPP
+
 #include <cstdint>
 #include <array>
 #include <stack>
 #include <string>
-#include "graphics.hpp"
 #include "timer.hpp"
+// #include "opcodes.hpp"
 
 enum class op
 {
@@ -44,15 +47,16 @@ enum class op
     DUMP, // FX55 stores V0 to VX in memory starting at address I
     LOAD // FX65 fills V0 to VX with values starting from address I
 };
-
 class Chip8 {
+public:
+    // Graphics graphics;
 
-    Graphics graphics;
+    std::array<std::array<bool, 64>, 32> framebuffer = {};
 
     std::array<uint8_t, 4096> memory = {};
     std::array<uint8_t, 16>   V      = {};
 
-    uint16_t I;
+    uint16_t I = 0;
     uint16_t PC;
 
     std::array<uint8_t, 4> val  = {};
@@ -65,32 +69,27 @@ class Chip8 {
 
     uint16_t opcode;
 
-    uint8_t delay_timer;
-    uint8_t sound_timer;
-
-    // for delay and sound timer
-    // CETimer<60> timer;
+    uint8_t delay_timer = 0;
+    uint8_t sound_timer = 0;
 
     // for CPU freq
     CETimer<600> timer;
 
-    size_t cycle_count;
+    size_t cycle_count = true;
 
-    bool should_draw;
+    bool should_draw = false;
 
     void fetch();
     op   decode();
     void execute();
 
-    bool cycle();
+    void cycle();
 
-    bool update_keys();
     void update_timers();
 
     void read_file(const std::string& name);
 
-public:
-    Chip8(const std::string& file_name, size_t f);
-
-    void run();
+    Chip8(const std::string& file_name);
 };
+
+#endif

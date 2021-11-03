@@ -2,7 +2,6 @@
 #include <bitset>
 #include <fstream>
 #include <ctime>
-#include <unordered_map>
 #include <thread>
 #include <future>
 
@@ -29,24 +28,9 @@ const uint8_t fontset[] = {
     0xF0, 0x80, 0xF0, 0x80, 0x80 // F
 };
 
-std::unordered_map<int, uint8_t> keybinds = { { SDLK_1, 0x1 }, { SDLK_2, 0x2 }, { SDLK_3, 0x3 },
-                                              { SDLK_4, 0xC }, { SDLK_q, 0x4 }, { SDLK_w, 0x5 },
-                                              { SDLK_e, 0x6 }, { SDLK_r, 0xD }, { SDLK_a, 0x7 },
-                                              { SDLK_s, 0x8 }, { SDLK_d, 0x9 }, { SDLK_f, 0xE },
-                                              { SDLK_z, 0xA }, { SDLK_x, 0x0 }, { SDLK_c, 0xB },
-                                              { SDLK_v, 0xF } };
-
 uint16_t swap_byte_order(uint16_t s) { return (s >> 8) | (s << 8); }
 
-Chip8::Chip8(const std::string& file_name, size_t f)
-        : memory({}),
-          V({ 0 }),
-          PC(entry),
-          val({ 0 }),
-          keys({ 0 }),
-          timer{},
-          cycle_count{ 0 },
-          graphics() {
+Chip8::Chip8(const std::string& file_name) : PC(entry) {
     std::srand(std::time(nullptr));
 
     read_file(file_name);
@@ -242,7 +226,11 @@ void Chip8::execute() {
     }
     case op::CLEAR: {
 
-        graphics.clear();
+        for (auto& line : framebuffer) {
+            for (auto& pixel : line) {
+                pixel = false;
+            }
+        }
 
         should_draw = true;
         break;
@@ -394,10 +382,10 @@ void Chip8::execute() {
                 uint8_t currX = (x + j) % 64;
 
                 // 7 - j because 0 actually is least significant bit
-                if (!pixel_unset && graphics(currY, currX) && line[7 - j]) {
+                if (!pixel_unset && framebuffer[currY][currX] && line[7 - j]) {
                     pixel_unset = true;
                 }
-                graphics(currY, currX) ^= line[7 - j];
+                framebuffer[currY][currX] ^= line[7 - j];
             }
         }
 
@@ -428,7 +416,7 @@ void Chip8::execute() {
     case op::GET_KEY: {
         bool wait = true;
         while (wait) {
-            update_keys();
+
             for (auto i = 0; i < 16; ++i) {
                 if (keys[i]) {
                     Vx   = static_cast<uint8_t>(i);
@@ -486,35 +474,6 @@ void Chip8::execute() {
     }
     }
 }
-
-bool Chip8::update_keys() {
-    // handle keys
-    static SDL_Event event;
-
-    bool keep_running = true;
-
-    while (SDL_PollEvent(&event)) {
-        // check to see if each event is one of our keys
-
-        auto res = keybinds.find(event.key.keysym.sym);
-
-        if (res != keybinds.end()) {
-            if (event.type == SDL_KEYDOWN) {
-                keys[res->second] = true;
-            }
-            else if (event.type == SDL_KEYUP) {
-                keys[res->second] = false;
-            }
-        }
-
-        // exit condition
-        else if (event.key.keysym.sym == SDLK_ESCAPE && event.type == SDL_KEYDOWN) {
-            keep_running = false;
-        }
-    }
-    return keep_running;
-}
-
 void Chip8::update_timers() {
     if (delay_timer > 0) {
         delay_timer--;
@@ -524,7 +483,7 @@ void Chip8::update_timers() {
     }
 }
 
-bool Chip8::cycle() {
+void Chip8::cycle() {
 
     // 600Hz
     while (!timer.update())
@@ -544,29 +503,4 @@ bool Chip8::cycle() {
     PC += 2;
 
     cycle_count++;
-
-    return update_keys();
-}
-
-void Chip8::run() {
-
-    std::promise<void> exit;
-
-    std::future<void> signal = exit.get_future();
-
-    auto gfx_thread = [&](std::future<void> exit) {
-        while (exit.wait_for(std::chrono::nanoseconds(1)) == std::future_status::timeout) {
-            graphics.draw();
-        }
-    };
-
-    std::thread thread(gfx_thread, std::move(signal));
-
-    while (cycle())
-        ;
-
-    // set promise value, signal to gfx thread to end
-    exit.set_value();
-
-    thread.join();
 }
