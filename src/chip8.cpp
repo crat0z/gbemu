@@ -51,21 +51,22 @@ void Chip8::read_file(const std::string& name) {
     file.close();
 }
 
-uint16_t Chip8::fetch() {
-    opcode = *reinterpret_cast<uint16_t*>(&memory[PC]);
+uint16_t Chip8::fetch(uint16_t addr) {
+
+    auto code = *reinterpret_cast<uint16_t*>(&memory[addr]);
 
     // CHIP8 is big endian, swap byte order
-    opcode = swap_byte_order(opcode);
+    code = swap_byte_order(code);
+
+    return code;
+}
+
+op Chip8::decode(uint16_t opc) {
 
     // store each 4 bits of opcode into array
     for (auto i = 0; i < 4; ++i) {
-        val[i] = (opcode >> (4 * (3 - i))) & 0xF;
+        val[i] = (opc >> (4 * (3 - i))) & 0xF;
     }
-
-    return opcode;
-}
-
-op Chip8::decode() {
 
     switch (val[0]) {
     case 0x0: {
@@ -496,9 +497,9 @@ void Chip8::cycle() {
     }
 
     // fetch
-    fetch();
+    opcode = fetch(PC);
     // decode
-    operation = decode();
+    operation = decode(opcode);
     // execute
     execute();
 

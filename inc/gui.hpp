@@ -19,7 +19,6 @@ private:
     int size_x, size_y;
 
     void prepare_imgui();
-    void prepare_game_gfx();
 
     void draw();
     void handle_input();

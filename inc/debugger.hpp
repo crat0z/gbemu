@@ -1,9 +1,16 @@
+#ifndef DEBUGGER_HPP
+#define DEBUGGER_HPP
+
 #include "chip8.hpp"
+#include <vector>
 
 // a wrapper around Chip8 class to allow for debugging functionality
 // without cluttering chip8 class itself
 
 class Debugger {
+
+    // std::vector<basic_block> res;
+
     std::array<uint8_t, 4096> prev_memory = {};
     std::array<uint8_t, 16>   prev_V      = {};
 
@@ -15,8 +22,15 @@ class Debugger {
 
     Chip8& proc;
 
-    std::string opcode_instruction;
-    const char* opcode_description;
+    op          next_opcode;
+    std::string next_instruction;
+    const char* next_description;
+
+    bool paused = false;
+
+    void get_next_instruction() noexcept;
+    void save_emu_state() noexcept;
+    void get_changes() noexcept;
 
 public:
     std::array<bool, 16> reg_changes = {};
@@ -30,5 +44,17 @@ public:
 
     void single_step();
 
-    void reset();
+    void reset() noexcept;
+
+    bool is_paused() const noexcept;
+
+    void pause() noexcept;
+
+    const char* get_description() const noexcept;
+
+    const std::string& get_instruction() const noexcept;
+
+    void analyze();
 };
+
+#endif

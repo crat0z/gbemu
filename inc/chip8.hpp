@@ -40,8 +40,8 @@ public:
 
     bool should_draw = false;
 
-    uint16_t fetch();
-    op       decode();
+    uint16_t fetch(uint16_t addr);
+    op       decode(uint16_t opc);
     void     execute();
 
     void cycle();

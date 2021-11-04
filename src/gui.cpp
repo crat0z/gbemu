@@ -23,25 +23,107 @@ std::unordered_map<int, uint8_t> keybinds = { { SDLK_1, 0x1 }, { SDLK_2, 0x2 }, 
                                               { SDLK_z, 0xA }, { SDLK_x, 0x0 }, { SDLK_c, 0xB },
                                               { SDLK_v, 0xF } };
 
+ImVec4 ColorFromBytes(uint8_t r, uint8_t g, uint8_t b) {
+    return ImVec4((float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f, 1.0f);
+}
+
+void style() {
+
+    auto&   style  = ImGui::GetStyle();
+    ImVec4* colors = style.Colors;
+
+    const ImVec4 bgColor          = ColorFromBytes(37, 37, 38);
+    const ImVec4 lightBgColor     = ColorFromBytes(82, 82, 85);
+    const ImVec4 veryLightBgColor = ColorFromBytes(90, 90, 95);
+
+    const ImVec4 panelColor       = ColorFromBytes(51, 51, 55);
+    const ImVec4 panelHoverColor  = ColorFromBytes(29, 151, 236);
+    const ImVec4 panelActiveColor = ColorFromBytes(0, 119, 200);
+
+    const ImVec4 textColor         = ColorFromBytes(255, 255, 255);
+    const ImVec4 textDisabledColor = ColorFromBytes(151, 151, 151);
+    const ImVec4 borderColor       = ColorFromBytes(78, 78, 78);
+
+    colors[ImGuiCol_Text]                 = textColor;
+    colors[ImGuiCol_TextDisabled]         = textDisabledColor;
+    colors[ImGuiCol_TextSelectedBg]       = panelActiveColor;
+    colors[ImGuiCol_WindowBg]             = bgColor;
+    colors[ImGuiCol_ChildBg]              = bgColor;
+    colors[ImGuiCol_PopupBg]              = bgColor;
+    colors[ImGuiCol_Border]               = borderColor;
+    colors[ImGuiCol_BorderShadow]         = borderColor;
+    colors[ImGuiCol_FrameBg]              = panelColor;
+    colors[ImGuiCol_FrameBgHovered]       = panelHoverColor;
+    colors[ImGuiCol_FrameBgActive]        = panelActiveColor;
+    colors[ImGuiCol_TitleBg]              = bgColor;
+    colors[ImGuiCol_TitleBgActive]        = bgColor;
+    colors[ImGuiCol_TitleBgCollapsed]     = bgColor;
+    colors[ImGuiCol_MenuBarBg]            = panelColor;
+    colors[ImGuiCol_ScrollbarBg]          = panelColor;
+    colors[ImGuiCol_ScrollbarGrab]        = lightBgColor;
+    colors[ImGuiCol_ScrollbarGrabHovered] = veryLightBgColor;
+    colors[ImGuiCol_ScrollbarGrabActive]  = veryLightBgColor;
+    colors[ImGuiCol_CheckMark]            = panelActiveColor;
+    colors[ImGuiCol_SliderGrab]           = panelHoverColor;
+    colors[ImGuiCol_SliderGrabActive]     = panelActiveColor;
+    colors[ImGuiCol_Button]               = panelColor;
+    colors[ImGuiCol_ButtonHovered]        = panelHoverColor;
+    colors[ImGuiCol_ButtonActive]         = panelHoverColor;
+    colors[ImGuiCol_Header]               = panelColor;
+    colors[ImGuiCol_HeaderHovered]        = panelHoverColor;
+    colors[ImGuiCol_HeaderActive]         = panelActiveColor;
+    colors[ImGuiCol_Separator]            = borderColor;
+    colors[ImGuiCol_SeparatorHovered]     = borderColor;
+    colors[ImGuiCol_SeparatorActive]      = borderColor;
+    colors[ImGuiCol_ResizeGrip]           = bgColor;
+    colors[ImGuiCol_ResizeGripHovered]    = panelColor;
+    colors[ImGuiCol_ResizeGripActive]     = lightBgColor;
+    colors[ImGuiCol_PlotLines]            = panelActiveColor;
+    colors[ImGuiCol_PlotLinesHovered]     = panelHoverColor;
+    colors[ImGuiCol_PlotHistogram]        = panelActiveColor;
+    colors[ImGuiCol_PlotHistogramHovered] = panelHoverColor;
+    colors[ImGuiCol_DragDropTarget]       = bgColor;
+    colors[ImGuiCol_NavHighlight]         = bgColor;
+    colors[ImGuiCol_DockingPreview]       = panelActiveColor;
+    colors[ImGuiCol_Tab]                  = bgColor;
+    colors[ImGuiCol_TabActive]            = panelActiveColor;
+    colors[ImGuiCol_TabUnfocused]         = bgColor;
+    colors[ImGuiCol_TabUnfocusedActive]   = panelActiveColor;
+    colors[ImGuiCol_TabHovered]           = panelHoverColor;
+
+    style.WindowRounding    = 0.0f;
+    style.ChildRounding     = 0.0f;
+    style.FrameRounding     = 0.0f;
+    style.GrabRounding      = 0.0f;
+    style.PopupRounding     = 0.0f;
+    style.ScrollbarRounding = 0.0f;
+    style.TabRounding       = 0.0f;
+    style.WindowTitleAlign  = { 0.50f, 0.50f };
+}
+
 GUI::GUI(const std::string& file_name) : emu(file_name) {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER);
 
-    SDL_WindowFlags flags =
-            (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
+    SDL_WindowFlags flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI |
+                                              SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED);
 
-    window = SDL_CreateWindow("chip8emu", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1580, 640,
+    window = SDL_CreateWindow("chip8emu", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1500, 900,
                               flags);
 
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
 
     ImGui::CreateContext();
     auto& io = ImGui::GetIO();
-    ImGui::StyleColorsDark();
 
     io.Fonts->AddFontFromMemoryCompressedBase85TTF(DroidSans_compressed_data_base85, 18);
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
     ImGui_ImplSDL2_InitForSDLRenderer(window);
     ImGui_ImplSDLRenderer_Init(renderer);
+
+    style();
 }
 
 GUI::~GUI() {
@@ -59,33 +141,97 @@ void GUI::prepare_imgui() {
 
     static Debugger debugger(emu);
 
-    ImGuiWindowFlags main_flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-                                  ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
+    static ImVec4 white_vec = ColorFromBytes(220, 220, 220);
+    static ImVec4 black_vec = ColorFromBytes(15, 15, 15);
 
-    ImGui_ImplSDLRenderer_NewFrame();
-    ImGui_ImplSDL2_NewFrame(window);
-    ImGui::NewFrame();
+    ImU32 white = ImColor(white_vec);
+    ImU32 black = ImColor(black_vec);
 
-    // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-    if (show_demo_window)
+    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+
+    // ImGuiWindowFlags flag = ImGuiWindowFlags_NoBackground;
+
+    if (show_demo_window) {
         ImGui::ShowDemoWindow(&show_demo_window);
+    }
+
+    {
+        /*
+            styles for the game window.
+         */
+
+        // vars
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 });
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+
+        ImGuiWindowFlags win_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav |
+                                     ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoCollapse |
+                                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoNav |
+                                     ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs;
+
+        ImGui::Begin("game window", nullptr, win_flags);
+        ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+        ImVec2 vMin = ImGui::GetWindowContentRegionMin();
+        ImVec2 vMax = ImGui::GetWindowContentRegionMax();
+
+        ImVec2 size = { vMax.x - vMin.x, vMax.y - vMin.y };
+
+        vMin.x += ImGui::GetWindowPos().x;
+        vMin.y += ImGui::GetWindowPos().y;
+
+        float scale;
+        float x_offset;
+        float y_offset;
+
+        if (size.x / size.y >= 2.0f) {
+            scale    = size.y / Y_PIXELS;
+            x_offset = (size.x - scale * X_PIXELS) / 2.0f;
+            y_offset = 0.0f;
+        }
+        else {
+            scale    = size.x / X_PIXELS;
+            x_offset = 0.0f;
+            y_offset = (size.y - scale * Y_PIXELS) / 2.0f;
+        }
+
+        vMin.x += x_offset;
+        vMin.y += y_offset;
+
+        for (auto i = 0; i < 32; ++i) {
+            auto y = vMin.y + i * scale;
+            for (auto j = 0; j < 64; ++j) {
+                auto x = vMin.x + j * scale;
+                if (emu.framebuffer[i][j]) {
+                    draw_list->AddRectFilled(ImVec2{ x, y }, ImVec2{ x + scale, y + scale }, white,
+                                             0.0f, ImDrawFlags_RoundCornersNone);
+                }
+                else {
+                    draw_list->AddRectFilled(ImVec2{ x, y }, ImVec2{ x + scale, y + scale }, black,
+                                             0.0f, ImDrawFlags_RoundCornersNone);
+                }
+            }
+        }
+
+        ImGui::End();
+        ImGui::PopStyleVar(2);
+    }
 
     // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
     {
-        ImGui::SetNextWindowSize({ 300, (float)size_x });
 
-        ImGui::SetNextWindowPos({ 0, 0 });
-        ImGui::Begin("chip8emu", nullptr,
-                     main_flags); // Create a window called "Hello, world!" and append into it.
+        ImGui::Begin("chip8emu"); // Create a window called "Hello, world!" and append into it.
         if (ImGui::BeginTabBar("tabs")) {
             if (ImGui::BeginTabItem("main")) {
                 ImGui::Checkbox("pause", &paused);
-
+                if (ImGui::Button("analyze")) {
+                    debugger.analyze();
+                }
                 ImGui::Text("%.3f fps", ImGui::GetIO().Framerate);
                 ImGui::EndTabItem();
             }
 
-            /* two lambdas for 1 and 2 parameter red colored text when variables change */
+            // two lambdas for 1 and 2 parameter red colored text when variables change
             auto colored_text = [&](bool val, const char* fmt, uint16_t v) {
                 if (val) {
                     ImGui::TextColored({ 255, 0, 0, 255 }, fmt, v);
@@ -174,6 +320,8 @@ void GUI::prepare_imgui() {
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("settings")) {
+                ImGui::ColorEdit4("white colour", &white_vec.x);
+                ImGui::ColorEdit4("black colour", &black_vec.x);
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("test")) {
@@ -185,46 +333,6 @@ void GUI::prepare_imgui() {
 
         ImGui::End();
     }
-
-    // Rendering
-    ImGui::Render();
-}
-
-void GUI::prepare_game_gfx() {
-    // game size
-    float x_f = (float)size_x - 300.0f;
-    float y_f = (float)size_y;
-
-    float scale;
-    float x_offset;
-    float y_offset;
-
-    /*
-        calculate scale, and offset to start drawing from, this is all
-        we need to calculate everything
-    */
-    if (x_f / y_f >= 2) {
-        scale    = y_f / Y_PIXELS;
-        x_offset = (x_f - scale * X_PIXELS) / 2.0;
-        y_offset = 0.0f;
-    }
-    else {
-        scale    = x_f / X_PIXELS;
-        x_offset = 0;
-        y_offset = (y_f - scale * Y_PIXELS) / 2.0;
-    }
-
-    x_offset += 300.0f;
-
-    rects.clear();
-
-    for (auto y = 0; y < 32; ++y) {
-        for (auto x = 0; x < 64; ++x) {
-            if (emu.framebuffer[y][x]) {
-                rects.emplace_back(x_offset + x * scale, y_offset + y * scale, scale, scale);
-            }
-        }
-    }
 }
 
 void GUI::draw() {
@@ -232,14 +340,17 @@ void GUI::draw() {
     // update our current screen size
     SDL_GetWindowSize(window, &size_x, &size_y);
 
-    prepare_imgui();
-    prepare_game_gfx();
+    ImGui_ImplSDLRenderer_NewFrame();
+    ImGui_ImplSDL2_NewFrame(window);
+    ImGui::NewFrame();
 
-    // actually do the drawing now
-    SDL_SetRenderDrawColor(renderer, 10, 10, 10, 255);
+    prepare_imgui();
+
+    // Rendering
+    ImGui::Render();
+
     SDL_RenderClear(renderer);
-    SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);
-    SDL_RenderFillRectsF(renderer, rects.data(), rects.size());
+
     ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
     SDL_RenderPresent(renderer);
 }
