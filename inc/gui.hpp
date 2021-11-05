@@ -1,22 +1,38 @@
 #include <SDL.h>
 #include <array>
 #include <vector>
-
+#include <imgui.h>
+#include "imgui-filebrowser/imfilebrowser.h"
 #include "chip8.hpp"
+#include "debugger.hpp"
+#include "disassembler.hpp"
 
 class GUI {
 private:
-    Chip8 emu;
+    Chip8        emu;
+    Debugger     debugger;
+    Disassembler disassembler;
 
-    bool done   = false;
-    bool paused = false;
+    ImGui::FileBrowser filebrowser;
+
+    bool done = false;
 
     SDL_Window*   window;
     SDL_Renderer* renderer;
 
     std::vector<SDL_FRect> rects;
 
-    int size_x, size_y;
+    ImVec4 white_vec;
+    ImVec4 black_vec;
+
+    void style();
+
+    // various windows
+    bool emulator_settings();
+    bool debugger_window();
+    bool launch_settings();
+
+    void game_window();
 
     void prepare_imgui();
 
@@ -24,7 +40,7 @@ private:
     void handle_input();
 
 public:
-    GUI(const std::string& file_name);
+    GUI();
     ~GUI();
     void run();
 };

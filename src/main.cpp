@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
     try {
         auto options = structopt::app("chip8emu").parse<Options>(argc, argv);
 
-        GUI instance(options.filename);
+        GUI instance;
 
         instance.run();
     }

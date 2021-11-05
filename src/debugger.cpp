@@ -4,6 +4,7 @@
 #include <disassembler.hpp>
 #include <iostream>
 #include <fmt/ranges.h>
+#include <thread>
 
 Debugger::Debugger(Chip8& p) : proc{ p } {}
 
@@ -31,12 +32,12 @@ void Debugger::get_changes() noexcept {
 
 void Debugger::get_next_instruction() noexcept {
     // we can safely decode next instruction
-    auto next = proc.fetch(proc.PC);
+    next_opcode = proc.fetch(proc.PC);
 
     // update our instruction info
-    next_instruction = opcode_instruction(next);
-    next_opcode      = decode(next);
-    next_description = opcode_description(next_opcode);
+    next_instruction = opcode_instruction(next_opcode);
+    next_operation   = decode(next_opcode);
+    next_description = opcode_description(next_operation);
 }
 
 void Debugger::single_step() {
@@ -62,38 +63,27 @@ void Debugger::reset() noexcept {
     st_change = false;
 }
 
-bool Debugger::is_paused() const noexcept { return paused; }
+bool Debugger::is_paused() const noexcept { return proc.is_paused; }
 
 // use a mutex here
-void Debugger::pause() noexcept { paused = true; };
+void Debugger::pause() noexcept {
+    using namespace std::chrono_literals;
+
+    proc.is_paused = true;
+    std::this_thread::sleep_for(10ms);
+
+    reset();
+
+    get_next_instruction();
+};
+
+void Debugger::run() noexcept {
+    proc.is_paused = false;
+    reset();
+}
 
 const char* Debugger::get_description() const noexcept { return next_description; }
 
-const std::string& Debugger::get_instruction() const noexcept { return next_instruction; }
+const char* Debugger::get_instruction() const noexcept { return next_instruction.c_str(); }
 
-void Debugger::analyze() {
-    disassembler dis(proc);
-    dis.analyze();
-
-    int count = 0;
-
-    for (auto block : dis.result) {
-        fmt::print("block {}\n", count);
-        fmt::print("\tblock start address: {0:#03x}\n\tblock end address: {1:#03x}\n",
-                   block->start_address, block->end_address);
-
-        fmt::print("\t{} references:\n", block->references.size());
-
-        for (auto i = 0; i < block->references.size(); ++i) {
-            fmt::print("\t\t{0:#03x} -> {1:#03x}\n", block->references[i].first,
-                       block->references[i].second);
-        }
-
-        fmt::print("\n\tdisassembly:\n");
-
-        for (auto& ins : block->instructions) {
-            fmt::print("\t\t{0:#03x}\t{1}\n", ins.address, ins.mnemonic);
-        }
-        count++;
-    }
-}
+uint16_t Debugger::get_opcode() const noexcept { return next_opcode; }

@@ -1,17 +1,19 @@
 #include "gui.hpp"
 #include <cmath>
-#include <imgui.h>
 #include <imgui_impl_sdl.h>
 #include <imgui_impl_sdlrenderer.h>
 
+#include <iostream>
 #include <thread>
 #include <future>
 #include <unordered_map>
 
-#include <DroidSans.hpp>
+#include <fmt/format.h>
 
+#include "DroidSans.hpp"
 #include "debugger.hpp"
 #include "opcodes.hpp"
+#include "disassembler.hpp"
 
 constexpr float X_PIXELS = 64.0;
 constexpr float Y_PIXELS = 32.0;
@@ -27,7 +29,11 @@ ImVec4 ColorFromBytes(uint8_t r, uint8_t g, uint8_t b) {
     return ImVec4((float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f, 1.0f);
 }
 
-void style() {
+void GUI::style() {
+
+    // default sprite colours
+    white_vec = ColorFromBytes(200, 200, 200);
+    black_vec = ColorFromBytes(15, 15, 15);
 
     auto&   style  = ImGui::GetStyle();
     ImVec4* colors = style.Colors;
@@ -101,7 +107,7 @@ void style() {
     style.WindowTitleAlign  = { 0.50f, 0.50f };
 }
 
-GUI::GUI(const std::string& file_name) : emu(file_name) {
+GUI::GUI() : emu(), debugger(emu), disassembler(emu) {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER);
 
     SDL_WindowFlags flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI |
@@ -116,8 +122,8 @@ GUI::GUI(const std::string& file_name) : emu(file_name) {
     auto& io = ImGui::GetIO();
 
     io.Fonts->AddFontFromMemoryCompressedBase85TTF(DroidSans_compressed_data_base85, 18);
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
     ImGui_ImplSDL2_InitForSDLRenderer(window);
@@ -136,88 +142,319 @@ GUI::~GUI() {
     SDL_Quit();
 }
 
-void GUI::prepare_imgui() {
-    static bool show_demo_window = false;
-
-    static Debugger debugger(emu);
-
-    static ImVec4 white_vec = ColorFromBytes(220, 220, 220);
-    static ImVec4 black_vec = ColorFromBytes(15, 15, 15);
-
+void GUI::game_window() {
     ImU32 white = ImColor(white_vec);
     ImU32 black = ImColor(black_vec);
+    /*
+        styles for the game window.
+    */
 
-    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+    // vars
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, black_vec);
 
-    // ImGuiWindowFlags flag = ImGuiWindowFlags_NoBackground;
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 });
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+
+    ImGuiWindowFlags win_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav |
+                                 ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoCollapse |
+                                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoNav |
+                                 ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize;
+
+    ImGui::Begin("game window", nullptr, win_flags);
+
+    /* 
+            menu bar is where most functionality will be
+        */
+
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+    ImVec2 vMin = ImGui::GetWindowContentRegionMin();
+    ImVec2 vMax = ImGui::GetWindowContentRegionMax();
+
+    ImVec2 size = { vMax.x - vMin.x, vMax.y - vMin.y };
+
+    vMin.x += ImGui::GetWindowPos().x;
+    vMin.y += ImGui::GetWindowPos().y;
+
+    float scale;
+    float x_offset;
+    float y_offset;
+
+    if (size.x / size.y >= 2.0f) {
+        scale    = size.y / Y_PIXELS;
+        x_offset = (size.x - scale * X_PIXELS) / 2.0f;
+        y_offset = 0.0f;
+    }
+    else {
+        scale    = size.x / X_PIXELS;
+        x_offset = 0.0f;
+        y_offset = (size.y - scale * Y_PIXELS) / 2.0f;
+    }
+
+    vMin.x += x_offset;
+    vMin.y += y_offset;
+
+    for (auto i = 0; i < 32; ++i) {
+        auto y = vMin.y + i * scale;
+        for (auto j = 0; j < 64; ++j) {
+            auto x = vMin.x + j * scale;
+            if (emu.framebuffer[i][j]) {
+                draw_list->AddRectFilled(ImVec2{ x, y }, ImVec2{ x + scale, y + scale }, white,
+                                         0.0f, ImDrawFlags_RoundCornersNone);
+            }
+            else {
+                draw_list->AddRectFilled(ImVec2{ x, y }, ImVec2{ x + scale, y + scale }, black,
+                                         0.0f, ImDrawFlags_RoundCornersNone);
+            }
+        }
+    }
+
+    ImGui::End();
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor();
+}
+
+bool GUI::emulator_settings() {
+    bool open = true;
+    ImGui::Begin("Emulator settings", &open);
+
+    ImGui::ColorEdit4("white colour", &white_vec.x);
+    ImGui::ColorEdit4("black colour", &black_vec.x);
+
+    ImGui::End();
+    return open;
+}
+
+bool GUI::launch_settings() {
+
+    bool open = true;
+
+    static uint16_t entry_setting = 0x200;
+    static uint16_t base_address  = 0x200;
+
+    static bool launch_paused = false;
+
+    static ImGuiWindowFlags launch_window_settings =
+            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDocking;
+
+    static std::string last_file_name = "";
+
+    filebrowser.Display();
+
+    if (filebrowser.HasSelected()) {
+        last_file_name = std::move(filebrowser.GetSelected());
+        filebrowser.ClearSelected();
+    }
+
+    ImGui::Begin("Launch settings", &open, launch_window_settings);
+
+    if (ImGui::Button("Choose file")) {
+        filebrowser.Open();
+    }
+
+    ImGui::TextWrapped("file chosen: %s", last_file_name.c_str());
+
+    ImGui::Separator();
+
+    ImGui::InputScalar("entry point (hexadecimal)", ImGuiDataType_U16, &entry_setting, nullptr,
+                       nullptr, "%03x",
+                       ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_AutoSelectAll);
+
+    ImGui::InputScalar("base address (hexadecimal)", ImGuiDataType_U16, &base_address, nullptr,
+                       nullptr, "%03x",
+                       ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_AutoSelectAll);
+
+    ImGui::Separator();
+
+    ImGui::Checkbox("launch paused", &launch_paused);
+
+    if (ImGui::Button("OK")) {
+        // new game
+        emu.new_game(last_file_name, entry_setting, base_address, launch_paused);
+
+        if (launch_paused) {
+            debugger.pause();
+        }
+
+        open = false;
+    }
+
+    ImGui::End();
+
+    return open;
+}
+
+bool GUI::debugger_window() {
+
+    // two lambdas for 1 and 2 parameter red colored text when variables change
+    static auto colored_text = [&](bool val, const char* fmt, uint16_t v) {
+        if (val) {
+            ImGui::TextColored({ 255, 0, 0, 255 }, fmt, v);
+        }
+        else {
+            ImGui::Text(fmt, v);
+        }
+    };
+
+    static auto colored_text2 = [&](bool val, const char* fmt, uint16_t v, uint16_t x) {
+        if (val) {
+            ImGui::TextColored({ 255, 0, 0, 255 }, fmt, v, x);
+        }
+        else {
+            ImGui::Text(fmt, v, x);
+        }
+    };
+
+    bool open = true;
+
+    ImGui::Begin("Registers");
+    {
+        ImGui::Text("Registers & Timers");
+        // draw registers in table
+        auto table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedSame;
+        if (ImGui::BeginTable("registers", 4, table_flags)) {
+            // draw registers
+            for (auto row = 0; row < 4; ++row) {
+
+                ImGui::TableNextRow();
+
+                for (auto col = 0; col < 4; ++col) {
+                    ImGui::TableSetColumnIndex(col);
+
+                    auto index = row + 4 * col;
+
+                    colored_text2(debugger.reg_changes[index], "V%01x 0x%02X", (index),
+                                  emu.V[index]);
+                }
+            }
+
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
+            colored_text(debugger.I_change, "I  0x%03X", emu.I);
+
+            ImGui::TableNextColumn();
+            colored_text(debugger.PC_change, "PC 0x%03X", emu.PC);
+
+            ImGui::TableNextColumn();
+            colored_text(debugger.dt_change, "D  0x%02X", emu.delay_timer);
+
+            ImGui::TableNextColumn();
+            colored_text(debugger.st_change, "S  0x%02X", emu.sound_timer);
+
+            ImGui::EndTable();
+        }
+        ImGui::Separator();
+
+        if (debugger.is_paused()) {
+            ImGui::Text("Next opcode: %04X", debugger.get_opcode());
+
+            ImGui::Separator();
+
+            ImGui::Text("Next instruction: %s", debugger.get_instruction());
+
+            ImGui::Separator();
+            // static bool description_header = false;
+            if (ImGui::CollapsingHeader("Description")) {
+                ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 300.0f);
+                ImGui::Text("Description: %s", debugger.get_description());
+            }
+        }
+
+        if (ImGui::Button("pause")) {
+            debugger.pause();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("step")) {
+            debugger.single_step();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("run")) {
+            debugger.run();
+        }
+    }
+    ImGui::End();
+
+    ImGui::Begin("Disassembler", &open);
+
+    // disassembly view
+    {
+
+        if (ImGui::Button("Refresh")) {
+            disassembler.analyze();
+        }
+
+        for (uint16_t i = 0; i < 2048; ++i) {
+
+            auto& ins1 = disassembler.found_instructions[2 * i];
+
+            if (ins1.operation != op::UNKNOWN) {
+                ImGui::Selectable(
+                        fmt::format("\t0x{0:03x}\t{1}", ins1.address, ins1.mnemonic).c_str());
+            }
+            else {
+                ImGui::Selectable(fmt::format("\t0x{0:03x}\t???????", ins1.address).c_str());
+            }
+        }
+    }
+
+    ImGui::End();
+
+    return open;
+}
+
+void GUI::prepare_imgui() {
+    static bool show_demo_window   = false;
+    static bool show_launch_window = false;
+    static bool show_emu_settings  = false;
+    static bool show_debugger      = false;
+
+    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_AutoHideTabBar);
 
     if (show_demo_window) {
         ImGui::ShowDemoWindow(&show_demo_window);
     }
 
-    {
-        /*
-            styles for the game window.
-         */
+    if (ImGui::BeginMainMenuBar()) {
 
-        // vars
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 });
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-
-        ImGuiWindowFlags win_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav |
-                                     ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoCollapse |
-                                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoNav |
-                                     ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs;
-
-        ImGui::Begin("game window", nullptr, win_flags);
-        ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
-        ImVec2 vMin = ImGui::GetWindowContentRegionMin();
-        ImVec2 vMax = ImGui::GetWindowContentRegionMax();
-
-        ImVec2 size = { vMax.x - vMin.x, vMax.y - vMin.y };
-
-        vMin.x += ImGui::GetWindowPos().x;
-        vMin.y += ImGui::GetWindowPos().y;
-
-        float scale;
-        float x_offset;
-        float y_offset;
-
-        if (size.x / size.y >= 2.0f) {
-            scale    = size.y / Y_PIXELS;
-            x_offset = (size.x - scale * X_PIXELS) / 2.0f;
-            y_offset = 0.0f;
-        }
-        else {
-            scale    = size.x / X_PIXELS;
-            x_offset = 0.0f;
-            y_offset = (size.y - scale * Y_PIXELS) / 2.0f;
-        }
-
-        vMin.x += x_offset;
-        vMin.y += y_offset;
-
-        for (auto i = 0; i < 32; ++i) {
-            auto y = vMin.y + i * scale;
-            for (auto j = 0; j < 64; ++j) {
-                auto x = vMin.x + j * scale;
-                if (emu.framebuffer[i][j]) {
-                    draw_list->AddRectFilled(ImVec2{ x, y }, ImVec2{ x + scale, y + scale }, white,
-                                             0.0f, ImDrawFlags_RoundCornersNone);
-                }
-                else {
-                    draw_list->AddRectFilled(ImVec2{ x, y }, ImVec2{ x + scale, y + scale }, black,
-                                             0.0f, ImDrawFlags_RoundCornersNone);
-                }
+        if (ImGui::BeginMenu("Emulator")) {
+            if (ImGui::MenuItem("Open new ROM")) {
+                show_launch_window = true;
             }
+            if (ImGui::MenuItem("Settings")) {
+                show_emu_settings = true;
+            }
+
+            if (ImGui::MenuItem("Debugger")) {
+                show_debugger = true;
+            }
+
+            ImGui::EndMenu();
         }
 
-        ImGui::End();
-        ImGui::PopStyleVar(2);
+        if (ImGui::BeginMenu("Test")) {
+            ImGui::MenuItem("Show demo window", nullptr, &show_demo_window);
+            ImGui::EndMenu();
+        }
+
+        ImGui::EndMainMenuBar();
     }
 
-    // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+    if (show_emu_settings) {
+        show_emu_settings = emulator_settings();
+    }
+
+    if (show_debugger) {
+        show_debugger = debugger_window();
+    }
+
+    if (show_launch_window) {
+        show_launch_window = launch_settings();
+    }
+
+    game_window();
+
+    /* // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
     {
 
         ImGui::Begin("chip8emu"); // Create a window called "Hello, world!" and append into it.
@@ -228,6 +465,9 @@ void GUI::prepare_imgui() {
                     debugger.analyze();
                 }
                 ImGui::Text("%.3f fps", ImGui::GetIO().Framerate);
+                if (ImGui::Button("select rom")) {
+                    filebrowser.Open();
+                }
                 ImGui::EndTabItem();
             }
 
@@ -332,13 +572,12 @@ void GUI::prepare_imgui() {
         }
 
         ImGui::End();
-    }
+
+        
+    } */
 }
 
 void GUI::draw() {
-
-    // update our current screen size
-    SDL_GetWindowSize(window, &size_x, &size_y);
 
     ImGui_ImplSDLRenderer_NewFrame();
     ImGui_ImplSDL2_NewFrame(window);
@@ -366,13 +605,11 @@ void GUI::handle_input() {
         auto& io = ImGui::GetIO();
 
         if (event.type == SDL_QUIT) {
-            done   = true;
-            paused = true;
+            done = true;
         }
         if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE &&
             event.window.windowID == SDL_GetWindowID(window)) {
-            done   = true;
-            paused = true;
+            done = true;
         }
 
         if (!io.WantCaptureKeyboard) {
@@ -408,7 +645,7 @@ void GUI::run() {
     std::thread thread(gfx_thread, std::move(signal));
 
     while (!done) {
-        while (!paused) {
+        while (!debugger.is_paused() && emu.is_ready) {
             emu.cycle();
         }
         std::this_thread::sleep_for(100ms);

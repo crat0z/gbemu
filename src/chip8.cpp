@@ -7,8 +7,6 @@
 
 #include "chip8.hpp"
 
-constexpr uint16_t entry = 0x200;
-
 const uint8_t fontset[] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
     0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -28,27 +26,67 @@ const uint8_t fontset[] = {
     0xF0, 0x80, 0xF0, 0x80, 0x80 // F
 };
 
-uint16_t swap_byte_order(uint16_t s) { return (s >> 8) | (s << 8); }
+static uint16_t swap_byte_order(uint16_t s) { return (s >> 8) | (s << 8); }
 
-Chip8::Chip8(const std::string& file_name) : PC(entry) {
+Chip8::Chip8() {
     std::srand(std::time(nullptr));
-
-    read_file(file_name);
-
-    // copy font data
-    for (auto i = 0; i < 80; ++i) {
-        memory[i] = fontset[i];
-    }
+    is_ready = false;
 }
 
-void Chip8::read_file(const std::string& name) {
+void Chip8::read_file(const std::string& name, uint16_t addr) {
     std::ifstream file;
     file.open(name, std::ios_base::binary);
     file.seekg(0, std::ios::end);
     size_t size = file.tellg();
     file.seekg(0, std::ios::beg);
-    file.read(reinterpret_cast<char*>(memory.data() + entry), size);
+    file.read(reinterpret_cast<char*>(memory.data() + addr), size);
     file.close();
+}
+
+void Chip8::copy_font_data() noexcept {
+    for (auto i = 0; i < 80; ++i) {
+        memory[i] = fontset[i];
+    }
+}
+
+void Chip8::reset_state() {
+    // just in case in future
+    is_ready = false;
+
+    framebuffer = {};
+    memory      = {};
+    V           = {};
+    val         = {};
+    keys        = {};
+
+    while (!stack.empty()) {
+        stack.pop();
+    }
+
+    I  = 0;
+    PC = 0;
+
+    cycle_count = 0;
+    delay_timer = 0;
+    sound_timer = 0;
+}
+
+// creates new game, always
+void Chip8::new_game(const std::string& filepath, uint16_t addr, uint16_t entry, bool paused) {
+    using namespace std::chrono_literals;
+
+    is_ready = false;
+    std::this_thread::sleep_for(100ms);
+
+    reset_state();
+    PC = entry;
+    read_file(filepath, addr);
+
+    base_address = addr;
+    entry_point  = entry;
+
+    is_paused = paused;
+    is_ready  = true;
 }
 
 uint16_t Chip8::fetch(uint16_t addr) {
@@ -235,7 +273,6 @@ void Chip8::execute() {
             }
         }
 
-        should_draw = true;
         break;
     }
     case op::RET: {
@@ -397,7 +434,6 @@ void Chip8::execute() {
         else
             V[0xF] = 0;
 
-        should_draw = true;
         break;
     }
     case op::SKP: {
@@ -477,6 +513,7 @@ void Chip8::execute() {
     }
     }
 }
+
 void Chip8::update_timers() {
     if (delay_timer > 0) {
         delay_timer--;

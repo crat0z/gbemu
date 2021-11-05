@@ -2,15 +2,19 @@
 #include <unordered_map>
 #include <iostream>
 
-disassembler::disassembler(Chip8& p) : proc(p) {}
+Disassembler::Disassembler(Chip8& p) : proc(p) {
+    for (uint16_t i = 0; i < 4096; ++i) {
+        found_instructions[i] = Instruction(i);
+    }
+}
 
-bool disassembler::is_call(op val) {
+bool Disassembler::is_call(op val) {
     if (val == op::CALL || val == op::SYS)
         return true;
     return false;
 }
 // also checks for unknown
-bool disassembler::is_jump_or_ret(op val) {
+bool Disassembler::is_jump_or_ret(op val) {
     static std::array<op, 11> jumps = { op::JP,    op::JP_V0, op::SE_I, op::SE_R, op::SNE_I,
                                         op::SNE_R, op::SKP,   op::SKNP, op::RET,  op::UNKNOWN };
 
@@ -21,9 +25,9 @@ bool disassembler::is_jump_or_ret(op val) {
     return false;
 }
 
-void disassembler::update_references(std::shared_ptr<basic_block> old,
+void Disassembler::update_references(std::shared_ptr<basic_block> old,
                                      std::shared_ptr<basic_block> now) {
-    for (auto& bb : result) {
+    for (auto& bb : control_flow_graph) {
         if (bb->to_block_false == old) {
             bb->to_block_false = now;
         }
@@ -38,8 +42,7 @@ void disassembler::update_references(std::shared_ptr<basic_block> old,
     }
 }
 
-std::shared_ptr<basic_block> disassembler::recursive(uint16_t start_address,
-                                                     uint16_t from_address) {
+std::shared_ptr<basic_block> Disassembler::rec_cfg(uint16_t start_address, uint16_t from_address) {
     // see if we have already processed this address
     auto found = done.find(start_address);
 
@@ -47,7 +50,7 @@ std::shared_ptr<basic_block> disassembler::recursive(uint16_t start_address,
     if (found == done.end()) {
         std::shared_ptr curr = std::make_shared<basic_block>();
 
-        result.push_back(curr);
+        control_flow_graph.push_back(curr);
 
         /*
             when analyzing a new basic block, it is clear that it will at least have a point
@@ -77,7 +80,7 @@ std::shared_ptr<basic_block> disassembler::recursive(uint16_t start_address,
                 // check to see if it is a call (no branch), process it
                 if (is_call(decode(current_opcode))) {
                     auto call_address = current_opcode & 0xFFF;
-                    recursive(call_address, current_address);
+                    rec_cfg(call_address, current_address);
                 }
 
                 // go to next instruction
@@ -110,7 +113,7 @@ std::shared_ptr<basic_block> disassembler::recursive(uint16_t start_address,
         case op::JP: {
             auto jump_address = current_opcode & 0xFFF;
 
-            auto result = recursive(jump_address, current_address);
+            auto result = rec_cfg(jump_address, current_address);
 
             done[current_address]->to_block_true = result;
             return done[current_address];
@@ -134,11 +137,11 @@ std::shared_ptr<basic_block> disassembler::recursive(uint16_t start_address,
             // do in this order, in case false case is not a jump. that way,
             // we split the block
 
-            auto false_result = recursive(current_address + 2, current_address);
+            auto false_result = rec_cfg(current_address + 2, current_address);
 
             done[current_address]->to_block_false = false_result;
 
-            auto true_result = recursive(current_address + 4, current_address);
+            auto true_result = rec_cfg(current_address + 4, current_address);
 
             done[current_address]->to_block_true = true_result;
 
@@ -190,7 +193,7 @@ std::shared_ptr<basic_block> disassembler::recursive(uint16_t start_address,
             */
             auto new_block = orig_block->split(start_address);
 
-            result.push_back(new_block);
+            control_flow_graph.push_back(new_block);
 
             // add reference
             orig_block->references.emplace_back(new_block->end_address, orig_block->start_address);
@@ -207,60 +210,21 @@ std::shared_ptr<basic_block> disassembler::recursive(uint16_t start_address,
 /*
     still implementing, in particular calls will ruin things
 */
-void disassembler::analyze() {
+void Disassembler::analyze() {
 
-    /*
-        basic algorithm: starting from entry, find all basic blocks, by interpreting
-        every instruction, and starting a new basic block when met with a conditional/jump/call
+    if (!proc.is_ready)
+        return;
 
-        each basic block can have multiple ins, but only 1 or 2 outs, a struct for this might be
-        
-        struct basic_block {
-            uint16_t start_address;
-            uint16_t end_address;
-            std::vector<Instruction> instructions;
+    rec_cfg(proc.entry_point, 0);
 
-
-            std::vector<basic_block&> in;
-            // some sort of container that holds either 2 bb& or 1 bb&, not sure yet
-
-        };
-
-        since this is just to have cool call graphs and better disassembly while debugging,
-        we might want Instruction struct to look like this
-        
-        struct Instruction {
-            uint16_t address;
-            uint16_t ins;
-            op operation;
-            std::string mnemonic;
-        };
-
-        instructions that jump:
-        SYS, RET, JP, CALL, SE, SNE, SKP, SKNP
-
-        instructions that are unconditional:
-        JP
-
-        instructions that are conditional:
-        SE, SNE, SKP, SKNP
-
-        instructons that call:
-        SYS, CALL, RET
-
-        JP can jump into the middle of a basic block, which means we'd have to break it
-        into two. then, we must contain either a list of every address we've visited, and
-        a reference to its basic block, or maybe something recursive idk
-
-        to split a basic block, we iterate over its instructions until we find the split point,
-        add the ones we've seen to a new basic block, and remove them from the original, adjusting
-        start/end address and ins/outs appropriately
-    */
-
-    recursive(0x200, 0);
-
-    std::sort(result.begin(), result.end(),
+    std::sort(control_flow_graph.begin(), control_flow_graph.end(),
               [](std::shared_ptr<basic_block> lhs, std::shared_ptr<basic_block> rhs) {
                   return (lhs->start_address < rhs->start_address);
               });
+
+    for (auto bb : control_flow_graph) {
+        for (auto& i : bb->instructions) {
+            found_instructions[i.address] = i;
+        }
+    }
 }

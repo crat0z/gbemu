@@ -16,6 +16,9 @@ struct Instruction {
 
     Instruction() = default;
 
+    Instruction(uint16_t addr)
+            : address{ addr }, opcode{ 0 }, operation{ op::UNKNOWN }, mnemonic{ "" } {}
+
     Instruction(uint16_t addr, uint16_t opc)
             : address{ addr },
               opcode{ opc },
@@ -115,7 +118,7 @@ struct basic_block {
     }
 };
 
-class disassembler {
+class Disassembler {
 
     std::unordered_map<uint16_t, std::shared_ptr<basic_block>> done;
 
@@ -126,12 +129,14 @@ class disassembler {
     bool is_jump_or_ret(op val);
     bool is_call(op val);
 
-    std::shared_ptr<basic_block> recursive(uint16_t start_address, uint16_t from_address);
+    std::shared_ptr<basic_block> rec_cfg(uint16_t start_address, uint16_t from_address);
 
 public:
-    std::vector<std::shared_ptr<basic_block>> result;
+    std::vector<std::shared_ptr<basic_block>> control_flow_graph;
 
-    disassembler(Chip8& p);
+    std::unordered_map<uint16_t, Instruction> found_instructions;
+
+    Disassembler(Chip8& p);
     void analyze();
 };
 

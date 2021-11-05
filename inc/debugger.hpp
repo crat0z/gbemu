@@ -22,11 +22,10 @@ class Debugger {
 
     Chip8& proc;
 
-    op          next_opcode;
+    op          next_operation;
+    uint16_t    next_opcode;
     std::string next_instruction;
     const char* next_description;
-
-    bool paused = false;
 
     void get_next_instruction() noexcept;
     void save_emu_state() noexcept;
@@ -42,19 +41,18 @@ public:
 
     Debugger(Chip8& p);
 
-    void single_step();
-
     void reset() noexcept;
-
     bool is_paused() const noexcept;
-
     void pause() noexcept;
+    void run() noexcept;
+
+    void single_step();
 
     const char* get_description() const noexcept;
 
-    const std::string& get_instruction() const noexcept;
+    const char* get_instruction() const noexcept;
 
-    void analyze();
+    uint16_t get_opcode() const noexcept;
 };
 
 #endif
