@@ -82,10 +82,11 @@ void Debugger::analyze() {
         fmt::print("\tblock start address: {0:#03x}\n\tblock end address: {1:#03x}\n",
                    block->start_address, block->end_address);
 
-        fmt::print("\treferenced by {} blocks:\n\t", block->from_blocks.size());
+        fmt::print("\t{} references:\n", block->references.size());
 
-        for (auto i = 0; i < block->from_blocks.size(); ++i) {
-            fmt::print("{0:#03x} ", block->from_blocks[i]->end_address);
+        for (auto i = 0; i < block->references.size(); ++i) {
+            fmt::print("\t\t{0:#03x} -> {1:#03x}\n", block->references[i].first,
+                       block->references[i].second);
         }
 
         fmt::print("\n\tdisassembly:\n");

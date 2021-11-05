@@ -1,5 +1,6 @@
 #include "disassembler.hpp"
 #include <unordered_map>
+#include <iostream>
 
 disassembler::disassembler(Chip8& p) : proc(p) {}
 
@@ -20,6 +21,23 @@ bool disassembler::is_jump_or_ret(op val) {
     return false;
 }
 
+void disassembler::update_references(std::shared_ptr<basic_block> old,
+                                     std::shared_ptr<basic_block> now) {
+    for (auto& bb : result) {
+        if (bb->to_block_false == old) {
+            bb->to_block_false = now;
+        }
+
+        if (bb->to_block_true == old) {
+            bb->to_block_true = now;
+        }
+
+        if (bb == old) {
+            bb = now;
+        }
+    }
+}
+
 std::shared_ptr<basic_block> disassembler::recursive(uint16_t start_address,
                                                      uint16_t from_address) {
     // see if we have already processed this address
@@ -31,15 +49,12 @@ std::shared_ptr<basic_block> disassembler::recursive(uint16_t start_address,
 
         result.push_back(curr);
 
-        curr->start_address = start_address;
-
         /*
             when analyzing a new basic block, it is clear that it will at least have a point
             where it came from, unless it is the entry/call
         */
         if (from_address != 0) {
-            auto from_block = done.at(from_address);
-            curr->from_blocks.push_back(from_block);
+            curr->references.emplace_back(from_address, start_address);
         }
         // start adding instructions to this basic block
         auto current_address = start_address;
@@ -47,65 +62,64 @@ std::shared_ptr<basic_block> disassembler::recursive(uint16_t start_address,
 
         // current instruction isnt a jump, add it to list for this block
         while (!is_jump_or_ret(decode(current_opcode))) {
-            // maybe emplace_back later on
-            Instruction current_instruction;
-            current_instruction.address   = current_address;
-            current_instruction.ins       = current_opcode;
-            current_instruction.operation = decode(current_opcode);
-            current_instruction.mnemonic  = opcode_instruction(current_opcode);
-            curr->instructions.push_back(current_instruction);
 
-            /* 
-                add this current address and its associated basic block to our map
-                in case in the future, we find a basic block that jumps to here
-            */
-            done[current_address] = curr;
+            // make sure we arent overrunning into a previous block
+            auto check = done.try_emplace(current_address, curr);
+            if (check.second) {
 
-            // check to see if it is a call (no branch), process it
-            if (is_call(decode(current_opcode))) {
-                auto call_address = current_opcode & 0xFFF;
-                recursive(call_address, current_address);
+                curr->append(current_address, current_opcode);
+                /* 
+                    add this current address and its associated basic block to our map
+                    in case in the future, we find a basic block that jumps to here
+                */
+                done[current_address] = curr;
+
+                // check to see if it is a call (no branch), process it
+                if (is_call(decode(current_opcode))) {
+                    auto call_address = current_opcode & 0xFFF;
+                    recursive(call_address, current_address);
+                }
+
+                // go to next instruction
+                current_address += 2;
+                current_opcode = proc.fetch(current_address);
             }
+            else {
+                // we add a reference and end our block
+                auto other = done.at(current_address);
 
-            // go to next instruction
-            current_address += 2;
-            current_opcode = proc.fetch(current_address);
+                curr->to_block_true = other;
+                curr->end_address   = current_address - 2;
+
+                other->references.emplace_back(curr->end_address, other->start_address);
+
+                return curr;
+            }
         }
 
         // now current_opcode is a jump, add it manually
-        Instruction current_instruction;
-        current_instruction.address   = current_address;
-        current_instruction.ins       = current_opcode;
-        current_instruction.operation = decode(current_opcode);
-        current_instruction.mnemonic  = opcode_instruction(current_opcode);
-        curr->instructions.push_back(current_instruction);
+
+        curr->append(current_address, current_opcode);
         done[current_address] = curr;
 
         // this is the end for this block
         curr->end_address = current_address;
 
-        /* 
-            switch on current opcode
-            instructions that are unconditional:
-            JP
-
-            instructions that are conditional:
-            SE, SNE, SKP, SKNP
-
-        */
         switch (decode(current_opcode)) {
         // for unconditional jump, we just process location
         case op::JP: {
             auto jump_address = current_opcode & 0xFFF;
 
-            curr->to_block_true = recursive(jump_address, current_address);
-            return curr;
+            auto result = recursive(jump_address, current_address);
+
+            done[current_address]->to_block_true = result;
+            return done[current_address];
         }
         // indirect jump and unknown opcodes kinda just screw it up..
         case op::UNKNOWN:
         case op::JP_V0:
         case op::RET: {
-            return curr;
+            return done[current_address];
         }
         /* 
             conditionals all work same way: skip next instruction if true
@@ -117,9 +131,18 @@ std::shared_ptr<basic_block> disassembler::recursive(uint16_t start_address,
         case op::SNE_R:
         case op::SKP:
         case op::SKNP: {
-            curr->to_block_true  = recursive(current_address + 4, current_address);
-            curr->to_block_false = recursive(current_address + 2, current_address);
-            return curr;
+            // do in this order, in case false case is not a jump. that way,
+            // we split the block
+
+            auto false_result = recursive(current_address + 2, current_address);
+
+            done[current_address]->to_block_false = false_result;
+
+            auto true_result = recursive(current_address + 4, current_address);
+
+            done[current_address]->to_block_true = true_result;
+
+            return done[current_address];
         }
         }
     }
@@ -129,9 +152,9 @@ std::shared_ptr<basic_block> disassembler::recursive(uint16_t start_address,
 
         auto from_block = done.at(from_address);
 
-        // if we're jumping to start of block, just add from_block to from_blocks
+        // if we're jumping to start of block, just add a reference from_address to start_address
         if (orig_block->start_address == start_address) {
-            orig_block->from_blocks.push_back(from_block);
+            orig_block->references.emplace_back(from_address, start_address);
             return orig_block;
         }
         else {
@@ -165,31 +188,17 @@ std::shared_ptr<basic_block> disassembler::recursive(uint16_t start_address,
 
                 
             */
-            std::shared_ptr new_block = std::make_shared<basic_block>();
+            auto new_block = orig_block->split(start_address);
 
-            // new block's start is original's
-            new_block->start_address = orig_block->start_address;
-            // same with from_blocks
-            new_block->from_blocks = orig_block->from_blocks;
-            orig_block->from_blocks.clear();
+            result.push_back(new_block);
 
-            auto it = orig_block->instructions.begin();
-            // add new_block's instructions
-            while (it->address != start_address) {
-                // fix this to use move semantics possibly
-                new_block->instructions.push_back(*it);
-                // erase old it
-                it = orig_block->instructions.erase(it);
-                // get first one again
+            // add reference
+            orig_block->references.emplace_back(new_block->end_address, orig_block->start_address);
+
+            // make sure everything in new block points to itself in map
+            for (auto& i : new_block->instructions) {
+                done[i.address] = new_block;
             }
-
-            // new_block contains its instructions now, so we can fill out rest
-            new_block->end_address   = new_block->instructions.end()->address;
-            new_block->to_block_true = orig_block;
-
-            // fix up orig_block now
-            orig_block->start_address = orig_block->instructions.begin()->address;
-            orig_block->from_blocks.push_back(new_block);
 
             return orig_block;
         }
@@ -249,4 +258,9 @@ void disassembler::analyze() {
     */
 
     recursive(0x200, 0);
+
+    std::sort(result.begin(), result.end(),
+              [](std::shared_ptr<basic_block> lhs, std::shared_ptr<basic_block> rhs) {
+                  return (lhs->start_address < rhs->start_address);
+              });
 }
