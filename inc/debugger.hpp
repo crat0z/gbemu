@@ -39,6 +39,8 @@ public:
     bool dt_change = false;
     bool st_change = false;
 
+    std::array<bool, 4096> breakpoints = {};
+
     Debugger(Chip8& p);
 
     void reset() noexcept;
@@ -53,6 +55,8 @@ public:
     const char* get_instruction() const noexcept;
 
     uint16_t get_opcode() const noexcept;
+
+    uint16_t get_PC() const noexcept;
 };
 
 #endif

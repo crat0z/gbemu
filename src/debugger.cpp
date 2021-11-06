@@ -87,3 +87,5 @@ const char* Debugger::get_description() const noexcept { return next_description
 const char* Debugger::get_instruction() const noexcept { return next_instruction.c_str(); }
 
 uint16_t Debugger::get_opcode() const noexcept { return next_opcode; }
+
+uint16_t Debugger::get_PC() const noexcept { return proc.PC; }

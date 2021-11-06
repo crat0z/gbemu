@@ -215,6 +215,9 @@ void Disassembler::analyze() {
     if (!proc.is_ready)
         return;
 
+    control_flow_graph.clear();
+    done.clear();
+
     rec_cfg(proc.entry_point, 0);
 
     std::sort(control_flow_graph.begin(), control_flow_graph.end(),

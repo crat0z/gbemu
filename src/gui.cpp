@@ -10,7 +10,7 @@
 
 #include <fmt/format.h>
 
-#include "DroidSans.hpp"
+#include "roboto_medium.hpp"
 #include "debugger.hpp"
 #include "opcodes.hpp"
 #include "disassembler.hpp"
@@ -121,7 +121,7 @@ GUI::GUI() : emu(), debugger(emu), disassembler(emu) {
     ImGui::CreateContext();
     auto& io = ImGui::GetIO();
 
-    io.Fonts->AddFontFromMemoryCompressedBase85TTF(DroidSans_compressed_data_base85, 18);
+    io.Fonts->AddFontFromMemoryCompressedBase85TTF(roboto_medium_compressed_data_base85, 20);
 
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
@@ -286,6 +286,8 @@ bool GUI::launch_settings() {
 
 bool GUI::debugger_window() {
 
+    bool disassembler_scroll = false;
+
     // two lambdas for 1 and 2 parameter red colored text when variables change
     static auto colored_text = [&](bool val, const char* fmt, uint16_t v) {
         if (val) {
@@ -345,55 +347,108 @@ bool GUI::debugger_window() {
             ImGui::EndTable();
         }
         ImGui::Separator();
-
-        if (debugger.is_paused()) {
-            ImGui::Text("Next opcode: %04X", debugger.get_opcode());
-
-            ImGui::Separator();
-
-            ImGui::Text("Next instruction: %s", debugger.get_instruction());
-
-            ImGui::Separator();
-            // static bool description_header = false;
-            if (ImGui::CollapsingHeader("Description")) {
-                ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 300.0f);
-                ImGui::Text("Description: %s", debugger.get_description());
-            }
-        }
-
-        if (ImGui::Button("pause")) {
-            debugger.pause();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("step")) {
-            debugger.single_step();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("run")) {
-            debugger.run();
-        }
     }
     ImGui::End();
 
-    ImGui::Begin("Disassembler", &open);
+    ImGui::Begin("Disassembler", &open, ImGuiWindowFlags_NoScrollbar);
 
     // disassembly view
     {
 
         if (ImGui::Button("Refresh")) {
             disassembler.analyze();
+            disassembler_scroll = true;
         }
 
-        for (uint16_t i = 0; i < 2048; ++i) {
+        ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY |
+                                ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable |
+                                ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchProp |
+                                ImGuiTableFlags_PadOuterX;
 
-            auto& ins1 = disassembler.found_instructions[2 * i];
+        auto test = ImGui::GetWindowContentRegionMax();
 
-            if (ins1.operation != op::UNKNOWN) {
-                ImGui::Selectable(
-                        fmt::format("\t0x{0:03x}\t{1}", ins1.address, ins1.mnemonic).c_str());
+        ImVec2 outer = ImVec2(0.0f, test.y - 150.0f);
+
+        if (ImGui::BeginTable("text_table", 3, flags, outer)) {
+
+            ImGui::TableSetupScrollFreeze(0, 1);
+            ImGui::TableSetupColumn("Address");
+            ImGui::TableSetupColumn("Value");
+            ImGui::TableSetupColumn("Instruction");
+            ImGui::TableHeadersRow();
+
+            ImGuiListClipper clipper;
+            clipper.Begin(4096);
+
+            ImGui::PushStyleColor(ImGuiCol_Header, ColorFromBytes(80, 80, 80));
+
+            while (clipper.Step()) {
+                for (auto i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+                    ImGui::TableNextRow();
+
+                    auto& ins1 = disassembler.found_instructions[2 * i];
+
+                    ImGui::TableNextColumn();
+                    // show address
+                    ImGui::Text("%03X", ins1.address);
+
+                    // show opcode
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%04X", ins1.opcode);
+
+                    // show instruction
+                    ImGui::TableNextColumn();
+
+                    if (ins1.operation != op::UNKNOWN) {
+                        bool highlight = false;
+                        if (debugger.get_PC() == ins1.address) {
+                            highlight = true;
+                        }
+
+                        ImGui::Selectable(fmt::format("{0}", ins1.mnemonic).c_str(), highlight,
+                                          ImGuiSelectableFlags_SpanAllColumns);
+                        // menu for right clicks
+
+                        if (ImGui::BeginPopupContextItem()) {
+
+                            if (ImGui::Selectable(fmt::format("Add breakpoint at address 0x{0:03x}",
+                                                              ins1.address)
+                                                          .c_str())) {
+                                debugger.breakpoints[ins1.address] = true;
+                                ImGui::CloseCurrentPopup();
+                            }
+                            ImGui::EndPopup();
+                        }
+                    }
+                    else {
+                        ImGui::Selectable(fmt::format("???????", ins1.address).c_str());
+                    }
+                }
             }
-            else {
-                ImGui::Selectable(fmt::format("\t0x{0:03x}\t???????", ins1.address).c_str());
+
+            ImGui::PopStyleColor();
+
+            ImGui::EndTable();
+
+            if (ImGui::Button("Pause")) {
+                debugger.pause();
+                disassembler_scroll = true;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Step")) {
+                debugger.single_step();
+                disassembler_scroll = true;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Run")) {
+                debugger.run();
+            }
+
+            if (disassembler_scroll) {
+                // kind of annoying
+                float item_pos_y =
+                        clipper.StartPosY + clipper.ItemsHeight * (debugger.get_PC() * 0.5f);
+                ImGui::SetScrollFromPosY(item_pos_y - ImGui::GetWindowPos().y);
             }
         }
     }
@@ -408,11 +463,16 @@ void GUI::prepare_imgui() {
     static bool show_launch_window = false;
     static bool show_emu_settings  = false;
     static bool show_debugger      = false;
+    static bool show_metrics       = false;
 
     ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_AutoHideTabBar);
 
     if (show_demo_window) {
         ImGui::ShowDemoWindow(&show_demo_window);
+    }
+
+    if (show_metrics) {
+        ImGui::ShowMetricsWindow(&show_metrics);
     }
 
     if (ImGui::BeginMainMenuBar()) {
@@ -434,6 +494,7 @@ void GUI::prepare_imgui() {
 
         if (ImGui::BeginMenu("Test")) {
             ImGui::MenuItem("Show demo window", nullptr, &show_demo_window);
+            ImGui::MenuItem("Show metrics window", nullptr, &show_metrics);
             ImGui::EndMenu();
         }
 
