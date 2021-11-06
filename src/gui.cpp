@@ -2,7 +2,6 @@
 #include <cmath>
 #include <imgui_impl_sdl.h>
 #include <imgui_impl_sdlrenderer.h>
-
 #include <iostream>
 #include <thread>
 #include <future>
@@ -311,9 +310,11 @@ bool GUI::debugger_window() {
 
     ImGui::Begin("Registers");
     {
-        ImGui::Text("Registers & Timers");
+        ImGui::Text("Registers");
         // draw registers in table
-        auto table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedSame;
+        ImGui::Separator();
+        auto table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchProp;
+
         if (ImGui::BeginTable("registers", 4, table_flags)) {
             // draw registers
             for (auto row = 0; row < 4; ++row) {
@@ -330,9 +331,11 @@ bool GUI::debugger_window() {
                 }
             }
 
-            ImGui::TableNextRow();
+            ImGui::EndTable();
+        }
+        ImGui::Separator();
 
-            ImGui::TableNextColumn();
+        /* ImGui::TableNextColumn();
             colored_text(debugger.I_change, "I  0x%03X", emu.I);
 
             ImGui::TableNextColumn();
@@ -342,11 +345,7 @@ bool GUI::debugger_window() {
             colored_text(debugger.dt_change, "D  0x%02X", emu.delay_timer);
 
             ImGui::TableNextColumn();
-            colored_text(debugger.st_change, "S  0x%02X", emu.sound_timer);
-
-            ImGui::EndTable();
-        }
-        ImGui::Separator();
+            colored_text(debugger.st_change, "S  0x%02X", emu.sound_timer);*/
     }
     ImGui::End();
 
@@ -359,11 +358,27 @@ bool GUI::debugger_window() {
             disassembler.analyze();
             disassembler_scroll = true;
         }
+        ImGui::SameLine();
+        if (ImGui::Button("Pause")) {
+            debugger.pause();
+            disassembler_scroll = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Step")) {
+            debugger.single_step();
+            disassembler_scroll = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Run")) {
+            debugger.run();
+        }
+
+        ImGui::Separator();
 
         ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY |
                                 ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable |
                                 ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchProp |
-                                ImGuiTableFlags_PadOuterX;
+                                ImGuiTableFlags_PadOuterX | ImGuiTableFlags_Resizable;
 
         auto test = ImGui::GetWindowContentRegionMax();
 
@@ -378,7 +393,7 @@ bool GUI::debugger_window() {
             ImGui::TableHeadersRow();
 
             ImGuiListClipper clipper;
-            clipper.Begin(4096);
+            clipper.Begin(2048);
 
             ImGui::PushStyleColor(ImGuiCol_Header, ColorFromBytes(80, 80, 80));
 
@@ -428,28 +443,14 @@ bool GUI::debugger_window() {
 
             ImGui::PopStyleColor();
 
-            ImGui::EndTable();
-
-            if (ImGui::Button("Pause")) {
-                debugger.pause();
-                disassembler_scroll = true;
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Step")) {
-                debugger.single_step();
-                disassembler_scroll = true;
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Run")) {
-                debugger.run();
-            }
-
             if (disassembler_scroll) {
                 // kind of annoying
                 float item_pos_y =
                         clipper.StartPosY + clipper.ItemsHeight * (debugger.get_PC() * 0.5f);
                 ImGui::SetScrollFromPosY(item_pos_y - ImGui::GetWindowPos().y);
             }
+
+            ImGui::EndTable();
         }
     }
 
