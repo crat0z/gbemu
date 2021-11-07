@@ -79,7 +79,7 @@ op decode(uint16_t opcode) {
         return op::SNE_R;
     }
     case 0xA: {
-        return op::LD_I;
+        return op::LD_I2;
     }
     case 0xB: {
         return op::JP_V0;

@@ -1,11 +1,16 @@
 #include <SDL.h>
-#include <array>
-#include <vector>
 #include <imgui.h>
 #include "imgui-filebrowser/imfilebrowser.h"
 #include "chip8.hpp"
 #include "debugger.hpp"
 #include "disassembler.hpp"
+
+enum icons
+{
+    PAUSE,
+    STEP_INTO,
+    CONTINUE
+};
 
 class GUI {
 private:
@@ -15,15 +20,15 @@ private:
 
     ImGui::FileBrowser filebrowser;
 
-    bool done = false;
-
     SDL_Window*   window;
     SDL_Renderer* renderer;
 
-    std::vector<SDL_FRect> rects;
+    std::array<SDL_Texture*, 3> icon_textures;
 
     ImVec4 white_vec;
     ImVec4 black_vec;
+
+    bool done = false;
 
     void style();
 

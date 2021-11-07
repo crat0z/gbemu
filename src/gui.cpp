@@ -6,8 +6,9 @@
 #include <thread>
 #include <future>
 #include <unordered_map>
-
 #include <fmt/format.h>
+
+#include <SDL_image.h>
 
 #include "roboto_medium.hpp"
 #include "debugger.hpp"
@@ -127,6 +128,29 @@ GUI::GUI() : emu(), debugger(emu), disassembler(emu) {
 
     ImGui_ImplSDL2_InitForSDLRenderer(window);
     ImGui_ImplSDLRenderer_Init(renderer);
+
+    // load icon textures, maybe put this in a method later
+
+    const std::string pause_str =
+            "<svg width='32' height='32' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentColor'><path d='M4.5 3H6v10H4.5V3zm7 0v10H10V3h1.5z'/></svg>";
+
+    const std::string continue_str =
+            "<svg width='32' height='32' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentColor'><path fill-rule='evenodd' clip-rule='evenodd' d='M2.5 2H4v12H2.5V2zm4.936.39L6.25 3v10l1.186.61 7-5V7.39l-7-5zM12.71 8l-4.96 3.543V4.457L12.71 8z'/></svg>";
+
+    const std::string step_into_str =
+            "<svg width='32' height='32' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentColor'><path fill-rule='evenodd' clip-rule='evenodd' d='M8 9.532h.542l3.905-3.905-1.061-1.06-2.637 2.61V1H7.251v6.177l-2.637-2.61-1.061 1.06 3.905 3.905H8zm1.956 3.481a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'/></svg>";
+
+    SDL_RWops* rw_p = SDL_RWFromConstMem(pause_str.c_str(), pause_str.size());
+    SDL_RWops* rw_c = SDL_RWFromConstMem(continue_str.c_str(), continue_str.size());
+    SDL_RWops* rw_s = SDL_RWFromConstMem(step_into_str.c_str(), step_into_str.size());
+
+    SDL_Surface* p_p = IMG_Load_RW(rw_p, 1);
+    SDL_Surface* c_p = IMG_Load_RW(rw_c, 1);
+    SDL_Surface* s_p = IMG_Load_RW(rw_s, 1);
+
+    icon_textures[PAUSE]     = SDL_CreateTextureFromSurface(renderer, p_p);
+    icon_textures[CONTINUE]  = SDL_CreateTextureFromSurface(renderer, c_p);
+    icon_textures[STEP_INTO] = SDL_CreateTextureFromSurface(renderer, s_p);
 
     style();
 }
@@ -283,9 +307,16 @@ bool GUI::launch_settings() {
     return open;
 }
 
-bool GUI::debugger_window() {
+struct scroll_message {
+    uint16_t target;
+    bool     scroll;
+};
 
-    bool disassembler_scroll = false;
+bool GUI::debugger_window() {
+    // state of window, returned at end
+    bool open = true;
+
+    static scroll_message scroll;
 
     // two lambdas for 1 and 2 parameter red colored text when variables change
     static auto colored_text = [&](bool val, const char* fmt, uint16_t v) {
@@ -305,8 +336,6 @@ bool GUI::debugger_window() {
             ImGui::Text(fmt, v, x);
         }
     };
-
-    bool open = true;
 
     ImGui::Begin("Registers");
     {
@@ -335,17 +364,19 @@ bool GUI::debugger_window() {
         }
         ImGui::Separator();
 
-        /* ImGui::TableNextColumn();
-            colored_text(debugger.I_change, "I  0x%03X", emu.I);
-
+        if (ImGui::BeginTable("special registers", 2, table_flags)) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            colored_text(debugger.dt_change, "D 0x%02X", emu.delay_timer);
+            ImGui::TableNextColumn();
+            colored_text(debugger.st_change, "S 0x%02X", emu.sound_timer);
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            colored_text(debugger.I_change, "I 0x%03X", emu.I);
             ImGui::TableNextColumn();
             colored_text(debugger.PC_change, "PC 0x%03X", emu.PC);
-
-            ImGui::TableNextColumn();
-            colored_text(debugger.dt_change, "D  0x%02X", emu.delay_timer);
-
-            ImGui::TableNextColumn();
-            colored_text(debugger.st_change, "S  0x%02X", emu.sound_timer);*/
+            ImGui::EndTable();
+        }
     }
     ImGui::End();
 
@@ -356,21 +387,8 @@ bool GUI::debugger_window() {
 
         if (ImGui::Button("Refresh")) {
             disassembler.analyze();
-            disassembler_scroll = true;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Pause")) {
-            debugger.pause();
-            disassembler_scroll = true;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Step")) {
-            debugger.single_step();
-            disassembler_scroll = true;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Run")) {
-            debugger.run();
+            scroll.target = emu.PC;
+            scroll.target = true;
         }
 
         ImGui::Separator();
@@ -385,7 +403,6 @@ bool GUI::debugger_window() {
         ImVec2 outer = ImVec2(0.0f, test.y - 150.0f);
 
         if (ImGui::BeginTable("text_table", 3, flags, outer)) {
-
             ImGui::TableSetupScrollFreeze(0, 1);
             ImGui::TableSetupColumn("Address");
             ImGui::TableSetupColumn("Value");
@@ -443,14 +460,35 @@ bool GUI::debugger_window() {
 
             ImGui::PopStyleColor();
 
-            if (disassembler_scroll) {
+            if (scroll.scroll) {
                 // kind of annoying
-                float item_pos_y =
-                        clipper.StartPosY + clipper.ItemsHeight * (debugger.get_PC() * 0.5f);
+                scroll.scroll    = false;
+                float item_pos_y = clipper.StartPosY + clipper.ItemsHeight * (scroll.target * 0.5f);
                 ImGui::SetScrollFromPosY(item_pos_y - ImGui::GetWindowPos().y);
             }
 
             ImGui::EndTable();
+
+            ImGui::Separator();
+
+            if (ImGui::ImageButton(icon_textures[PAUSE], ImVec2(32, 32))) {
+                debugger.pause();
+                scroll.scroll = true;
+                scroll.target = emu.PC;
+            }
+
+            ImGui::SameLine();
+            if (ImGui::ImageButton(icon_textures[STEP_INTO], ImVec2(32, 32))) {
+                debugger.single_step();
+                scroll.scroll = true;
+                scroll.target = emu.PC;
+            }
+            ImGui::SameLine();
+            if (ImGui::ImageButton(icon_textures[CONTINUE], ImVec2(32, 32))) {
+                debugger.run();
+                scroll.scroll = true;
+                scroll.target = emu.PC;
+            }
         }
     }
 
@@ -461,7 +499,7 @@ bool GUI::debugger_window() {
 
 void GUI::prepare_imgui() {
     static bool show_demo_window   = false;
-    static bool show_launch_window = false;
+    static bool show_launch_window = true;
     static bool show_emu_settings  = false;
     static bool show_debugger      = false;
     static bool show_metrics       = false;
