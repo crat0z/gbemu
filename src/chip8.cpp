@@ -60,7 +60,7 @@ void Chip8::reset_state() {
     keys        = {};
 
     while (!stack.empty()) {
-        stack.pop();
+        stack.pop_back();
     }
 
     I  = 0;
@@ -260,7 +260,7 @@ void Chip8::execute() {
         // for call/jump instructions, we unconditionally add 2 to PC every cycle
         // so by adjusting by -2, we can skip a conditional check
     case op::SYS: {
-        stack.emplace(PC);
+        stack.emplace_back(PC);
         PC = (imm12)-2;
         break;
     }
@@ -276,12 +276,13 @@ void Chip8::execute() {
     }
     case op::RET: {
         // get last PC from stack
-        PC = stack.top();
+
+        PC = stack.back();
         /*
             currently PC points to last CALL_SUB instruction, but we unconditionally
             increment anyway
          */
-        stack.pop();
+        stack.pop_back();
         break;
     }
     case op::JP: {
@@ -290,7 +291,7 @@ void Chip8::execute() {
     }
     case op::CALL: {
         // save PC
-        stack.emplace(PC);
+        stack.emplace_back(PC);
         PC = (imm12)-2;
         break;
     }

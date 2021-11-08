@@ -111,7 +111,7 @@ void Debugger::step_over() noexcept {
 void Debugger::step_out() noexcept {
     if (is_paused()) {
         if (!proc.stack.empty()) {
-            set_destination(proc.stack.top() + 2);
+            set_destination(proc.stack.back() + 2);
             unpause();
         }
     }

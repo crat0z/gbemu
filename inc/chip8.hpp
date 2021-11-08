@@ -24,7 +24,7 @@ private:
     uint16_t I = 0;
     uint16_t PC;
 
-    std::stack<uint16_t> stack;
+    std::deque<uint16_t> stack;
 
     op operation;
 
