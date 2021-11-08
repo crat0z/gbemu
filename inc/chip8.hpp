@@ -11,24 +11,21 @@
 constexpr uint16_t CHIP8_DEFAULT_ENTRY = 0x200;
 
 class Chip8 {
-private:
-    void copy_font_data() noexcept;
 
-public:
-    std::array<std::array<bool, 64>, 32> framebuffer = {};
+private:
+    friend class Debugger;
+
+    void copy_font_data() noexcept;
 
     std::array<uint8_t, 4096> memory = {};
     std::array<uint8_t, 16>   V      = {};
+    std::array<uint8_t, 4>    val    = {};
 
     uint16_t I = 0;
     uint16_t PC;
 
-    std::array<uint8_t, 4> val  = {};
-    std::array<bool, 16>   keys = {};
-
     std::stack<uint16_t> stack;
 
-    // current operation
     op operation;
 
     uint16_t opcode;
@@ -42,7 +39,6 @@ public:
     CETimer<600> timer;
 
     bool is_ready;
-    bool is_paused;
 
     uint16_t entry_point;
     uint16_t base_address;
@@ -57,11 +53,16 @@ public:
 
     // read file on filesystem with name, write to emu memory beginning @ addr
     void read_file(const std::string& name, uint16_t addr);
+    void reset_state();
+
+public:
+    std::array<std::array<bool, 64>, 32> framebuffer = {};
+
+    std::array<bool, 16> keys = {};
 
     Chip8();
     // new game with filepath, entry and writing memory to addr
     void new_game(const std::string& filepath, uint16_t entry, uint16_t addr, bool paused);
-    void reset_state();
 };
 
 #endif

@@ -5,7 +5,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
-#include "chip8.hpp"
+#include "debugger.hpp"
 #include "opcodes.hpp"
 
 struct Instruction {
@@ -23,7 +23,7 @@ struct Instruction {
             : address{ addr },
               opcode{ opc },
               operation{ decode(opc) },
-              mnemonic{ opcode_instruction(opc) } {}
+              mnemonic{ opcode_mnemonic(opc) } {}
 };
 
 struct basic_block {
@@ -35,15 +35,10 @@ struct basic_block {
 
     // std::vector<std::shared_ptr<basic_block>> from_blocks;
     /* to_block_true is an unconditional if to_block_false does not have a value */
-    std::shared_ptr<basic_block> to_block_true;
-
+    std::shared_ptr<basic_block>                to_block_true;
     std::optional<std::shared_ptr<basic_block>> to_block_false;
 
     basic_block() = default;
-
-    bool is_indirect_jump() { return instructions.end()->operation == op::JP_V0; }
-    bool end_is_ret() { return instructions.end()->operation == op::RET; }
-    bool is_unconditional() const noexcept { return !to_block_false.has_value(); }
 
     std::shared_ptr<basic_block>                true_branch() { return to_block_true; }
     std::optional<std::shared_ptr<basic_block>> false_branch() { return to_block_true; }
@@ -122,9 +117,7 @@ class Disassembler {
 
     std::unordered_map<uint16_t, std::shared_ptr<basic_block>> done;
 
-    Chip8& proc;
-
-    void update_references(std::shared_ptr<basic_block> old, std::shared_ptr<basic_block> now);
+    Debugger& proc;
 
     bool is_jump_or_ret(op val);
     bool is_call(op val);
@@ -133,10 +126,9 @@ class Disassembler {
 
 public:
     std::vector<std::shared_ptr<basic_block>> control_flow_graph;
-
     std::unordered_map<uint16_t, Instruction> found_instructions;
 
-    Disassembler(Chip8& p);
+    Disassembler(Debugger& p);
     void analyze();
 };
 

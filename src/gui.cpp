@@ -18,16 +18,59 @@
 constexpr float X_PIXELS = 64.0;
 constexpr float Y_PIXELS = 32.0;
 
-std::unordered_map<int, uint8_t> keybinds = { { SDLK_1, 0x1 }, { SDLK_2, 0x2 }, { SDLK_3, 0x3 },
-                                              { SDLK_4, 0xC }, { SDLK_q, 0x4 }, { SDLK_w, 0x5 },
-                                              { SDLK_e, 0x6 }, { SDLK_r, 0xD }, { SDLK_a, 0x7 },
-                                              { SDLK_s, 0x8 }, { SDLK_d, 0x9 }, { SDLK_f, 0xE },
-                                              { SDLK_z, 0xA }, { SDLK_x, 0x0 }, { SDLK_c, 0xB },
-                                              { SDLK_v, 0xF } };
+constexpr float font_size = 20.0f;
+
+static std::unordered_map<int, uint8_t> keys = { { SDLK_1, 0x1 }, { SDLK_2, 0x2 }, { SDLK_3, 0x3 },
+                                                 { SDLK_4, 0xC }, { SDLK_q, 0x4 }, { SDLK_w, 0x5 },
+                                                 { SDLK_e, 0x6 }, { SDLK_r, 0xD }, { SDLK_a, 0x7 },
+                                                 { SDLK_s, 0x8 }, { SDLK_d, 0x9 }, { SDLK_f, 0xE },
+                                                 { SDLK_z, 0xA }, { SDLK_x, 0x0 }, { SDLK_c, 0xB },
+                                                 { SDLK_v, 0xF } };
+
+static const std::array<std::string, 12> svgs = {
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path d='M4.5 3H6v10H4.5V3zm7 0v10H10V3h1.5z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M8 9.532h.542l3.905-3.905-1.061-1.06-2.637 2.61V1H7.251v6.177l-2.637-2.61-1.061 1.06 3.905 3.905H8zm1.956 3.481a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M14.25 5.75v-4h-1.5v2.542c-1.145-1.359-2.911-2.209-4.84-2.209-3.177 0-5.92 2.307-6.16 5.398l-.02.269h1.501l.022-.226c.212-2.195 2.202-3.94 4.656-3.94 1.736 0 3.244.875 4.05 2.166h-2.83v1.5h4.163l.962-.975V5.75h-.004zM8 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M2.5 2H4v12H2.5V2zm4.936.39L6.25 3v10l1.186.61 7-5V7.39l-7-5zM12.71 8l-4.96 3.543V4.457L12.71 8z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M4.681 3H2V2h3.5l.5.5V6H5V4a5 5 0 1 0 4.53-.761l.302-.954A6 6 0 1 1 4.681 3z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M8 1h-.542L3.553 4.905l1.061 1.06 2.637-2.61v6.177h1.498V3.355l2.637 2.61 1.061-1.06L8.542 1H8zm1.956 12.013a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='red'><path d='M8 4c.367 0 .721.048 1.063.145a3.943 3.943 0 0 1 1.762 1.031 3.944 3.944 0 0 1 1.03 1.762c.097.34.145.695.145 1.062 0 .367-.048.721-.145 1.063a3.94 3.94 0 0 1-1.03 1.765 4.017 4.017 0 0 1-1.762 1.031C8.72 11.953 8.367 12 8 12s-.721-.047-1.063-.14a4.056 4.056 0 0 1-1.765-1.032A4.055 4.055 0 0 1 4.14 9.062 3.992 3.992 0 0 1 4 8c0-.367.047-.721.14-1.063a4.02 4.02 0 0 1 .407-.953A4.089 4.089 0 0 1 5.98 4.546a3.94 3.94 0 0 1 .957-.401A3.89 3.89 0 0 1 8 4z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M7 3.093l-5 5V8.8l5 5 .707-.707-4.146-4.147H14v-1H3.56L7.708 3.8 7 3.093z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M9 13.887l5-5V8.18l-5-5-.707.707 4.146 4.147H2v1h10.44L8.292 13.18l.707.707z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentcolor'><path fill-rule='evenodd' clip-rule='evenodd' d='M7 3.093l-5 5V8.8l5 5 .707-.707-4.146-4.147H14v-1H3.56L7.708 3.8 7 3.093z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentcolor'><path fill-rule='evenodd' clip-rule='evenodd' d='M9 13.887l5-5V8.18l-5-5-.707.707 4.146 4.147H2v1h10.44L8.292 13.18l.707.707z'/></svg>"
+};
 
 ImVec4 ColorFromBytes(uint8_t r, uint8_t g, uint8_t b) {
     return ImVec4((float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f, 1.0f);
 }
+
+enum icons
+{
+    PAUSE,
+    STEP_INTO,
+    STEP_OVER,
+    CONTINUE,
+    REFRESH,
+    STEP_OUT,
+    BREAKPOINT,
+    ARROW_LEFT,
+    ARROW_RIGHT,
+    ARROW_LEFT_INACTIVE,
+    ARROW_RIGHT_INACTIVE
+};
+
+enum windows
+{
+    METRICS_WINDOW,
+    DEMO_WINDOW,
+    LAUNCH_WINDOW,
+    DISASSEMBLER_WINDOW,
+    REGISTER_VIEW,
+    EMULATOR_SETTINGS,
+    MEMORY_VIEWER,
+    STACK_VIEWER
+};
 
 void GUI::style() {
 
@@ -107,11 +150,10 @@ void GUI::style() {
     style.WindowTitleAlign  = { 0.50f, 0.50f };
 }
 
-GUI::GUI() : emu(), debugger(emu), disassembler(emu) {
+GUI::GUI() : emu(), debugger(emu), disassembler(debugger) {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER);
 
-    SDL_WindowFlags flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI |
-                                              SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED);
+    SDL_WindowFlags flags = (SDL_WindowFlags)(SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
 
     window = SDL_CreateWindow("chip8emu", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1500, 900,
                               flags);
@@ -121,7 +163,7 @@ GUI::GUI() : emu(), debugger(emu), disassembler(emu) {
     ImGui::CreateContext();
     auto& io = ImGui::GetIO();
 
-    io.Fonts->AddFontFromMemoryCompressedBase85TTF(roboto_medium_compressed_data_base85, 20);
+    io.Fonts->AddFontFromMemoryCompressedBase85TTF(roboto_medium_compressed_data_base85, font_size);
 
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
@@ -131,26 +173,14 @@ GUI::GUI() : emu(), debugger(emu), disassembler(emu) {
 
     // load icon textures, maybe put this in a method later
 
-    const std::string pause_str =
-            "<svg width='32' height='32' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentColor'><path d='M4.5 3H6v10H4.5V3zm7 0v10H10V3h1.5z'/></svg>";
+    int i = 0;
 
-    const std::string continue_str =
-            "<svg width='32' height='32' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentColor'><path fill-rule='evenodd' clip-rule='evenodd' d='M2.5 2H4v12H2.5V2zm4.936.39L6.25 3v10l1.186.61 7-5V7.39l-7-5zM12.71 8l-4.96 3.543V4.457L12.71 8z'/></svg>";
-
-    const std::string step_into_str =
-            "<svg width='32' height='32' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentColor'><path fill-rule='evenodd' clip-rule='evenodd' d='M8 9.532h.542l3.905-3.905-1.061-1.06-2.637 2.61V1H7.251v6.177l-2.637-2.61-1.061 1.06 3.905 3.905H8zm1.956 3.481a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'/></svg>";
-
-    SDL_RWops* rw_p = SDL_RWFromConstMem(pause_str.c_str(), pause_str.size());
-    SDL_RWops* rw_c = SDL_RWFromConstMem(continue_str.c_str(), continue_str.size());
-    SDL_RWops* rw_s = SDL_RWFromConstMem(step_into_str.c_str(), step_into_str.size());
-
-    SDL_Surface* p_p = IMG_Load_RW(rw_p, 1);
-    SDL_Surface* c_p = IMG_Load_RW(rw_c, 1);
-    SDL_Surface* s_p = IMG_Load_RW(rw_s, 1);
-
-    icon_textures[PAUSE]     = SDL_CreateTextureFromSurface(renderer, p_p);
-    icon_textures[CONTINUE]  = SDL_CreateTextureFromSurface(renderer, c_p);
-    icon_textures[STEP_INTO] = SDL_CreateTextureFromSurface(renderer, s_p);
+    for (const auto& icon_svg : svgs) {
+        auto tmp         = SDL_RWFromConstMem(icon_svg.c_str(), icon_svg.size());
+        auto tmp2        = IMG_Load_RW(tmp, 1);
+        icon_textures[i] = SDL_CreateTextureFromSurface(renderer, tmp2);
+        i++;
+    }
 
     style();
 }
@@ -180,8 +210,16 @@ void GUI::game_window() {
 
     ImGuiWindowFlags win_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav |
                                  ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoCollapse |
-                                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoNav |
-                                 ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize;
+                                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDecoration |
+                                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                                 ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBringToFrontOnFocus;
+
+    auto vp = ImGui::GetMainViewport();
+
+    ImGui::SetNextWindowDockID(dock_id);
+
+    ImGui::SetNextWindowPos(vp->WorkPos, ImGuiCond_Once);
+    ImGui::SetNextWindowSize(vp->WorkSize, ImGuiCond_Once);
 
     ImGui::Begin("game window", nullptr, win_flags);
 
@@ -237,20 +275,26 @@ void GUI::game_window() {
     ImGui::PopStyleColor();
 }
 
-bool GUI::emulator_settings() {
-    bool open = true;
-    ImGui::Begin("Emulator settings", &open);
+void GUI::emulator_settings() {
+
+    ImGui::Begin("Emulator settings", &window_state[EMULATOR_SETTINGS],
+                 ImGuiWindowFlags_AlwaysAutoResize);
+
+    ImGui::Text("Colour settings");
 
     ImGui::ColorEdit4("white colour", &white_vec.x);
     ImGui::ColorEdit4("black colour", &black_vec.x);
 
+    ImGui::Separator();
+
+    ImGui::Text("Controls");
+
+    for (auto it = keys.begin(); it != keys.end(); ++it) {}
+
     ImGui::End();
-    return open;
 }
 
-bool GUI::launch_settings() {
-
-    bool open = true;
+void GUI::launch_settings() {
 
     static uint16_t entry_setting = 0x200;
     static uint16_t base_address  = 0x200;
@@ -269,7 +313,7 @@ bool GUI::launch_settings() {
         filebrowser.ClearSelected();
     }
 
-    ImGui::Begin("Launch settings", &open, launch_window_settings);
+    ImGui::Begin("Launch settings", &window_state[LAUNCH_WINDOW], launch_window_settings);
 
     if (ImGui::Button("Choose file")) {
         filebrowser.Open();
@@ -299,24 +343,19 @@ bool GUI::launch_settings() {
             debugger.pause();
         }
 
-        open = false;
+        window_state[LAUNCH_WINDOW] = false;
     }
 
     ImGui::End();
-
-    return open;
 }
 
-struct scroll_message {
-    uint16_t target;
-    bool     scroll;
-};
+void GUI::stack_viewer() {
+    ImGui::Begin("Stack view", &window_state[STACK_VIEWER]);
+    {}
+    ImGui::End();
+}
 
-bool GUI::debugger_window() {
-    // state of window, returned at end
-    bool open = true;
-
-    static scroll_message scroll;
+void GUI::register_viewer() {
 
     // two lambdas for 1 and 2 parameter red colored text when variables change
     static auto colored_text = [&](bool val, const char* fmt, uint16_t v) {
@@ -337,7 +376,7 @@ bool GUI::debugger_window() {
         }
     };
 
-    ImGui::Begin("Registers");
+    ImGui::Begin("Registers", &window_state[REGISTER_VIEW]);
     {
         ImGui::Text("Registers");
         // draw registers in table
@@ -355,8 +394,14 @@ bool GUI::debugger_window() {
 
                     auto index = row + 4 * col;
 
-                    colored_text2(debugger.reg_changes[index], "V%01x 0x%02X", (index),
-                                  emu.V[index]);
+                    // only draw coloured text if we should i.e. not while program is running
+                    if (debugger.is_readable()) {
+                        colored_text2(debugger.reg_changes[index], "V%01x 0x%02X", (index),
+                                      debugger.get_V(index));
+                    }
+                    else {
+                        ImGui::Text("V%01x 0x??", index);
+                    }
                 }
             }
 
@@ -367,49 +412,141 @@ bool GUI::debugger_window() {
         if (ImGui::BeginTable("special registers", 2, table_flags)) {
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
-            colored_text(debugger.dt_change, "D 0x%02X", emu.delay_timer);
+            colored_text(debugger.dt_change, "D 0x%02X", debugger.get_DT());
             ImGui::TableNextColumn();
-            colored_text(debugger.st_change, "S 0x%02X", emu.sound_timer);
+            colored_text(debugger.I_change, "I  0x%03X", debugger.get_I());
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
-            colored_text(debugger.I_change, "I 0x%03X", emu.I);
+            colored_text(debugger.st_change, "S 0x%02X", debugger.get_ST());
             ImGui::TableNextColumn();
-            colored_text(debugger.PC_change, "PC 0x%03X", emu.PC);
+            colored_text(debugger.PC_change, "PC 0x%03X", debugger.get_PC());
             ImGui::EndTable();
         }
     }
     ImGui::End();
+}
 
-    ImGui::Begin("Disassembler", &open, ImGuiWindowFlags_NoScrollbar);
+void GUI::memory_viewer() {
+    ImGui::Begin("Memory viewer");
+    if (ImGui::BeginTable("memory", 8)) {};
+}
+
+void GUI::disassembly() {
+
+    std::stack<uint16_t, std::vector<uint16_t>> stacker;
+
+    static uint16_t jump;
+
+    static ImGuiListClipper clipper;
+
+    static float scroll_value;
+
+    struct scrolling {
+        std::stack<float> backwards;
+        std::stack<float> forwards;
+
+        uint16_t target_addr;
+        float    target_scroll;
+
+        bool show_left() { return !backwards.empty(); }
+        bool show_right() { return !forwards.empty(); }
+
+        float fix_float(float v) {
+            if (v == 0.0f) {
+                return v += FLT_MIN;
+            }
+            else {
+                return v;
+            }
+        }
+        uint16_t fix_u16(uint16_t v) {
+            if (v == 0) {
+                return v + 1;
+            }
+            else {
+                return v;
+            }
+        }
+        // called to clear the forward stack, i.e., we've gone back, and decided
+        // to go down another path of history
+        void push() {
+
+            while (!forwards.empty())
+                forwards.pop();
+            backwards.push(fix_float(scroll_value));
+        }
+
+        // queue up a new scroll target. optionally destroys forward history we've kept
+        void queue_scroll(uint16_t addr, bool save_to_history = false) {
+            if (save_to_history) {
+                push();
+            }
+            set_value(addr);
+        }
+
+        void set_value(float v) { target_scroll = fix_float(v); }
+
+        void set_value(uint16_t v) { target_addr = fix_u16(v); }
+
+        // actually do the scrolling, call this at particular spot
+        void scroll_to_target() {
+            if (target_addr) {
+                float item_pos_y = clipper.StartPosY + clipper.ItemsHeight * (target_addr * 0.5f);
+                ImGui::SetScrollFromPosY(item_pos_y - ImGui::GetWindowPos().y);
+                target_addr = 0;
+            }
+            else if (target_scroll) {
+                ImGui::SetScrollY(target_scroll);
+                target_scroll = 0.0f;
+            }
+        }
+
+        void go_back() {
+            // get our last back point
+            float ret = backwards.top();
+            backwards.pop();
+
+            // push our current one
+            forwards.push(fix_float(scroll_value));
+
+            // make sure its not zero
+            set_value(ret);
+        }
+
+        void go_forward() {
+            float ret = forwards.top();
+            forwards.pop();
+            backwards.push(fix_float(scroll_value));
+
+            set_value(ret);
+        }
+    };
+
+    static scrolling scroller;
+
+    ImGui::Begin("Disassembler", &window_state[DISASSEMBLER_WINDOW], ImGuiWindowFlags_NoScrollbar);
 
     // disassembly view
     {
-
-        if (ImGui::Button("Refresh")) {
-            disassembler.analyze();
-            scroll.target = emu.PC;
-            scroll.target = true;
-        }
-
-        ImGui::Separator();
 
         ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY |
                                 ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable |
                                 ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchProp |
                                 ImGuiTableFlags_PadOuterX | ImGuiTableFlags_Resizable;
 
-        auto test = ImGui::GetWindowContentRegionMax();
+        auto test = ImGui::GetContentRegionMax();
 
-        ImVec2 outer = ImVec2(0.0f, test.y - 150.0f);
+        ImVec2 outer = ImVec2(0.0f, test.y - 3 * font_size);
 
-        if (ImGui::BeginTable("text_table", 3, flags, outer)) {
+        if (ImGui::BeginTable("text_table", 4, flags, outer)) {
             ImGui::TableSetupScrollFreeze(0, 1);
             ImGui::TableSetupColumn("Address");
             ImGui::TableSetupColumn("Value");
             ImGui::TableSetupColumn("Instruction");
+            ImGui::TableSetupColumn("BP");
             ImGui::TableHeadersRow();
 
-            ImGuiListClipper clipper;
+            clipper = {};
             clipper.Begin(2048);
 
             ImGui::PushStyleColor(ImGuiCol_Header, ColorFromBytes(80, 80, 80));
@@ -425,7 +562,9 @@ bool GUI::debugger_window() {
                     ImGui::Text("%03X", ins1.address);
 
                     // show opcode
+
                     ImGui::TableNextColumn();
+                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
                     ImGui::Text("%04X", ins1.opcode);
 
                     // show instruction
@@ -436,245 +575,222 @@ bool GUI::debugger_window() {
                         if (debugger.get_PC() == ins1.address) {
                             highlight = true;
                         }
-
+                        ImGui::PushID(ins1.address);
                         ImGui::Selectable(fmt::format("{0}", ins1.mnemonic).c_str(), highlight,
                                           ImGuiSelectableFlags_SpanAllColumns);
+
                         // menu for right clicks
-
                         if (ImGui::BeginPopupContextItem()) {
-
-                            if (ImGui::Selectable(fmt::format("Add breakpoint at address 0x{0:03x}",
-                                                              ins1.address)
-                                                          .c_str())) {
-                                debugger.breakpoints[ins1.address] = true;
-                                ImGui::CloseCurrentPopup();
+                            // display different text depending on if bp is set
+                            if (debugger.is_breakpoint_set(ins1.address)) {
+                                if (ImGui::Selectable(
+                                            fmt::format("Remove breakpoint at address 0x{0:03x}",
+                                                        ins1.address)
+                                                    .c_str())) {
+                                    debugger.remove_breakpoint(ins1.address);
+                                    ImGui::CloseCurrentPopup();
+                                }
                             }
+                            else {
+                                if (ImGui::Selectable(
+                                            fmt::format("Add breakpoint at address 0x{0:03x}",
+                                                        ins1.address)
+                                                    .c_str())) {
+                                    debugger.set_breakpoint(ins1.address);
+                                    ImGui::CloseCurrentPopup();
+                                }
+                            }
+                            // follow to jump target in disassembly
+                            if (is_followable(ins1.operation)) {
+                                uint16_t imm12 = ins1.opcode & 0xFFF;
+                                if (ImGui::Selectable(
+                                            fmt::format("Follow to address 0x{0:03x}", imm12)
+                                                    .c_str())) {
+                                    scroller.queue_scroll(imm12, true);
+                                    ImGui::CloseCurrentPopup();
+                                }
+                            }
+
                             ImGui::EndPopup();
                         }
+
+                        ImGui::PopID();
                     }
                     else {
-                        ImGui::Selectable(fmt::format("???????", ins1.address).c_str());
+                        ImGui::Selectable(fmt::format("???????", ins1.address).c_str(), false,
+                                          ImGuiSelectableFlags_SpanAllColumns |
+                                                  ImGuiSelectableFlags_Disabled);
+                    }
+                    // breakpoint icon
+                    ImGui::TableNextColumn();
+                    if (debugger.is_breakpoint_set(ins1.address)) {
+                        ImGui::Image(icon_textures[BREAKPOINT], ImVec2(font_size, font_size));
                     }
                 }
             }
 
             ImGui::PopStyleColor();
 
-            if (scroll.scroll) {
-                // kind of annoying
-                scroll.scroll    = false;
-                float item_pos_y = clipper.StartPosY + clipper.ItemsHeight * (scroll.target * 0.5f);
-                ImGui::SetScrollFromPosY(item_pos_y - ImGui::GetWindowPos().y);
+            // debugger tells us when we've reached a PC we should scroll to
+            if (debugger.reached_destination()) {
+                scroller.queue_scroll(debugger.get_PC());
             }
+
+            scroll_value = ImGui::GetScrollY();
+
+            scroller.scroll_to_target();
 
             ImGui::EndTable();
 
-            ImGui::Separator();
+            if (ImGui::ImageButton(icon_textures[REFRESH], ImVec2(font_size, font_size))) {
+                disassembler.analyze();
+                scroller.queue_scroll(debugger.get_entry(), true);
+            }
 
-            if (ImGui::ImageButton(icon_textures[PAUSE], ImVec2(32, 32))) {
+            ImGui::SameLine();
+
+            if (ImGui::ImageButton(icon_textures[PAUSE], ImVec2(font_size, font_size))) {
                 debugger.pause();
-                scroll.scroll = true;
-                scroll.target = emu.PC;
+                scroller.queue_scroll(debugger.get_PC(), true);
+            }
+            ImGui::SameLine();
+
+            if (ImGui::ImageButton(icon_textures[STEP_OVER], ImVec2(font_size, font_size))) {
+                debugger.step_over();
             }
 
             ImGui::SameLine();
-            if (ImGui::ImageButton(icon_textures[STEP_INTO], ImVec2(32, 32))) {
+            if (ImGui::ImageButton(icon_textures[STEP_INTO], ImVec2(font_size, font_size))) {
                 debugger.single_step();
-                scroll.scroll = true;
-                scroll.target = emu.PC;
+            }
+
+            ImGui::SameLine();
+            if (ImGui::ImageButton(icon_textures[STEP_OUT], ImVec2(font_size, font_size))) {
+                debugger.step_out();
+            }
+
+            ImGui::SameLine();
+            if (ImGui::ImageButton(icon_textures[CONTINUE], ImVec2(font_size, font_size))) {
+                debugger.continue_emu();
+            }
+
+            ImGui::SameLine();
+
+            ImGui::SetNextItemWidth(3 * font_size);
+            if (ImGui::InputScalar("", ImGuiDataType_U16, &jump, nullptr, nullptr, "%03x",
+                                   ImGuiInputTextFlags_EnterReturnsTrue)) {
+                scroller.queue_scroll(jump);
+                jump = 0;
+            }
+
+            if (scroller.show_left()) {
+                if (ImGui::ImageButton(icon_textures[ARROW_LEFT], ImVec2(font_size, font_size))) {
+                    scroller.go_back();
+                }
+            }
+            else {
+                ImGui::ImageButton(icon_textures[ARROW_LEFT_INACTIVE],
+                                   ImVec2(font_size, font_size));
             }
             ImGui::SameLine();
-            if (ImGui::ImageButton(icon_textures[CONTINUE], ImVec2(32, 32))) {
-                debugger.run();
-                scroll.scroll = true;
-                scroll.target = emu.PC;
+            if (scroller.show_right()) {
+                if (ImGui::ImageButton(icon_textures[ARROW_RIGHT], ImVec2(font_size, font_size))) {
+                    scroller.go_forward();
+                }
+            }
+            else {
+                ImGui::ImageButton(icon_textures[ARROW_RIGHT_INACTIVE],
+                                   ImVec2(font_size, font_size));
             }
         }
     }
 
     ImGui::End();
-
-    return open;
 }
 
 void GUI::prepare_imgui() {
-    static bool show_demo_window   = false;
-    static bool show_launch_window = true;
-    static bool show_emu_settings  = false;
-    static bool show_debugger      = false;
-    static bool show_metrics       = false;
 
-    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_AutoHideTabBar);
+    auto toggle = [](bool& r) { r ^= true; };
 
-    if (show_demo_window) {
-        ImGui::ShowDemoWindow(&show_demo_window);
-    }
-
-    if (show_metrics) {
-        ImGui::ShowMetricsWindow(&show_metrics);
-    }
+    dock_id = ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(),
+                                           ImGuiDockNodeFlags_AutoHideTabBar |
+                                                   ImGuiDockNodeFlags_PassthruCentralNode);
 
     if (ImGui::BeginMainMenuBar()) {
 
         if (ImGui::BeginMenu("Emulator")) {
             if (ImGui::MenuItem("Open new ROM")) {
-                show_launch_window = true;
+                toggle(window_state[LAUNCH_WINDOW]);
             }
-            if (ImGui::MenuItem("Settings")) {
-                show_emu_settings = true;
+            if (ImGui::MenuItem("Settings", nullptr, window_state[EMULATOR_SETTINGS])) {
+                toggle(window_state[EMULATOR_SETTINGS]);
             }
 
-            if (ImGui::MenuItem("Debugger")) {
-                show_debugger = true;
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Debugger")) {
+            if (ImGui::MenuItem("All windows")) {
+                window_state[REGISTER_VIEW]       = true;
+                window_state[DISASSEMBLER_WINDOW] = true;
+                window_state[STACK_VIEWER]        = true;
+            }
+            if (ImGui::MenuItem("Register view", nullptr, window_state[REGISTER_VIEW])) {
+                toggle(window_state[REGISTER_VIEW]);
+            }
+            if (ImGui::MenuItem("Disassembly", nullptr, window_state[DISASSEMBLER_WINDOW])) {
+                toggle(window_state[DISASSEMBLER_WINDOW]);
+            }
+            if (ImGui::MenuItem("Stack view", nullptr, window_state[STACK_VIEWER])) {
+                toggle(window_state[STACK_VIEWER]);
             }
 
             ImGui::EndMenu();
         }
 
         if (ImGui::BeginMenu("Test")) {
-            ImGui::MenuItem("Show demo window", nullptr, &show_demo_window);
-            ImGui::MenuItem("Show metrics window", nullptr, &show_metrics);
+            if (ImGui::MenuItem("Show demo window", nullptr, window_state[DEMO_WINDOW])) {
+                toggle(window_state[DEMO_WINDOW]);
+            }
+            if (ImGui::MenuItem("Show metrics window", nullptr, window_state[METRICS_WINDOW])) {
+                toggle(window_state[METRICS_WINDOW]);
+            }
+
             ImGui::EndMenu();
         }
 
         ImGui::EndMainMenuBar();
     }
 
-    if (show_emu_settings) {
-        show_emu_settings = emulator_settings();
-    }
-
-    if (show_debugger) {
-        show_debugger = debugger_window();
-    }
-
-    if (show_launch_window) {
-        show_launch_window = launch_settings();
-    }
-
     game_window();
 
-    /* // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-    {
+    if (window_state[DEMO_WINDOW]) {
+        ImGui::ShowDemoWindow(&window_state[DEMO_WINDOW]);
+    }
 
-        ImGui::Begin("chip8emu"); // Create a window called "Hello, world!" and append into it.
-        if (ImGui::BeginTabBar("tabs")) {
-            if (ImGui::BeginTabItem("main")) {
-                ImGui::Checkbox("pause", &paused);
-                if (ImGui::Button("analyze")) {
-                    debugger.analyze();
-                }
-                ImGui::Text("%.3f fps", ImGui::GetIO().Framerate);
-                if (ImGui::Button("select rom")) {
-                    filebrowser.Open();
-                }
-                ImGui::EndTabItem();
-            }
+    if (window_state[METRICS_WINDOW]) {
+        ImGui::ShowMetricsWindow(&window_state[METRICS_WINDOW]);
+    }
 
-            // two lambdas for 1 and 2 parameter red colored text when variables change
-            auto colored_text = [&](bool val, const char* fmt, uint16_t v) {
-                if (val) {
-                    ImGui::TextColored({ 255, 0, 0, 255 }, fmt, v);
-                }
-                else {
-                    ImGui::Text(fmt, v);
-                }
-            };
+    if (window_state[EMULATOR_SETTINGS]) {
+        emulator_settings();
+    }
 
-            auto colored_text2 = [&](bool val, const char* fmt, uint16_t v, uint16_t x) {
-                if (val) {
-                    ImGui::TextColored({ 255, 0, 0, 255 }, fmt, v, x);
-                }
-                else {
-                    ImGui::Text(fmt, v, x);
-                }
-            };
+    if (window_state[REGISTER_VIEW]) {
+        register_viewer();
+    }
 
-            if (ImGui::BeginTabItem("debugger")) {
-                ImGui::Text("Registers & Timers");
-                // draw registers in table
-                auto table_flags = ImGuiTableFlags_Borders;
-                if (ImGui::BeginTable("registers", 4, table_flags)) {
-                    // draw registers
-                    for (auto row = 0; row < 4; ++row) {
+    if (window_state[DISASSEMBLER_WINDOW]) {
+        disassembly();
+    }
 
-                        ImGui::TableNextRow();
+    if (window_state[STACK_VIEWER]) {
+        stack_viewer();
+    }
 
-                        for (auto col = 0; col < 4; ++col) {
-                            ImGui::TableSetColumnIndex(col);
-
-                            auto index = 4 * row + col;
-
-                            colored_text2(debugger.reg_changes[index], "V%02d 0x%02X", (index),
-                                          emu.V[index]);
-                        }
-                    }
-
-                    ImGui::TableNextRow();
-
-                    ImGui::TableNextColumn();
-                    colored_text(debugger.I_change, "I  0x%03X", emu.I);
-
-                    ImGui::TableNextColumn();
-                    colored_text(debugger.PC_change, "PC 0x%03X", emu.PC);
-
-                    ImGui::TableNextColumn();
-                    colored_text(debugger.dt_change, "D  0x%02X", emu.delay_timer);
-
-                    ImGui::TableNextColumn();
-                    colored_text(debugger.st_change, "S  0x%02X", emu.sound_timer);
-
-                    ImGui::EndTable();
-                }
-                ImGui::Separator();
-
-                if (paused) {
-                    ImGui::Text("Next opcode: %04X", emu.opcode);
-
-                    ImGui::Separator();
-
-                    ImGui::Text("Next instruction: %s", opcode_instruction(emu.opcode).c_str());
-
-                    ImGui::Separator();
-                    // static bool description_header = false;
-                    if (ImGui::CollapsingHeader("Description")) {
-                        ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 300.0f);
-                        ImGui::Text("Description: %s", opcode_description(decode(emu.opcode)));
-                    }
-                }
-
-                if (ImGui::Button("pause")) {
-                    debugger.reset();
-                    paused = true;
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("step")) {
-                    debugger.single_step();
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("run")) {
-                    debugger.reset();
-                    paused = false;
-                }
-
-                ImGui::EndTabItem();
-            }
-            if (ImGui::BeginTabItem("settings")) {
-                ImGui::ColorEdit4("white colour", &white_vec.x);
-                ImGui::ColorEdit4("black colour", &black_vec.x);
-                ImGui::EndTabItem();
-            }
-            if (ImGui::BeginTabItem("test")) {
-                ImGui::Checkbox("Demo Window", &show_demo_window);
-                ImGui::EndTabItem();
-            }
-            ImGui::EndTabBar();
-        }
-
-        ImGui::End();
-
-        
-    } */
+    if (window_state[LAUNCH_WINDOW]) {
+        launch_settings();
+    }
 }
 
 void GUI::draw() {
@@ -713,9 +829,9 @@ void GUI::handle_input() {
         }
 
         if (!io.WantCaptureKeyboard) {
-            auto res = keybinds.find(event.key.keysym.sym);
+            auto res = keys.find(event.key.keysym.sym);
 
-            if (res != keybinds.end()) {
+            if (res != keys.end()) {
                 if (event.type == SDL_KEYDOWN) {
                     emu.keys[res->second] = true;
                 }
@@ -745,11 +861,11 @@ void GUI::run() {
     std::thread thread(gfx_thread, std::move(signal));
 
     while (!done) {
-        while (!debugger.is_paused() && emu.is_ready) {
-            emu.cycle();
+        while (!debugger.is_paused() && debugger.is_ready()) {
+            debugger.cycle();
         }
         std::this_thread::sleep_for(100ms);
-        emu.timer.reset();
+        debugger.reset_timer();
     }
 
     // set promise value, signal to gfx thread to end

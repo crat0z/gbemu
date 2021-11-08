@@ -5,13 +5,6 @@
 #include "debugger.hpp"
 #include "disassembler.hpp"
 
-enum icons
-{
-    PAUSE,
-    STEP_INTO,
-    CONTINUE
-};
-
 class GUI {
 private:
     Chip8        emu;
@@ -23,19 +16,29 @@ private:
     SDL_Window*   window;
     SDL_Renderer* renderer;
 
-    std::array<SDL_Texture*, 3> icon_textures;
+    std::array<SDL_Texture*, 12> icon_textures;
+
+    std::array<bool, 20> window_state = {};
 
     ImVec4 white_vec;
     ImVec4 black_vec;
+
+    ImGuiID dock_id;
 
     bool done = false;
 
     void style();
 
     // various windows
-    bool emulator_settings();
-    bool debugger_window();
-    bool launch_settings();
+
+    void register_viewer();
+    void disassembly();
+    void stack_viewer();
+    void memory_viewer();
+
+    void emulator_settings();
+    void debugger_window();
+    void launch_settings();
 
     void game_window();
 

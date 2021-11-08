@@ -2,17 +2,12 @@
 #include <unordered_map>
 #include <iostream>
 
-Disassembler::Disassembler(Chip8& p) : proc(p) {
+Disassembler::Disassembler(Debugger& p) : proc(p) {
     for (uint16_t i = 0; i < 4096; ++i) {
         found_instructions[i] = Instruction(i);
     }
 }
 
-bool Disassembler::is_call(op val) {
-    if (val == op::CALL || val == op::SYS)
-        return true;
-    return false;
-}
 // also checks for unknown
 bool Disassembler::is_jump_or_ret(op val) {
     static std::array<op, 11> jumps = { op::JP,    op::JP_V0, op::SE_I, op::SE_R, op::SNE_I,
@@ -23,23 +18,6 @@ bool Disassembler::is_jump_or_ret(op val) {
             return true;
     }
     return false;
-}
-
-void Disassembler::update_references(std::shared_ptr<basic_block> old,
-                                     std::shared_ptr<basic_block> now) {
-    for (auto& bb : control_flow_graph) {
-        if (bb->to_block_false == old) {
-            bb->to_block_false = now;
-        }
-
-        if (bb->to_block_true == old) {
-            bb->to_block_true = now;
-        }
-
-        if (bb == old) {
-            bb = now;
-        }
-    }
 }
 
 std::shared_ptr<basic_block> Disassembler::rec_cfg(uint16_t start_address, uint16_t from_address) {
@@ -78,7 +56,8 @@ std::shared_ptr<basic_block> Disassembler::rec_cfg(uint16_t start_address, uint1
                 done[current_address] = curr;
 
                 // check to see if it is a call (no branch), process it
-                if (is_call(decode(current_opcode))) {
+                if (decode(current_opcode) == op::CALL || decode(current_opcode) == op::SYS) {
+
                     auto call_address = current_opcode & 0xFFF;
                     rec_cfg(call_address, current_address);
                 }
@@ -137,13 +116,10 @@ std::shared_ptr<basic_block> Disassembler::rec_cfg(uint16_t start_address, uint1
             // do in this order, in case false case is not a jump. that way,
             // we split the block
 
-            auto false_result = rec_cfg(current_address + 2, current_address);
-
+            auto false_result                     = rec_cfg(current_address + 2, current_address);
             done[current_address]->to_block_false = false_result;
-
-            auto true_result = rec_cfg(current_address + 4, current_address);
-
-            done[current_address]->to_block_true = true_result;
+            auto true_result                      = rec_cfg(current_address + 4, current_address);
+            done[current_address]->to_block_true  = true_result;
 
             return done[current_address];
         }
@@ -212,13 +188,13 @@ std::shared_ptr<basic_block> Disassembler::rec_cfg(uint16_t start_address, uint1
 */
 void Disassembler::analyze() {
 
-    if (!proc.is_ready)
+    if (!proc.is_ready())
         return;
 
     control_flow_graph.clear();
     done.clear();
 
-    rec_cfg(proc.entry_point, 0);
+    rec_cfg(proc.get_entry(), 0);
 
     std::sort(control_flow_graph.begin(), control_flow_graph.end(),
               [](std::shared_ptr<basic_block> lhs, std::shared_ptr<basic_block> rhs) {

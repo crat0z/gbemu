@@ -2,6 +2,26 @@
 #include <array>
 #include <fmt/format.h>
 
+namespace {
+    std::array<op, 10> jump_or_calls = { op::CALL, op::JP, op::JP_V0, op::SYS };
+}
+
+bool is_jump_or_call(op opcode) {
+    for (auto& x : jump_or_calls) {
+        if (x == opcode) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool is_followable(op opcode) {
+    if (opcode == op::JP_V0) {
+        return false;
+    }
+    return is_jump_or_call(opcode);
+}
+
 op decode(uint16_t opcode) {
     std::array<uint8_t, 4> val;
 
@@ -151,7 +171,7 @@ op decode(uint16_t opcode) {
     return op::UNKNOWN;
 }
 
-std::string opcode_instruction(uint16_t opcode) {
+std::string opcode_mnemonic(uint16_t opcode) {
     op o = decode(opcode);
 
     std::array<uint8_t, 4> val;
@@ -393,3 +413,5 @@ const char* opcode_description(op opcode) {
     }
     }
 }
+
+const char* opcode_description(uint16_t opcode) { return opcode_description(decode(opcode)); }

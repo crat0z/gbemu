@@ -85,8 +85,7 @@ void Chip8::new_game(const std::string& filepath, uint16_t addr, uint16_t entry,
     base_address = addr;
     entry_point  = entry;
 
-    is_paused = paused;
-    is_ready  = true;
+    is_ready = true;
 }
 
 uint16_t Chip8::fetch(uint16_t addr) {

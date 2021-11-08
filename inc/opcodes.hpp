@@ -43,10 +43,14 @@ enum class op
     LOAD // FX65 fills V0 to VX with values starting from address I
 };
 
+bool is_jump_or_call(op opcode);
+bool is_followable(op opcode);
+
 op decode(uint16_t opcode);
 
-std::string opcode_instruction(uint16_t opcode);
+std::string opcode_mnemonic(uint16_t opcode);
 
+const char* opcode_description(uint16_t opcode);
 const char* opcode_description(op opcode);
 
 #endif
