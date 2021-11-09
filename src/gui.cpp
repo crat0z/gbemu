@@ -503,13 +503,15 @@ void GUI::launch_settings() {
     ImGui::TextWrapped("file chosen: %s", last_file_name.c_str());
 
     ImGui::Separator();
+    ImGui::SetNextItemWidth(150.0f);
 
-    ImGui::InputScalar("entry point (hexadecimal)", ImGuiDataType_U16, &entry_setting, nullptr,
-                       nullptr, "%03x",
+    ImGui::InputScalar("entry point (hex)", ImGuiDataType_U16, &entry_setting, nullptr, nullptr,
+                       "%03x",
                        ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_AutoSelectAll);
+    ImGui::SetNextItemWidth(150.0f);
 
-    ImGui::InputScalar("base address (hexadecimal)", ImGuiDataType_U16, &base_address, nullptr,
-                       nullptr, "%03x",
+    ImGui::InputScalar("base address (hex)", ImGuiDataType_U16, &base_address, nullptr, nullptr,
+                       "%03x",
                        ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_AutoSelectAll);
 
     ImGui::Separator();
@@ -823,6 +825,7 @@ void GUI::disassembly() {
 
             // debugger tells us when we've reached a PC we should scroll to
             if (debugger.reached_destination()) {
+                debugger.recv_destination();
                 scroller.queue_scroll(debugger.get_PC());
             }
 
