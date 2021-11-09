@@ -1,5 +1,4 @@
 #include "gui.hpp"
-#include <cmath>
 #include <imgui_impl_sdl.h>
 #include <imgui_impl_sdlrenderer.h>
 #include <iostream>
@@ -15,140 +14,339 @@
 #include "opcodes.hpp"
 #include "disassembler.hpp"
 
-constexpr float X_PIXELS = 64.0;
-constexpr float Y_PIXELS = 32.0;
+// figure out what to do with this stuff, if anything at all. having auxillary functions
+// defined like this actually makes browsing the stuff below much better
+namespace {
+    // enums
+    enum icons
+    {
+        PAUSE,
+        STEP_INTO,
+        STEP_OVER,
+        CONTINUE,
+        REFRESH,
+        STEP_OUT,
+        BREAKPOINT,
+        ARROW_LEFT,
+        ARROW_RIGHT,
+        ARROW_LEFT_INACTIVE,
+        ARROW_RIGHT_INACTIVE
+    };
 
-constexpr float font_size = 20.0f;
+    enum windows
+    {
+        METRICS_WINDOW,
+        DEMO_WINDOW,
+        LAUNCH_WINDOW,
+        DISASSEMBLER_WINDOW,
+        REGISTER_VIEW,
+        EMULATOR_SETTINGS,
+        MEMORY_VIEWER,
+        STACK_VIEWER
+    };
 
-enum icons
-{
-    PAUSE,
-    STEP_INTO,
-    STEP_OVER,
-    CONTINUE,
-    REFRESH,
-    STEP_OUT,
-    BREAKPOINT,
-    ARROW_LEFT,
-    ARROW_RIGHT,
-    ARROW_LEFT_INACTIVE,
-    ARROW_RIGHT_INACTIVE
-};
+    // const data
+    const std::array<std::string, 12> svgs = {
+        "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path d='M4.5 3H6v10H4.5V3zm7 0v10H10V3h1.5z'/></svg>",
+        "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M8 9.532h.542l3.905-3.905-1.061-1.06-2.637 2.61V1H7.251v6.177l-2.637-2.61-1.061 1.06 3.905 3.905H8zm1.956 3.481a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'/></svg>",
+        "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M14.25 5.75v-4h-1.5v2.542c-1.145-1.359-2.911-2.209-4.84-2.209-3.177 0-5.92 2.307-6.16 5.398l-.02.269h1.501l.022-.226c.212-2.195 2.202-3.94 4.656-3.94 1.736 0 3.244.875 4.05 2.166h-2.83v1.5h4.163l.962-.975V5.75h-.004zM8 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'/></svg>",
+        "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M2.5 2H4v12H2.5V2zm4.936.39L6.25 3v10l1.186.61 7-5V7.39l-7-5zM12.71 8l-4.96 3.543V4.457L12.71 8z'/></svg>",
+        "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M4.681 3H2V2h3.5l.5.5V6H5V4a5 5 0 1 0 4.53-.761l.302-.954A6 6 0 1 1 4.681 3z'/></svg>",
+        "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M8 1h-.542L3.553 4.905l1.061 1.06 2.637-2.61v6.177h1.498V3.355l2.637 2.61 1.061-1.06L8.542 1H8zm1.956 12.013a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'/></svg>",
+        "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='red'><path d='M8 4c.367 0 .721.048 1.063.145a3.943 3.943 0 0 1 1.762 1.031 3.944 3.944 0 0 1 1.03 1.762c.097.34.145.695.145 1.062 0 .367-.048.721-.145 1.063a3.94 3.94 0 0 1-1.03 1.765 4.017 4.017 0 0 1-1.762 1.031C8.72 11.953 8.367 12 8 12s-.721-.047-1.063-.14a4.056 4.056 0 0 1-1.765-1.032A4.055 4.055 0 0 1 4.14 9.062 3.992 3.992 0 0 1 4 8c0-.367.047-.721.14-1.063a4.02 4.02 0 0 1 .407-.953A4.089 4.089 0 0 1 5.98 4.546a3.94 3.94 0 0 1 .957-.401A3.89 3.89 0 0 1 8 4z'/></svg>",
+        "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M7 3.093l-5 5V8.8l5 5 .707-.707-4.146-4.147H14v-1H3.56L7.708 3.8 7 3.093z'/></svg>",
+        "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M9 13.887l5-5V8.18l-5-5-.707.707 4.146 4.147H2v1h10.44L8.292 13.18l.707.707z'/></svg>",
+        "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentcolor'><path fill-rule='evenodd' clip-rule='evenodd' d='M7 3.093l-5 5V8.8l5 5 .707-.707-4.146-4.147H14v-1H3.56L7.708 3.8 7 3.093z'/></svg>",
+        "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentcolor'><path fill-rule='evenodd' clip-rule='evenodd' d='M9 13.887l5-5V8.18l-5-5-.707.707 4.146 4.147H2v1h10.44L8.292 13.18l.707.707z'/></svg>"
+    };
 
-enum windows
-{
-    METRICS_WINDOW,
-    DEMO_WINDOW,
-    LAUNCH_WINDOW,
-    DISASSEMBLER_WINDOW,
-    REGISTER_VIEW,
-    EMULATOR_SETTINGS,
-    MEMORY_VIEWER,
-    STACK_VIEWER
-};
+    constexpr float X_PIXELS  = 64.0;
+    constexpr float Y_PIXELS  = 32.0;
+    constexpr float font_size = 20.0f;
 
-class Keys {
-    std::vector<std::pair<SDL_Keycode, uint8_t>> keys = {
+    std::vector<std::pair<SDL_Keycode, uint8_t>> default_keymap = {
         { SDLK_1, 0x1 }, { SDLK_2, 0x2 }, { SDLK_3, 0x3 }, { SDLK_4, 0xC },
         { SDLK_q, 0x4 }, { SDLK_w, 0x5 }, { SDLK_e, 0x6 }, { SDLK_r, 0xD },
         { SDLK_a, 0x7 }, { SDLK_s, 0x8 }, { SDLK_d, 0x9 }, { SDLK_f, 0xE },
         { SDLK_z, 0xA }, { SDLK_x, 0x0 }, { SDLK_c, 0xB }, { SDLK_v, 0xF }
     };
 
-public:
-    Keys() = default;
+    class Keys {
+        std::vector<std::pair<SDL_Keycode, uint8_t>> data;
 
-    ~Keys() = default;
+    public:
+        Keys() { data = default_keymap; };
 
-    std::pair<SDL_Keycode, uint8_t>& operator[](size_t v) noexcept { return keys[v]; }
+        ~Keys() = default;
 
-    uint8_t translate_key(SDL_Keycode k) const noexcept {
-        for (auto& p : keys) {
-            if (p.first == k) {
-                return p.second;
+        // set a key from old value to a new one, returns true
+        // if successful, returns false otherwise
+        bool change_key(SDL_Keycode from, SDL_Keycode to) {
+            for (auto& v : data) {
+                if (v.first == from) {
+                    v.first = to;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        std::pair<SDL_Keycode, uint8_t>& operator[](size_t v) noexcept { return data[v]; }
+
+        std::optional<uint8_t> translate_key(SDL_Keycode k) const noexcept {
+            for (auto& p : data) {
+                if (p.first == k) {
+                    return p.second;
+                }
+            }
+            return std::nullopt;
+        }
+
+        bool contains(SDL_Keycode k) const noexcept {
+            for (auto& v : data) {
+                if (k == v.first) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        bool contains(uint8_t k) const noexcept {
+            for (auto& v : data) {
+                if (k == v.second) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // this is actually safe, since graphics and keyboard events are processed
+        // in same thread
+        void reset() noexcept {
+            data = { { SDLK_1, 0x1 }, { SDLK_2, 0x2 }, { SDLK_3, 0x3 }, { SDLK_4, 0xC },
+                     { SDLK_q, 0x4 }, { SDLK_w, 0x5 }, { SDLK_e, 0x6 }, { SDLK_r, 0xD },
+                     { SDLK_a, 0x7 }, { SDLK_s, 0x8 }, { SDLK_d, 0x9 }, { SDLK_f, 0xE },
+                     { SDLK_z, 0xA }, { SDLK_x, 0x0 }, { SDLK_c, 0xB }, { SDLK_v, 0xF } };
+        }
+
+        size_t size() const noexcept { return data.size(); }
+    };
+
+    float last_scroll_val;
+
+    struct scrolling {
+        std::stack<float> bw_history;
+        std::stack<float> fw_history;
+
+        ImGuiListClipper clipper;
+
+        uint16_t target_addr;
+        float    target_scroll;
+
+        bool show_left() { return !bw_history.empty(); }
+        bool show_right() { return !fw_history.empty(); }
+
+        float fix_float(float v) {
+            if (v == 0.0f) {
+                return v += FLT_MIN;
+            }
+            else {
+                return v;
             }
         }
-        return 0;
-    }
-
-    bool contains(SDL_Keycode k) const noexcept {
-        for (auto& v : keys) {
-            if (k == v.first) {
-                return true;
+        uint16_t fix_u16(uint16_t v) {
+            if (v == 0) {
+                return v + 1;
+            }
+            else {
+                return v;
             }
         }
-        return false;
-    }
+        // called to clear the forward stack, i.e., we've gone back, and decided
+        // to go down another path of history
+        void push() {
 
-    bool contains(uint8_t k) const noexcept {
-        for (auto& v : keys) {
-            if (k == v.second) {
-                return true;
-            }
+            while (!fw_history.empty())
+                fw_history.pop();
+            bw_history.push(fix_float(last_scroll_val));
         }
-        return false;
+
+        // queue up a new scroll target. optionally destroys forward history we've kept
+        void queue_scroll(uint16_t addr, bool save_to_history = false) {
+            if (save_to_history) {
+                push();
+            }
+            set_value(addr);
+        }
+
+        void set_value(float v) { target_scroll = fix_float(v); }
+
+        void set_value(uint16_t v) { target_addr = fix_u16(v); }
+
+        // actually do the scrolling, call this at particular spot
+        void scroll_to_target() {
+            if (target_addr) {
+                float item_pos_y = clipper.StartPosY + clipper.ItemsHeight * (target_addr * 0.5f);
+                ImGui::SetScrollFromPosY(item_pos_y - ImGui::GetWindowPos().y);
+                target_addr = 0;
+            }
+            else if (target_scroll) {
+                ImGui::SetScrollY(target_scroll);
+                target_scroll = 0.0f;
+            }
+            //reset clipper now
+            clipper = ImGuiListClipper();
+        }
+
+        void go_back() {
+            // get our last back point
+            float ret = bw_history.top();
+            bw_history.pop();
+
+            // push our current one
+            fw_history.push(fix_float(last_scroll_val));
+
+            // make sure its not zero
+            set_value(ret);
+        }
+
+        void go_forward() {
+            float ret = fw_history.top();
+            fw_history.pop();
+            bw_history.push(fix_float(last_scroll_val));
+
+            set_value(ret);
+        }
+    };
+
+    Keys keymap;
+
+    ImVec4 color_from_bytes(uint8_t r, uint8_t g, uint8_t b) {
+        return ImVec4((float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f, 1.0f);
     }
 
-    // this is actually safe, since graphics and keyboard events are processed
-    // in same thread
-    void reset() noexcept {
-        keys = { { SDLK_1, 0x1 }, { SDLK_2, 0x2 }, { SDLK_3, 0x3 }, { SDLK_4, 0xC },
-                 { SDLK_q, 0x4 }, { SDLK_w, 0x5 }, { SDLK_e, 0x6 }, { SDLK_r, 0xD },
-                 { SDLK_a, 0x7 }, { SDLK_s, 0x8 }, { SDLK_d, 0x9 }, { SDLK_f, 0xE },
-                 { SDLK_z, 0xA }, { SDLK_x, 0x0 }, { SDLK_c, 0xB }, { SDLK_v, 0xF } };
+    // centers cursor horizontally, given it knows an item size
+    void center_cursor(float item_size) {
+        auto width = ImGui::GetContentRegionAvail().x;
+        auto x     = ImGui::GetCursorPosX();
+
+        ImGui::SetCursorPosX(x + ((width - item_size) / 2.0f));
     }
 
-    size_t size() const noexcept { return keys.size(); }
-};
+    // centers text horizontally, if it knows the size.
+    void center_text_known(const char* format, float size, ...) {
 
-Keys keymap;
+        center_cursor(size);
 
-static const std::array<std::string, 12> svgs = {
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path d='M4.5 3H6v10H4.5V3zm7 0v10H10V3h1.5z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M8 9.532h.542l3.905-3.905-1.061-1.06-2.637 2.61V1H7.251v6.177l-2.637-2.61-1.061 1.06 3.905 3.905H8zm1.956 3.481a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M14.25 5.75v-4h-1.5v2.542c-1.145-1.359-2.911-2.209-4.84-2.209-3.177 0-5.92 2.307-6.16 5.398l-.02.269h1.501l.022-.226c.212-2.195 2.202-3.94 4.656-3.94 1.736 0 3.244.875 4.05 2.166h-2.83v1.5h4.163l.962-.975V5.75h-.004zM8 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M2.5 2H4v12H2.5V2zm4.936.39L6.25 3v10l1.186.61 7-5V7.39l-7-5zM12.71 8l-4.96 3.543V4.457L12.71 8z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M4.681 3H2V2h3.5l.5.5V6H5V4a5 5 0 1 0 4.53-.761l.302-.954A6 6 0 1 1 4.681 3z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M8 1h-.542L3.553 4.905l1.061 1.06 2.637-2.61v6.177h1.498V3.355l2.637 2.61 1.061-1.06L8.542 1H8zm1.956 12.013a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='red'><path d='M8 4c.367 0 .721.048 1.063.145a3.943 3.943 0 0 1 1.762 1.031 3.944 3.944 0 0 1 1.03 1.762c.097.34.145.695.145 1.062 0 .367-.048.721-.145 1.063a3.94 3.94 0 0 1-1.03 1.765 4.017 4.017 0 0 1-1.762 1.031C8.72 11.953 8.367 12 8 12s-.721-.047-1.063-.14a4.056 4.056 0 0 1-1.765-1.032A4.055 4.055 0 0 1 4.14 9.062 3.992 3.992 0 0 1 4 8c0-.367.047-.721.14-1.063a4.02 4.02 0 0 1 .407-.953A4.089 4.089 0 0 1 5.98 4.546a3.94 3.94 0 0 1 .957-.401A3.89 3.89 0 0 1 8 4z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M7 3.093l-5 5V8.8l5 5 .707-.707-4.146-4.147H14v-1H3.56L7.708 3.8 7 3.093z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M9 13.887l5-5V8.18l-5-5-.707.707 4.146 4.147H2v1h10.44L8.292 13.18l.707.707z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentcolor'><path fill-rule='evenodd' clip-rule='evenodd' d='M7 3.093l-5 5V8.8l5 5 .707-.707-4.146-4.147H14v-1H3.56L7.708 3.8 7 3.093z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentcolor'><path fill-rule='evenodd' clip-rule='evenodd' d='M9 13.887l5-5V8.18l-5-5-.707.707 4.146 4.147H2v1h10.44L8.292 13.18l.707.707z'/></svg>"
-};
+        va_list args;
+        va_start(args, size);
+        ImGui::TextV(format, args);
+        va_end(args);
+    }
 
-ImVec4 ColorFromBytes(uint8_t r, uint8_t g, uint8_t b) {
-    return ImVec4((float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f, 1.0f);
+    // centers a string
+    void center_text(const char* format) {
+        center_cursor(ImGui::CalcTextSize(format).x);
+
+        ImGui::Text(format);
+    }
+
+    void colored_centered_text_known(const ImVec4& colour, bool cond, float size,
+                                     const char* format, ...) {
+        va_list args;
+        va_start(args, format);
+
+        center_cursor(size);
+
+        if (cond) {
+            ImGui::TextColoredV(colour, format, args);
+        }
+        else {
+            ImGui::TextV(format, args);
+        }
+        va_end(args);
+    }
+
+    void colored_text(const ImVec4& colour, bool cond, const char* format, ...) {
+
+        va_list args;
+        va_start(args, format);
+        if (cond) {
+            ImGui::TextColoredV(colour, format, args);
+        }
+        else {
+            ImGui::TextV(format, args);
+        }
+        va_end(args);
+    }
+
+} // namespace
+
+GUI::GUI() : emu(), debugger(emu), disassembler(debugger) {
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER);
+
+    SDL_WindowFlags flags = (SDL_WindowFlags)(SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
+
+    window = SDL_CreateWindow("chip8emu", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1500, 900,
+                              flags);
+
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
+
+    ImGui::CreateContext();
+    auto& io = ImGui::GetIO();
+
+    io.Fonts->AddFontFromMemoryCompressedBase85TTF(roboto_medium_compressed_data_base85, font_size);
+
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+    ImGui_ImplSDL2_InitForSDLRenderer(window);
+    ImGui_ImplSDLRenderer_Init(renderer);
+
+    // load icon textures, maybe put this in a method later
+
+    int i = 0;
+
+    for (const auto& icon_svg : svgs) {
+        auto tmp         = SDL_RWFromConstMem(icon_svg.c_str(), icon_svg.size());
+        auto tmp2        = IMG_Load_RW(tmp, 1);
+        icon_textures[i] = SDL_CreateTextureFromSurface(renderer, tmp2);
+        i++;
+    }
+
+    style();
 }
 
-void CenterText(const char* str) {
-    auto width   = ImGui::GetContentRegionAvail().x;
-    auto t_width = ImGui::CalcTextSize(str).x;
+GUI::~GUI() {
+    ImGui_ImplSDLRenderer_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
 
-    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (width - t_width) / 2);
-    ImGui::Text(str);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 }
 
 void GUI::style() {
 
     // default sprite colours
-    white_vec = ColorFromBytes(200, 200, 200);
-    black_vec = ColorFromBytes(15, 15, 15);
+    white_vec = color_from_bytes(200, 200, 200);
+    black_vec = color_from_bytes(15, 15, 15);
 
     auto&   style  = ImGui::GetStyle();
     ImVec4* colors = style.Colors;
 
-    const ImVec4 bgColor          = ColorFromBytes(37, 37, 38);
-    const ImVec4 lightBgColor     = ColorFromBytes(82, 82, 85);
-    const ImVec4 veryLightBgColor = ColorFromBytes(90, 90, 95);
+    const ImVec4 bgColor          = color_from_bytes(37, 37, 38);
+    const ImVec4 lightBgColor     = color_from_bytes(82, 82, 85);
+    const ImVec4 veryLightBgColor = color_from_bytes(90, 90, 95);
 
-    const ImVec4 panelColor       = ColorFromBytes(51, 51, 55);
-    const ImVec4 panelHoverColor  = ColorFromBytes(29, 151, 236);
-    const ImVec4 panelActiveColor = ColorFromBytes(0, 119, 200);
+    const ImVec4 panelColor       = color_from_bytes(51, 51, 55);
+    const ImVec4 panelHoverColor  = color_from_bytes(29, 151, 236);
+    const ImVec4 panelActiveColor = color_from_bytes(0, 119, 200);
 
-    const ImVec4 textColor         = ColorFromBytes(255, 255, 255);
-    const ImVec4 textDisabledColor = ColorFromBytes(151, 151, 151);
-    const ImVec4 borderColor       = ColorFromBytes(78, 78, 78);
+    const ImVec4 textColor         = color_from_bytes(255, 255, 255);
+    const ImVec4 textDisabledColor = color_from_bytes(151, 151, 151);
+    const ImVec4 borderColor       = color_from_bytes(78, 78, 78);
 
     colors[ImGuiCol_Text]                 = textColor;
     colors[ImGuiCol_TextDisabled]         = textDisabledColor;
@@ -206,51 +404,6 @@ void GUI::style() {
     style.TabRounding       = 0.0f;
     style.WindowTitleAlign  = { 0.50f, 0.50f };
     style.ButtonTextAlign   = { 0.50f, 0.50f };
-}
-
-GUI::GUI() : emu(), debugger(emu), disassembler(debugger) {
-    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER);
-
-    SDL_WindowFlags flags = (SDL_WindowFlags)(SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
-
-    window = SDL_CreateWindow("chip8emu", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1500, 900,
-                              flags);
-
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
-
-    ImGui::CreateContext();
-    auto& io = ImGui::GetIO();
-
-    io.Fonts->AddFontFromMemoryCompressedBase85TTF(roboto_medium_compressed_data_base85, font_size);
-
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-
-    ImGui_ImplSDL2_InitForSDLRenderer(window);
-    ImGui_ImplSDLRenderer_Init(renderer);
-
-    // load icon textures, maybe put this in a method later
-
-    int i = 0;
-
-    for (const auto& icon_svg : svgs) {
-        auto tmp         = SDL_RWFromConstMem(icon_svg.c_str(), icon_svg.size());
-        auto tmp2        = IMG_Load_RW(tmp, 1);
-        icon_textures[i] = SDL_CreateTextureFromSurface(renderer, tmp2);
-        i++;
-    }
-
-    style();
-}
-
-GUI::~GUI() {
-    ImGui_ImplSDLRenderer_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
-    ImGui::DestroyContext();
-
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
 }
 
 void GUI::game_window() {
@@ -338,30 +491,25 @@ void GUI::emulator_settings() {
     ImGui::Begin("Emulator settings", &window_state[EMULATOR_SETTINGS],
                  ImGuiWindowFlags_AlwaysAutoResize);
 
-    CenterText("Colour settings");
+    center_text("Colour settings");
 
     ImGui::ColorEdit4("white colour", &white_vec.x);
     ImGui::ColorEdit4("black colour", &black_vec.x);
 
     ImGui::Separator();
 
-    CenterText("Controls");
+    center_text("Controls");
 
-    if (ImGui::BeginTable("all keybinds", 2,
-                          ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_NoHostExtendX,
-                          { ImGui::GetContentRegionAvailWidth() * 0.5f, 0.0f })) {
+    // table kind of overkill, since we have 1 row
+    if (ImGui::BeginTable("all keybinds", 4, ImGuiTableFlags_SizingStretchSame)) {
+        ImGui::TableNextRow();
 
-        for (auto i = 0; i < 2; ++i) {
-            if (i % 2 == 0) {
-                ImGui::TableNextRow();
-            }
-
+        for (auto i = 0; i < 4; ++i) {
             ImGui::TableNextColumn();
 
-            if (ImGui::BeginTable("keybinds", 2,
-                                  ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_Borders)) {
+            if (ImGui::BeginTable("inner", 2, ImGuiTableFlags_SizingStretchSame)) {
+                for (auto j = i; j < 16; j += 4) {
 
-                for (auto j = i * 4; j < ((i + 2) * 4); ++j) {
                     auto& k = keymap[j];
                     ImGui::TableNextRow();
 
@@ -459,14 +607,11 @@ void GUI::emulator_settings() {
                                                  0.5f);
                     ImGui::Text("%01X", k.second);
                 }
-
                 ImGui::EndTable();
             }
         }
         ImGui::EndTable();
     }
-
-    ImGui::SameLine();
 
     if (ImGui::Button("Reset to default")) {
         keymap.reset();
@@ -534,64 +679,166 @@ void GUI::launch_settings() {
 
 void GUI::stack_viewer() {
     ImGui::Begin("Stack view", &window_state[STACK_VIEWER]);
-    {}
+    {
+        auto& stack = debugger.get_stack();
+        for (auto v : stack) {
+            ImGui::Selectable(fmt::format("{0:03X}", v).c_str());
+        }
+    }
     ImGui::End();
 }
 
 void GUI::register_viewer() {
 
-    // two lambdas for 1 and 2 parameter red colored text when variables change
-    static auto colored_text = [&](bool val, const char* fmt, uint16_t v) {
-        if (val) {
-            ImGui::TextColored({ 255, 0, 0, 255 }, fmt, v);
-        }
-        else {
-            ImGui::Text(fmt, v);
-        }
+    static const float onesize    = ImGui::CalcTextSize("A").x;
+    static const float lhs_width  = ImGui::CalcTextSize("V0").x;
+    static const float rhs_width  = ImGui::CalcTextSize("FF").x;
+    static const float threesize  = ImGui::CalcTextSize("FFF").x;
+    static const float pair_width = lhs_width + rhs_width + ((lhs_width + rhs_width) / 2.0f);
+
+    auto draw_I = [&]() {
+        ImGui::TableNextColumn();
+        center_text("I");
+        ImGui::TableNextColumn();
+        colored_centered_text_known({ 255, 0, 0, 255 }, debugger.I_change, threesize, "%03X",
+                                    debugger.get_I());
     };
 
-    static auto colored_text2 = [&](bool val, const char* fmt, uint16_t v, uint16_t x) {
-        if (val) {
-            ImGui::TextColored({ 255, 0, 0, 255 }, fmt, v, x);
-        }
-        else {
-            ImGui::Text(fmt, v, x);
-        }
+    auto draw_PC = [&]() {
+        ImGui::TableNextColumn();
+        center_text("PC");
+        ImGui::TableNextColumn();
+        colored_centered_text_known({ 255, 0, 0, 255 }, debugger.PC_change, threesize, "%03X",
+                                    debugger.get_PC());
     };
 
+    auto draw_D = [&]() {
+        ImGui::TableNextColumn();
+        center_text("D");
+        ImGui::TableNextColumn();
+        colored_centered_text_known({ 255, 0, 0, 255 }, debugger.dt_change, rhs_width, "%02X",
+                                    debugger.get_DT());
+    };
+
+    auto draw_S = [&]() {
+        ImGui::TableNextColumn();
+        center_text("S");
+        ImGui::TableNextColumn();
+        colored_centered_text_known({ 255, 0, 0, 255 }, debugger.st_change, rhs_width, "%02X",
+                                    debugger.get_ST());
+    };
+
+    // we check one time to calculate how much space we will need for our pair of register/values
     ImGui::Begin("Registers", &window_state[REGISTER_VIEW]);
-    {
-        ImGui::Text("Registers");
-        // draw registers in table
-        ImGui::Separator();
-        auto table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchProp;
 
-        if (ImGui::BeginTable("registers", 4, table_flags)) {
-            // draw registers
-            for (auto row = 0; row < 4; ++row) {
+    center_text("Registers");
+    // calculate how many pairs we can draw horizontally
+    auto avail = ImGui::GetContentRegionAvail();
+    int  count = static_cast<int>(std::floor(avail.x / pair_width));
 
-                ImGui::TableNextRow();
+    if (count == 0) {
+        count = 1;
+    }
 
-                for (auto col = 0; col < 4; ++col) {
-                    ImGui::TableSetColumnIndex(col);
+    // draw outer table
+    if (ImGui::BeginTable("allregisters", count,
+                          ImGuiTableFlags_NoHostExtendX | ImGuiTableFlags_SizingStretchSame |
+                                  ImGuiTableFlags_Borders | ImGuiTableFlags_NoPadInnerX)) {
+        for (auto index = 0; index < 16; ++index) {
+            ImGui::TableNextColumn();
 
-                    auto index = row + 4 * col;
+            center_cursor(pair_width);
+            // draw each pair
+            if (ImGui::BeginTable("pair", 2,
+                                  ImGuiTableFlags_SizingStretchSame |
+                                          ImGuiTableFlags_NoHostExtendX |
+                                          ImGuiTableFlags_NoPadInnerX | ImGuiTableFlags_NoPadOuterX,
+                                  { pair_width, 0.0f })) {
+                ImGui::TableNextColumn();
+                center_text_known("V%01x", lhs_width, index);
+                ImGui::TableNextColumn();
 
-                    // only draw coloured text if we should i.e. not while program is running
-                    if (debugger.is_readable()) {
-                        colored_text2(debugger.reg_changes[index], "V%01x 0x%02X", (index),
-                                      debugger.get_V(index));
-                    }
-                    else {
-                        ImGui::Text("V%01x 0x??", index);
-                    }
+                if (debugger.is_readable()) {
+                    colored_centered_text_known({ 255, 0, 0, 255 }, debugger.reg_changes[index],
+                                                rhs_width, "%02X", debugger.get_V(index));
                 }
+                else {
+                    ImGui::Text("??");
+                }
+
+                ImGui::EndTable();
+            }
+        }
+        ImGui::EndTable();
+    }
+    // three cases, we draw vertically, horizontally, or in a table if we're square
+    // vertical case
+    if (count == 1) {
+        if (ImGui::BeginTable("special registers", 2,
+                              ImGuiTableFlags_NoHostExtendX | ImGuiTableFlags_SizingStretchSame |
+                                      ImGuiTableFlags_Borders | ImGuiTableFlags_NoPadInnerX)) {
+            draw_I();
+            draw_PC();
+            draw_D();
+            draw_S();
+            ImGui::EndTable();
+        }
+    }
+    // horizontal case
+    else if (count > 7) {
+        if (ImGui::BeginTable("special registers", 8,
+                              ImGuiTableFlags_NoHostExtendX | ImGuiTableFlags_SizingStretchSame |
+                                      ImGuiTableFlags_Borders | ImGuiTableFlags_NoPadInnerX)) {
+            draw_I();
+            draw_PC();
+            draw_D();
+            draw_S();
+            ImGui::EndTable();
+        }
+    }
+    // square
+    else {
+        if (ImGui::BeginTable("special registers", 2,
+                              ImGuiTableFlags_NoHostExtendX | ImGuiTableFlags_SizingStretchSame |
+                                      ImGuiTableFlags_Borders | ImGuiTableFlags_NoPadInnerX)) {
+            ImGui::TableNextColumn();
+            center_text("Special");
+            ImGui::TableNextColumn();
+            center_text("Timers");
+
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+
+            if (ImGui::BeginTable(
+                        "Special", 2,
+                        ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoHostExtendX |
+                                ImGuiTableFlags_NoPadInnerX | ImGuiTableFlags_NoPadOuterX)) {
+
+                draw_I();
+
+                draw_PC();
+
+                ImGui::EndTable();
+            }
+
+            ImGui::TableNextColumn();
+
+            if (ImGui::BeginTable(
+                        "Timers", 2,
+                        ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoHostExtendX |
+                                ImGuiTableFlags_NoPadInnerX | ImGuiTableFlags_NoPadOuterX)) {
+
+                draw_D();
+                draw_S();
+
+                ImGui::EndTable();
             }
 
             ImGui::EndTable();
         }
-        ImGui::Separator();
+    }
 
+    /* 
         if (ImGui::BeginTable("special registers", 2, table_flags)) {
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
@@ -605,7 +852,7 @@ void GUI::register_viewer() {
             colored_text(debugger.PC_change, "PC 0x%03X", debugger.get_PC());
             ImGui::EndTable();
         }
-    }
+    }*/
     ImGui::End();
 }
 
@@ -617,91 +864,6 @@ void GUI::memory_viewer() {
 void GUI::disassembly() {
 
     static uint16_t jump;
-
-    static ImGuiListClipper clipper;
-
-    static float scroll_value;
-
-    struct scrolling {
-        std::stack<float> backwards;
-        std::stack<float> forwards;
-
-        uint16_t target_addr;
-        float    target_scroll;
-
-        bool show_left() { return !backwards.empty(); }
-        bool show_right() { return !forwards.empty(); }
-
-        float fix_float(float v) {
-            if (v == 0.0f) {
-                return v += FLT_MIN;
-            }
-            else {
-                return v;
-            }
-        }
-        uint16_t fix_u16(uint16_t v) {
-            if (v == 0) {
-                return v + 1;
-            }
-            else {
-                return v;
-            }
-        }
-        // called to clear the forward stack, i.e., we've gone back, and decided
-        // to go down another path of history
-        void push() {
-
-            while (!forwards.empty())
-                forwards.pop();
-            backwards.push(fix_float(scroll_value));
-        }
-
-        // queue up a new scroll target. optionally destroys forward history we've kept
-        void queue_scroll(uint16_t addr, bool save_to_history = false) {
-            if (save_to_history) {
-                push();
-            }
-            set_value(addr);
-        }
-
-        void set_value(float v) { target_scroll = fix_float(v); }
-
-        void set_value(uint16_t v) { target_addr = fix_u16(v); }
-
-        // actually do the scrolling, call this at particular spot
-        void scroll_to_target() {
-            if (target_addr) {
-                float item_pos_y = clipper.StartPosY + clipper.ItemsHeight * (target_addr * 0.5f);
-                ImGui::SetScrollFromPosY(item_pos_y - ImGui::GetWindowPos().y);
-                target_addr = 0;
-            }
-            else if (target_scroll) {
-                ImGui::SetScrollY(target_scroll);
-                target_scroll = 0.0f;
-            }
-        }
-
-        void go_back() {
-            // get our last back point
-            float ret = backwards.top();
-            backwards.pop();
-
-            // push our current one
-            forwards.push(fix_float(scroll_value));
-
-            // make sure its not zero
-            set_value(ret);
-        }
-
-        void go_forward() {
-            float ret = forwards.top();
-            forwards.pop();
-            backwards.push(fix_float(scroll_value));
-
-            set_value(ret);
-        }
-    };
 
     static scrolling scroller;
 
@@ -737,30 +899,27 @@ void GUI::disassembly() {
                                     font_size);
             ImGui::TableHeadersRow();
 
-            clipper = {};
-            clipper.Begin(2048);
+            scroller.clipper.Begin(2048);
 
-            ImGui::PushStyleColor(ImGuiCol_Header, ColorFromBytes(80, 80, 80));
+            ImGui::PushStyleColor(ImGuiCol_Header, color_from_bytes(80, 80, 80));
 
-            while (clipper.Step()) {
-                for (auto i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+            while (scroller.clipper.Step()) {
+                for (auto i = scroller.clipper.DisplayStart; i < scroller.clipper.DisplayEnd; i++) {
                     ImGui::TableNextRow();
 
                     auto& ins1 = disassembler.found_instructions[2 * i];
 
                     ImGui::TableNextColumn();
                     // show address
-                    ImGui::Text("%03X", ins1.address);
+                    center_text_known("%03X", t3_width, ins1.address);
 
                     // show opcode
 
                     ImGui::TableNextColumn();
-                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
-                    ImGui::Text("%04X", ins1.opcode);
+                    center_text_known("%04X", t4_width, ins1.opcode);
 
                     // show instruction
                     ImGui::TableNextColumn();
-
                     if (ins1.operation != op::UNKNOWN) {
                         bool highlight = false;
                         if (debugger.get_PC() == ins1.address) {
@@ -828,9 +987,9 @@ void GUI::disassembly() {
                 debugger.recv_destination();
                 scroller.queue_scroll(debugger.get_PC());
             }
-
-            scroll_value = ImGui::GetScrollY();
-
+            // save last_scroll_val in case we scroll next frame
+            last_scroll_val = ImGui::GetScrollY();
+            // scroll now to any targets we might have
             scroller.scroll_to_target();
 
             ImGui::EndTable();
@@ -1023,13 +1182,16 @@ void GUI::handle_input() {
 
         if (!io.WantCaptureKeyboard) {
             auto input_key = event.key.keysym.sym;
-            if (keymap.contains(input_key)) {
+
+            auto mapping = keymap.translate_key(input_key);
+
+            if (mapping.has_value()) {
 
                 if (event.type == SDL_KEYDOWN) {
-                    emu.keys[keymap.translate_key(input_key)] = true;
+                    emu.keys[*mapping] = true;
                 }
                 else if (event.type == SDL_KEYUP) {
-                    emu.keys[keymap.translate_key(input_key)] = false;
+                    emu.keys[*mapping] = false;
                 }
             }
         }

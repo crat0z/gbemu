@@ -7,34 +7,7 @@
 #include <string>
 #include "timer.hpp"
 #include "opcodes.hpp"
-
-class InspectableStack {
-
-    std::vector<uint16_t> stack;
-
-public:
-    InspectableStack() = default;
-
-    size_t size() const noexcept { return stack.size(); }
-
-    void push_back(uint16_t val) noexcept { stack.push_back(val); }
-
-    uint16_t pop_back() noexcept {
-        auto ret = stack.back();
-        stack.pop_back();
-        return ret;
-    }
-
-    uint16_t& back() noexcept { return stack.back(); }
-
-    void emplace_back(uint16_t val) noexcept { stack.emplace_back(val); }
-
-    uint16_t& operator[](size_t index) noexcept { return stack[index]; }
-
-    bool empty() const noexcept { return stack.empty(); }
-};
-
-constexpr uint16_t CHIP8_DEFAULT_ENTRY = 0x200;
+#include "stack.hpp"
 
 class Chip8 {
 
@@ -50,7 +23,7 @@ private:
     uint16_t I = 0;
     uint16_t PC;
 
-    InspectableStack stack;
+    Stack stack;
 
     op operation;
 

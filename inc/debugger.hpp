@@ -48,6 +48,8 @@ public:
 
     Debugger(Chip8& p);
 
+    Stack& get_stack() const noexcept;
+
     uint16_t get_V(uint8_t reg) const noexcept;
     void     set_V(uint8_t reg, uint8_t val) const noexcept;
 

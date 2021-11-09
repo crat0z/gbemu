@@ -12,28 +12,40 @@ struct Instruction {
     uint16_t    address;
     uint16_t    opcode;
     op          operation;
+    uint8_t     length;
     std::string mnemonic;
 
     Instruction() = default;
 
-    Instruction(uint16_t addr)
-            : address{ addr }, opcode{ 0 }, operation{ op::UNKNOWN }, mnemonic{ "" } {}
+    Instruction(const Instruction& rhs) = default;
+    Instruction& operator=(const Instruction& rhs) = default;
 
+    Instruction(Instruction&& rhs) = default;
+    Instruction& operator=(Instruction&& rhs) = default;
+
+    ~Instruction() = default;
+
+    Instruction(uint16_t addr)
+            : address{ addr }, opcode{ 0 }, operation{ op::UNKNOWN }, length{ 0 }, mnemonic{ "" } {}
+
+    // length = 2 always at this point, change in future
     Instruction(uint16_t addr, uint16_t opc)
             : address{ addr },
               opcode{ opc },
               operation{ decode(opc) },
+              length{ 2 },
               mnemonic{ opcode_mnemonic(opc) } {}
 };
 
 struct basic_block {
-    uint16_t                 start_address;
-    uint16_t                 end_address;
-    std::vector<Instruction> instructions;
+    uint16_t start_address;
+    uint16_t end_address;
 
+    std::vector<Instruction> instructions;
+    // references are pairs of from_address, to_address where to_address
+    // is always within the range of this basic block
     std::vector<std::pair<uint16_t, uint16_t>> references;
 
-    // std::vector<std::shared_ptr<basic_block>> from_blocks;
     /* to_block_true is an unconditional if to_block_false does not have a value */
     std::shared_ptr<basic_block>                to_block_true;
     std::optional<std::shared_ptr<basic_block>> to_block_false;
@@ -43,13 +55,25 @@ struct basic_block {
     std::shared_ptr<basic_block>                true_branch() { return to_block_true; }
     std::optional<std::shared_ptr<basic_block>> false_branch() { return to_block_true; }
 
-    // append an instruction
-    void append(uint16_t addr, uint16_t opc) {
-        if (instructions.size() == 0) {
-            start_address = addr;
+    void add_reference(uint16_t from_address, uint16_t to_address) {
+        // make sure that this is a valid reference
+        for (auto& ins : instructions) {
+            if (ins.address == to_address) {
+                references.emplace_back(from_address, to_address);
+            }
         }
-        instructions.emplace_back(addr, opc);
-        end_address = addr;
+    }
+
+    // append an instruction
+    void append(uint16_t addr, uint16_t opc) { append(Instruction(addr, opc)); }
+
+    // append an instruction rvalue
+    void append(Instruction&& rv) {
+        if (instructions.size() == 0) {
+            start_address = rv.address;
+        }
+        end_address = rv.address;
+        instructions.emplace_back(rv);
     }
 
     // "merge" or consume another basic block, appending all of
@@ -73,15 +97,15 @@ struct basic_block {
     }
 
     // split THIS block into two, starting from given address
-    // returns a basic block, containing the instructions before the split point
-    // since this is a member function, splitting requires caller to add reference
-    // from new to original.
-    std::shared_ptr<basic_block> split(uint16_t split_address) {
+    // returns a basic block, containing the instructions before the split point.
+    // second parameter is necessary so split can link new block to this block post split
+    std::shared_ptr<basic_block> split(uint16_t                     split_address,
+                                       std::shared_ptr<basic_block> this_ptr) {
 
         std::shared_ptr new_block = std::make_shared<basic_block>();
 
         // new block's start is original's
-        new_block->start_address = start_address;
+        new_block->start_address = this->start_address;
 
         // take all of the instructions before split point
         auto it = instructions.begin();
@@ -94,7 +118,7 @@ struct basic_block {
         // copy all of the necessary references
         for (auto& p : references) {
             if (p.second < split_address) {
-                new_block->references.emplace_back(p);
+                new_block->add_reference(p.first, p.second);
             }
         }
 
@@ -104,10 +128,17 @@ struct basic_block {
                          references.end());
 
         // new_block contains its instructions now, so we can fill out rest
+        // FIXME LOGIC hardcoded difference of 2
         new_block->end_address = split_address - 2;
 
         // fix up orig_block now
-        start_address = split_address;
+        this->start_address = split_address;
+
+        // add a reference from new_block to orig_block
+        this->add_reference(new_block->end_address, this->start_address);
+
+        // our new_block now has unconditional jump
+        new_block->to_block_true = this_ptr;
 
         return new_block;
     }
@@ -115,12 +146,7 @@ struct basic_block {
 
 class Disassembler {
 
-    std::unordered_map<uint16_t, std::shared_ptr<basic_block>> done;
-
     Debugger& proc;
-
-    bool is_jump_or_ret(op val);
-    bool is_call(op val);
 
     std::shared_ptr<basic_block> rec_cfg(uint16_t start_address, uint16_t from_address);
 

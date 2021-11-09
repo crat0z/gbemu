@@ -1,23 +1,26 @@
 #include "disassembler.hpp"
 #include <unordered_map>
-#include <iostream>
+
+namespace {
+
+    std::unordered_map<uint16_t, std::shared_ptr<basic_block>> done;
+
+    bool is_jump_or_ret(op val) {
+        static std::array<op, 11> jumps = { op::JP,    op::JP_V0, op::SE_I, op::SE_R, op::SNE_I,
+                                            op::SNE_R, op::SKP,   op::SKNP, op::RET,  op::UNKNOWN };
+
+        for (auto j : jumps) {
+            if (j == val)
+                return true;
+        }
+        return false;
+    }
+} // namespace
 
 Disassembler::Disassembler(Debugger& p) : proc(p) {
     for (uint16_t i = 0; i < 4096; ++i) {
         found_instructions[i] = Instruction(i);
     }
-}
-
-// also checks for unknown
-bool Disassembler::is_jump_or_ret(op val) {
-    static std::array<op, 11> jumps = { op::JP,    op::JP_V0, op::SE_I, op::SE_R, op::SNE_I,
-                                        op::SNE_R, op::SKP,   op::SKNP, op::RET,  op::UNKNOWN };
-
-    for (auto j : jumps) {
-        if (j == val)
-            return true;
-    }
-    return false;
 }
 
 std::shared_ptr<basic_block> Disassembler::rec_cfg(uint16_t start_address, uint16_t from_address) {
@@ -35,7 +38,7 @@ std::shared_ptr<basic_block> Disassembler::rec_cfg(uint16_t start_address, uint1
             where it came from, unless it is the entry/call
         */
         if (from_address != 0) {
-            curr->references.emplace_back(from_address, start_address);
+            curr->add_reference(from_address, start_address);
         }
         // start adding instructions to this basic block
         auto current_address = start_address;
@@ -48,7 +51,7 @@ std::shared_ptr<basic_block> Disassembler::rec_cfg(uint16_t start_address, uint1
             auto check = done.try_emplace(current_address, curr);
             if (check.second) {
 
-                curr->append(current_address, current_opcode);
+                Instruction ins(current_address, current_opcode);
                 /* 
                     add this current address and its associated basic block to our map
                     in case in the future, we find a basic block that jumps to here
@@ -63,7 +66,8 @@ std::shared_ptr<basic_block> Disassembler::rec_cfg(uint16_t start_address, uint1
                 }
 
                 // go to next instruction
-                current_address += 2;
+                current_address += ins.length;
+                curr->append(std::move(ins));
                 current_opcode = proc.fetch(current_address);
             }
             else {
@@ -71,9 +75,10 @@ std::shared_ptr<basic_block> Disassembler::rec_cfg(uint16_t start_address, uint1
                 auto other = done.at(current_address);
 
                 curr->to_block_true = other;
-                curr->end_address   = current_address - 2;
+                // FIXME figure out this and below
+                curr->end_address = current_address - 2;
 
-                other->references.emplace_back(curr->end_address, other->start_address);
+                other->add_reference(curr->end_address, other->start_address);
 
                 return curr;
             }
@@ -97,16 +102,7 @@ std::shared_ptr<basic_block> Disassembler::rec_cfg(uint16_t start_address, uint1
             done[current_address]->to_block_true = result;
             return done[current_address];
         }
-        // indirect jump and unknown opcodes kinda just screw it up..
-        case op::UNKNOWN:
-        case op::JP_V0:
-        case op::RET: {
-            return done[current_address];
-        }
-        /* 
-            conditionals all work same way: skip next instruction if true
-            then, true path is current_address + 4, false path is + 2
-        */
+
         case op::SE_I:
         case op::SE_R:
         case op::SNE_I:
@@ -123,17 +119,28 @@ std::shared_ptr<basic_block> Disassembler::rec_cfg(uint16_t start_address, uint1
 
             return done[current_address];
         }
+
+        // indirect jump and unknown opcodes kinda just screw it up..
+        case op::UNKNOWN:
+        case op::JP_V0:
+        case op::RET:
+        // nothing should ever hit default case, its just to make compiler happy, since
+        // decode will return op::UNKNOWN in any case
+        default: {
+            return done[current_address];
+        }
         }
     }
-    // otherwise, we're jumping into a basic block already processed/or is being processed
+    // otherwise, we're jumping into a basic block already processed
     else {
         auto orig_block = done.at(start_address);
 
+        // always true in this case
         auto from_block = done.at(from_address);
 
         // if we're jumping to start of block, just add a reference from_address to start_address
         if (orig_block->start_address == start_address) {
-            orig_block->references.emplace_back(from_address, start_address);
+            orig_block->add_reference(from_address, start_address);
             return orig_block;
         }
         else {
@@ -167,12 +174,9 @@ std::shared_ptr<basic_block> Disassembler::rec_cfg(uint16_t start_address, uint1
 
                 
             */
-            auto new_block = orig_block->split(start_address);
+            auto new_block = orig_block->split(start_address, orig_block);
 
             control_flow_graph.push_back(new_block);
-
-            // add reference
-            orig_block->references.emplace_back(new_block->end_address, orig_block->start_address);
 
             // make sure everything in new block points to itself in map
             for (auto& i : new_block->instructions) {
