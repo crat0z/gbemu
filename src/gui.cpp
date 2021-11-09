@@ -20,31 +20,6 @@ constexpr float Y_PIXELS = 32.0;
 
 constexpr float font_size = 20.0f;
 
-static std::unordered_map<int, uint8_t> keys = { { SDLK_1, 0x1 }, { SDLK_2, 0x2 }, { SDLK_3, 0x3 },
-                                                 { SDLK_4, 0xC }, { SDLK_q, 0x4 }, { SDLK_w, 0x5 },
-                                                 { SDLK_e, 0x6 }, { SDLK_r, 0xD }, { SDLK_a, 0x7 },
-                                                 { SDLK_s, 0x8 }, { SDLK_d, 0x9 }, { SDLK_f, 0xE },
-                                                 { SDLK_z, 0xA }, { SDLK_x, 0x0 }, { SDLK_c, 0xB },
-                                                 { SDLK_v, 0xF } };
-
-static const std::array<std::string, 12> svgs = {
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path d='M4.5 3H6v10H4.5V3zm7 0v10H10V3h1.5z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M8 9.532h.542l3.905-3.905-1.061-1.06-2.637 2.61V1H7.251v6.177l-2.637-2.61-1.061 1.06 3.905 3.905H8zm1.956 3.481a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M14.25 5.75v-4h-1.5v2.542c-1.145-1.359-2.911-2.209-4.84-2.209-3.177 0-5.92 2.307-6.16 5.398l-.02.269h1.501l.022-.226c.212-2.195 2.202-3.94 4.656-3.94 1.736 0 3.244.875 4.05 2.166h-2.83v1.5h4.163l.962-.975V5.75h-.004zM8 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M2.5 2H4v12H2.5V2zm4.936.39L6.25 3v10l1.186.61 7-5V7.39l-7-5zM12.71 8l-4.96 3.543V4.457L12.71 8z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M4.681 3H2V2h3.5l.5.5V6H5V4a5 5 0 1 0 4.53-.761l.302-.954A6 6 0 1 1 4.681 3z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M8 1h-.542L3.553 4.905l1.061 1.06 2.637-2.61v6.177h1.498V3.355l2.637 2.61 1.061-1.06L8.542 1H8zm1.956 12.013a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='red'><path d='M8 4c.367 0 .721.048 1.063.145a3.943 3.943 0 0 1 1.762 1.031 3.944 3.944 0 0 1 1.03 1.762c.097.34.145.695.145 1.062 0 .367-.048.721-.145 1.063a3.94 3.94 0 0 1-1.03 1.765 4.017 4.017 0 0 1-1.762 1.031C8.72 11.953 8.367 12 8 12s-.721-.047-1.063-.14a4.056 4.056 0 0 1-1.765-1.032A4.055 4.055 0 0 1 4.14 9.062 3.992 3.992 0 0 1 4 8c0-.367.047-.721.14-1.063a4.02 4.02 0 0 1 .407-.953A4.089 4.089 0 0 1 5.98 4.546a3.94 3.94 0 0 1 .957-.401A3.89 3.89 0 0 1 8 4z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M7 3.093l-5 5V8.8l5 5 .707-.707-4.146-4.147H14v-1H3.56L7.708 3.8 7 3.093z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M9 13.887l5-5V8.18l-5-5-.707.707 4.146 4.147H2v1h10.44L8.292 13.18l.707.707z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentcolor'><path fill-rule='evenodd' clip-rule='evenodd' d='M7 3.093l-5 5V8.8l5 5 .707-.707-4.146-4.147H14v-1H3.56L7.708 3.8 7 3.093z'/></svg>",
-    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentcolor'><path fill-rule='evenodd' clip-rule='evenodd' d='M9 13.887l5-5V8.18l-5-5-.707.707 4.146 4.147H2v1h10.44L8.292 13.18l.707.707z'/></svg>"
-};
-
-ImVec4 ColorFromBytes(uint8_t r, uint8_t g, uint8_t b) {
-    return ImVec4((float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f, 1.0f);
-}
-
 enum icons
 {
     PAUSE,
@@ -71,6 +46,88 @@ enum windows
     MEMORY_VIEWER,
     STACK_VIEWER
 };
+
+class Keys {
+    std::vector<std::pair<SDL_Keycode, uint8_t>> keys = {
+        { SDLK_1, 0x1 }, { SDLK_2, 0x2 }, { SDLK_3, 0x3 }, { SDLK_4, 0xC },
+        { SDLK_q, 0x4 }, { SDLK_w, 0x5 }, { SDLK_e, 0x6 }, { SDLK_r, 0xD },
+        { SDLK_a, 0x7 }, { SDLK_s, 0x8 }, { SDLK_d, 0x9 }, { SDLK_f, 0xE },
+        { SDLK_z, 0xA }, { SDLK_x, 0x0 }, { SDLK_c, 0xB }, { SDLK_v, 0xF }
+    };
+
+public:
+    Keys() = default;
+
+    ~Keys() = default;
+
+    std::pair<SDL_Keycode, uint8_t>& operator[](size_t v) noexcept { return keys[v]; }
+
+    uint8_t translate_key(SDL_Keycode k) const noexcept {
+        for (auto& p : keys) {
+            if (p.first == k) {
+                return p.second;
+            }
+        }
+        return 0;
+    }
+
+    bool contains(SDL_Keycode k) const noexcept {
+        for (auto& v : keys) {
+            if (k == v.first) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool contains(uint8_t k) const noexcept {
+        for (auto& v : keys) {
+            if (k == v.second) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // this is actually safe, since graphics and keyboard events are processed
+    // in same thread
+    void reset() noexcept {
+        keys = { { SDLK_1, 0x1 }, { SDLK_2, 0x2 }, { SDLK_3, 0x3 }, { SDLK_4, 0xC },
+                 { SDLK_q, 0x4 }, { SDLK_w, 0x5 }, { SDLK_e, 0x6 }, { SDLK_r, 0xD },
+                 { SDLK_a, 0x7 }, { SDLK_s, 0x8 }, { SDLK_d, 0x9 }, { SDLK_f, 0xE },
+                 { SDLK_z, 0xA }, { SDLK_x, 0x0 }, { SDLK_c, 0xB }, { SDLK_v, 0xF } };
+    }
+
+    size_t size() const noexcept { return keys.size(); }
+};
+
+Keys keymap;
+
+static const std::array<std::string, 12> svgs = {
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path d='M4.5 3H6v10H4.5V3zm7 0v10H10V3h1.5z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M8 9.532h.542l3.905-3.905-1.061-1.06-2.637 2.61V1H7.251v6.177l-2.637-2.61-1.061 1.06 3.905 3.905H8zm1.956 3.481a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M14.25 5.75v-4h-1.5v2.542c-1.145-1.359-2.911-2.209-4.84-2.209-3.177 0-5.92 2.307-6.16 5.398l-.02.269h1.501l.022-.226c.212-2.195 2.202-3.94 4.656-3.94 1.736 0 3.244.875 4.05 2.166h-2.83v1.5h4.163l.962-.975V5.75h-.004zM8 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M2.5 2H4v12H2.5V2zm4.936.39L6.25 3v10l1.186.61 7-5V7.39l-7-5zM12.71 8l-4.96 3.543V4.457L12.71 8z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M4.681 3H2V2h3.5l.5.5V6H5V4a5 5 0 1 0 4.53-.761l.302-.954A6 6 0 1 1 4.681 3z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M8 1h-.542L3.553 4.905l1.061 1.06 2.637-2.61v6.177h1.498V3.355l2.637 2.61 1.061-1.06L8.542 1H8zm1.956 12.013a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='red'><path d='M8 4c.367 0 .721.048 1.063.145a3.943 3.943 0 0 1 1.762 1.031 3.944 3.944 0 0 1 1.03 1.762c.097.34.145.695.145 1.062 0 .367-.048.721-.145 1.063a3.94 3.94 0 0 1-1.03 1.765 4.017 4.017 0 0 1-1.762 1.031C8.72 11.953 8.367 12 8 12s-.721-.047-1.063-.14a4.056 4.056 0 0 1-1.765-1.032A4.055 4.055 0 0 1 4.14 9.062 3.992 3.992 0 0 1 4 8c0-.367.047-.721.14-1.063a4.02 4.02 0 0 1 .407-.953A4.089 4.089 0 0 1 5.98 4.546a3.94 3.94 0 0 1 .957-.401A3.89 3.89 0 0 1 8 4z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M7 3.093l-5 5V8.8l5 5 .707-.707-4.146-4.147H14v-1H3.56L7.708 3.8 7 3.093z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M9 13.887l5-5V8.18l-5-5-.707.707 4.146 4.147H2v1h10.44L8.292 13.18l.707.707z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentcolor'><path fill-rule='evenodd' clip-rule='evenodd' d='M7 3.093l-5 5V8.8l5 5 .707-.707-4.146-4.147H14v-1H3.56L7.708 3.8 7 3.093z'/></svg>",
+    "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentcolor'><path fill-rule='evenodd' clip-rule='evenodd' d='M9 13.887l5-5V8.18l-5-5-.707.707 4.146 4.147H2v1h10.44L8.292 13.18l.707.707z'/></svg>"
+};
+
+ImVec4 ColorFromBytes(uint8_t r, uint8_t g, uint8_t b) {
+    return ImVec4((float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f, 1.0f);
+}
+
+void CenterText(const char* str) {
+    auto width   = ImGui::GetContentRegionAvail().x;
+    auto t_width = ImGui::CalcTextSize(str).x;
+
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (width - t_width) / 2);
+    ImGui::Text(str);
+}
 
 void GUI::style() {
 
@@ -148,6 +205,7 @@ void GUI::style() {
     style.ScrollbarRounding = 0.0f;
     style.TabRounding       = 0.0f;
     style.WindowTitleAlign  = { 0.50f, 0.50f };
+    style.ButtonTextAlign   = { 0.50f, 0.50f };
 }
 
 GUI::GUI() : emu(), debugger(emu), disassembler(debugger) {
@@ -280,16 +338,139 @@ void GUI::emulator_settings() {
     ImGui::Begin("Emulator settings", &window_state[EMULATOR_SETTINGS],
                  ImGuiWindowFlags_AlwaysAutoResize);
 
-    ImGui::Text("Colour settings");
+    CenterText("Colour settings");
 
     ImGui::ColorEdit4("white colour", &white_vec.x);
     ImGui::ColorEdit4("black colour", &black_vec.x);
 
     ImGui::Separator();
 
-    ImGui::Text("Controls");
+    CenterText("Controls");
 
-    for (auto it = keys.begin(); it != keys.end(); ++it) {}
+    if (ImGui::BeginTable("all keybinds", 2,
+                          ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_NoHostExtendX,
+                          { ImGui::GetContentRegionAvailWidth() * 0.5f, 0.0f })) {
+
+        for (auto i = 0; i < 2; ++i) {
+            if (i % 2 == 0) {
+                ImGui::TableNextRow();
+            }
+
+            ImGui::TableNextColumn();
+
+            if (ImGui::BeginTable("keybinds", 2,
+                                  ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_Borders)) {
+
+                for (auto j = i * 4; j < ((i + 2) * 4); ++j) {
+                    auto& k = keymap[j];
+                    ImGui::TableNextRow();
+
+                    ImGui::TableNextColumn();
+
+                    ImGui::PushID(j);
+                    ImGui::PushID(i);
+                    if (ImGui::Button(SDL_GetKeyName(k.first), ImVec2(-FLT_MIN, 0.0f))) {
+                        ImGui::OpenPopup("keybind");
+                    }
+
+                    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+                    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+                    if (ImGui::BeginPopupModal("keybind", nullptr,
+                                               ImGuiWindowFlags_AlwaysAutoResize)) {
+                        ImGui::Text("Changing keybind for %01X", k.second);
+                        ImGui::Text("Press a key. Press ESC to cancel.");
+                        ImGui::CaptureKeyboardFromApp(true);
+
+                        auto& io = ImGui::GetIO();
+                        // check every key
+                        for (int i = 0; i < sizeof(io.KeysDown); ++i) {
+                            SDL_Scancode scancode = static_cast<SDL_Scancode>(i);
+
+                            if (ImGui::IsKeyDown(i)) {
+                                // ImGui keys are scancodes
+                                if (scancode == SDL_SCANCODE_ESCAPE) {
+                                    ImGui::CloseCurrentPopup();
+                                }
+                                else {
+                                    auto keycode = SDL_GetKeyFromScancode(scancode);
+
+                                    // key already bound
+                                    if (keymap.contains(keycode)) {
+                                        ImGui::OpenPopup("already bound");
+                                        break;
+                                    }
+                                    // only allow 0-9a-z
+                                    // https://wiki.libsdl.org/SDLKeycodeLookup
+                                    else if ((keycode > 0x29 && keycode < 0x3a) ||
+                                             (keycode > 0x60 && keycode < 0x7b)) {
+                                        k.first = keycode;
+                                        ImGui::CloseCurrentPopup();
+                                    }
+                                    else {
+                                        ImGui::OpenPopup("wrong key");
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        // key bound
+                        if (ImGui::BeginPopupModal("already bound", nullptr,
+                                                   ImGuiWindowFlags_AlwaysAutoResize)) {
+                            ImGui::Text("That key is already in use.");
+
+                            if (ImGui::Button("OK")) {
+                                ImGui::CloseCurrentPopup();
+                            }
+                            ImGui::EndPopup();
+                        }
+                        // wrong key
+
+                        if (ImGui::BeginPopupModal("wrong key", nullptr,
+                                                   ImGuiWindowFlags_AlwaysAutoResize)) {
+                            const char* line1 = "Only alphanumeric keys allowed.";
+                            const char* line2 = "Please try again.";
+
+                            ImGui::Text(line1);
+                            // center second line
+                            ImGui::SetCursorPosX((ImGui::GetContentRegionAvailWidth() -
+                                                  ImGui::CalcTextSize(line2).x) *
+                                                 0.5f);
+                            ImGui::Text(line2);
+
+                            if (ImGui::Button("OK")) {
+                                ImGui::CloseCurrentPopup();
+                            }
+                            ImGui::EndPopup();
+                        }
+
+                        ImGui::EndPopup();
+                    }
+
+                    ImGui::PopID();
+                    ImGui::PopID();
+
+                    ImGui::TableNextColumn();
+                    // center the text here
+                    auto text_size = ImGui::CalcTextSize("f");
+                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() +
+                                         (ImGui::GetContentRegionAvailWidth() - text_size.x) *
+                                                 0.5f);
+                    ImGui::Text("%01X", k.second);
+                }
+
+                ImGui::EndTable();
+            }
+        }
+        ImGui::EndTable();
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("Reset to default")) {
+        keymap.reset();
+    }
 
     ImGui::End();
 }
@@ -309,7 +490,7 @@ void GUI::launch_settings() {
     filebrowser.Display();
 
     if (filebrowser.HasSelected()) {
-        last_file_name = std::move(filebrowser.GetSelected());
+        last_file_name = std::move(filebrowser.GetSelected().string());
         filebrowser.ClearSelected();
     }
 
@@ -433,8 +614,6 @@ void GUI::memory_viewer() {
 
 void GUI::disassembly() {
 
-    std::stack<uint16_t, std::vector<uint16_t>> stacker;
-
     static uint16_t jump;
 
     static ImGuiListClipper clipper;
@@ -524,7 +703,12 @@ void GUI::disassembly() {
 
     static scrolling scroller;
 
-    ImGui::Begin("Disassembler", &window_state[DISASSEMBLER_WINDOW], ImGuiWindowFlags_NoScrollbar);
+    // widths for text in the table for centering
+    float t3_width = ImGui::CalcTextSize("fff").x;
+    float t4_width = ImGui::CalcTextSize("ffff").x;
+
+    ImGui::Begin("Disassembler", &window_state[DISASSEMBLER_WINDOW],
+                 ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize);
 
     // disassembly view
     {
@@ -536,14 +720,19 @@ void GUI::disassembly() {
 
         auto test = ImGui::GetContentRegionMax();
 
-        ImVec2 outer = ImVec2(0.0f, test.y - 3 * font_size);
+        ImVec2 outer = ImVec2(0.0f, test.y - 4.5 * font_size);
 
         if (ImGui::BeginTable("text_table", 4, flags, outer)) {
             ImGui::TableSetupScrollFreeze(0, 1);
             ImGui::TableSetupColumn("Address");
             ImGui::TableSetupColumn("Value");
             ImGui::TableSetupColumn("Instruction");
-            ImGui::TableSetupColumn("BP");
+            ImGui::TableSetupColumn("BP",
+                                    ImGuiTableColumnFlags_WidthFixed |
+                                            ImGuiTableColumnFlags_NoResize |
+                                            ImGuiTableColumnFlags_NoHeaderWidth |
+                                            ImGuiTableColumnFlags_NoHeaderLabel,
+                                    font_size);
             ImGui::TableHeadersRow();
 
             clipper = {};
@@ -623,6 +812,7 @@ void GUI::disassembly() {
                     }
                     // breakpoint icon
                     ImGui::TableNextColumn();
+
                     if (debugger.is_breakpoint_set(ins1.address)) {
                         ImGui::Image(icon_textures[BREAKPOINT], ImVec2(font_size, font_size));
                     }
@@ -829,14 +1019,14 @@ void GUI::handle_input() {
         }
 
         if (!io.WantCaptureKeyboard) {
-            auto res = keys.find(event.key.keysym.sym);
+            auto input_key = event.key.keysym.sym;
+            if (keymap.contains(input_key)) {
 
-            if (res != keys.end()) {
                 if (event.type == SDL_KEYDOWN) {
-                    emu.keys[res->second] = true;
+                    emu.keys[keymap.translate_key(input_key)] = true;
                 }
                 else if (event.type == SDL_KEYUP) {
-                    emu.keys[res->second] = false;
+                    emu.keys[keymap.translate_key(input_key)] = false;
                 }
             }
         }

@@ -132,8 +132,8 @@ void Debugger::cycle() noexcept {
 bool Debugger::reached_destination() const noexcept { return proc.PC == destination; }
 
 void Debugger::recv_destination() noexcept {
-    destination == 0xffff;
-    debugging = false;
+    destination = 0xffff;
+    debugging   = false;
 }
 
 void Debugger::continue_emu() noexcept {
