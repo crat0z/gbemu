@@ -409,6 +409,7 @@ void GUI::style() {
     style.TabRounding       = 0.0f;
     style.WindowTitleAlign  = { 0.50f, 0.50f };
     style.ButtonTextAlign   = { 0.50f, 0.50f };
+    //style.SelectableTextAlign = { 0.50f, 0.0f };
 }
 
 void GUI::game_window() {
@@ -894,12 +895,14 @@ void GUI::disassembly() {
             ImGui::TableSetupColumn(
                     "PC",
                     ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoHeaderWidth |
-                            ImGuiTableColumnFlags_NoHeaderLabel | ImGuiTableColumnFlags_NoReorder,
+                            ImGuiTableColumnFlags_NoHeaderLabel | ImGuiTableColumnFlags_NoReorder |
+                            ImGuiTableColumnFlags_NoResize,
                     font_size);
             ImGui::TableSetupColumn(
                     "BP",
                     ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoHeaderWidth |
-                            ImGuiTableColumnFlags_NoHeaderLabel | ImGuiTableColumnFlags_NoReorder,
+                            ImGuiTableColumnFlags_NoHeaderLabel | ImGuiTableColumnFlags_NoReorder |
+                            ImGuiTableColumnFlags_NoResize,
                     font_size);
             ImGui::TableSetupColumn("Address");
             ImGui::TableSetupColumn("Value");
@@ -910,6 +913,8 @@ void GUI::disassembly() {
             ds_handler.clipper.Begin(2048);
 
             ImGui::PushStyleColor(ImGuiCol_Header, color_from_bytes(80, 80, 80));
+
+            ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, { 0.5f, 0.0f });
 
             while (ds_handler.clipper.Step()) {
                 for (auto i = ds_handler.clipper.DisplayStart; i < ds_handler.clipper.DisplayEnd;
@@ -942,12 +947,9 @@ void GUI::disassembly() {
                     // show instruction
                     ImGui::TableNextColumn();
                     if (ins1.operation != op::UNKNOWN) {
-                        bool highlight = false;
-                        if (debugger.get_PC() == ins1.address) {
-                            highlight = true;
-                        }
+
                         ImGui::PushID(ins1.address);
-                        ImGui::Selectable(fmt::format("{0}", ins1.mnemonic).c_str(), highlight,
+                        ImGui::Selectable(fmt::format("{0}", ins1.mnemonic).c_str(), false,
                                           ImGuiSelectableFlags_SpanAllColumns);
 
                         // menu for right clicks
@@ -994,6 +996,8 @@ void GUI::disassembly() {
                     }
                 }
             }
+
+            ImGui::PopStyleVar();
 
             ImGui::PopStyleColor();
 
