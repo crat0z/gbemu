@@ -7,7 +7,7 @@
 #include <future>
 #include <unordered_map>
 #include <fmt/format.h>
-
+#include <stack>
 #include <SDL_image.h>
 
 #include "roboto_medium.hpp"
