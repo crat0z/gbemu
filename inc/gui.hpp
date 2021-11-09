@@ -16,7 +16,7 @@ private:
     SDL_Window*   window;
     SDL_Renderer* renderer;
 
-    std::array<SDL_Texture*, 12> icon_textures;
+    std::array<SDL_Texture*, 15> icon_textures;
 
     std::array<bool, 20> window_state = {};
 

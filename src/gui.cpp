@@ -30,7 +30,8 @@ namespace {
         ARROW_LEFT,
         ARROW_RIGHT,
         ARROW_LEFT_INACTIVE,
-        ARROW_RIGHT_INACTIVE
+        ARROW_RIGHT_INACTIVE,
+        ARROW_RIGHT_PC
     };
 
     enum windows
@@ -46,7 +47,7 @@ namespace {
     };
 
     // const data
-    const std::array<std::string, 12> svgs = {
+    const std::array<std::string, 14> svgs = {
         "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path d='M4.5 3H6v10H4.5V3zm7 0v10H10V3h1.5z'/></svg>",
         "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M8 9.532h.542l3.905-3.905-1.061-1.06-2.637 2.61V1H7.251v6.177l-2.637-2.61-1.061 1.06 3.905 3.905H8zm1.956 3.481a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'/></svg>",
         "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M14.25 5.75v-4h-1.5v2.542c-1.145-1.359-2.911-2.209-4.84-2.209-3.177 0-5.92 2.307-6.16 5.398l-.02.269h1.501l.022-.226c.212-2.195 2.202-3.94 4.656-3.94 1.736 0 3.244.875 4.05 2.166h-2.83v1.5h4.163l.962-.975V5.75h-.004zM8 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'/></svg>",
@@ -57,7 +58,9 @@ namespace {
         "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M7 3.093l-5 5V8.8l5 5 .707-.707-4.146-4.147H14v-1H3.56L7.708 3.8 7 3.093z'/></svg>",
         "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='white'><path fill-rule='evenodd' clip-rule='evenodd' d='M9 13.887l5-5V8.18l-5-5-.707.707 4.146 4.147H2v1h10.44L8.292 13.18l.707.707z'/></svg>",
         "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentcolor'><path fill-rule='evenodd' clip-rule='evenodd' d='M7 3.093l-5 5V8.8l5 5 .707-.707-4.146-4.147H14v-1H3.56L7.708 3.8 7 3.093z'/></svg>",
-        "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentcolor'><path fill-rule='evenodd' clip-rule='evenodd' d='M9 13.887l5-5V8.18l-5-5-.707.707 4.146 4.147H2v1h10.44L8.292 13.18l.707.707z'/></svg>"
+        "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentcolor'><path fill-rule='evenodd' clip-rule='evenodd' d='M9 13.887l5-5V8.18l-5-5-.707.707 4.146 4.147H2v1h10.44L8.292 13.18l.707.707z'/></svg>",
+        "<svg width='20' height='20' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='green'><path fill-rule='evenodd' clip-rule='evenodd' d='M9 13.887l5-5V8.18l-5-5-.707.707 4.146 4.147H2v1h10.44L8.292 13.18l.707.707z'/></svg>"
+
     };
 
     constexpr float X_PIXELS  = 64.0;
@@ -134,7 +137,7 @@ namespace {
 
     float last_scroll_val;
 
-    struct scrolling {
+    struct d_scroll_handler {
         std::stack<float> bw_history;
         std::stack<float> fw_history;
 
@@ -218,6 +221,8 @@ namespace {
             set_value(ret);
         }
     };
+
+    d_scroll_handler ds_handler;
 
     Keys keymap;
 
@@ -865,8 +870,6 @@ void GUI::disassembly() {
 
     static uint16_t jump;
 
-    static scrolling scroller;
-
     // widths for text in the table for centering
     float t3_width = ImGui::CalcTextSize("fff").x;
     float t4_width = ImGui::CalcTextSize("ffff").x;
@@ -886,35 +889,53 @@ void GUI::disassembly() {
 
         ImVec2 outer = ImVec2(0.0f, test.y - 4.5 * font_size);
 
-        if (ImGui::BeginTable("text_table", 4, flags, outer)) {
+        if (ImGui::BeginTable("text_table", 5, flags, outer)) {
             ImGui::TableSetupScrollFreeze(0, 1);
+            ImGui::TableSetupColumn(
+                    "PC",
+                    ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoHeaderWidth |
+                            ImGuiTableColumnFlags_NoHeaderLabel | ImGuiTableColumnFlags_NoReorder,
+                    font_size);
+            ImGui::TableSetupColumn(
+                    "BP",
+                    ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoHeaderWidth |
+                            ImGuiTableColumnFlags_NoHeaderLabel | ImGuiTableColumnFlags_NoReorder,
+                    font_size);
             ImGui::TableSetupColumn("Address");
             ImGui::TableSetupColumn("Value");
             ImGui::TableSetupColumn("Instruction");
-            ImGui::TableSetupColumn("BP",
-                                    ImGuiTableColumnFlags_WidthFixed |
-                                            ImGuiTableColumnFlags_NoResize |
-                                            ImGuiTableColumnFlags_NoHeaderWidth |
-                                            ImGuiTableColumnFlags_NoHeaderLabel,
-                                    font_size);
+
             ImGui::TableHeadersRow();
 
-            scroller.clipper.Begin(2048);
+            ds_handler.clipper.Begin(2048);
 
             ImGui::PushStyleColor(ImGuiCol_Header, color_from_bytes(80, 80, 80));
 
-            while (scroller.clipper.Step()) {
-                for (auto i = scroller.clipper.DisplayStart; i < scroller.clipper.DisplayEnd; i++) {
+            while (ds_handler.clipper.Step()) {
+                for (auto i = ds_handler.clipper.DisplayStart; i < ds_handler.clipper.DisplayEnd;
+                     i++) {
                     ImGui::TableNextRow();
 
                     auto& ins1 = disassembler.found_instructions[2 * i];
+
+                    // PC icon
+                    ImGui::TableNextColumn();
+                    if (debugger.get_PC() == ins1.address) {
+                        ImGui::Image(icon_textures[ARROW_RIGHT_PC], ImVec2(font_size, font_size));
+                    }
+
+                    // breakpoint icon
+                    ImGui::TableNextColumn();
+
+                    if (debugger.is_breakpoint_set(ins1.address)) {
+                        ImGui::Image(icon_textures[BREAKPOINT], ImVec2(font_size, font_size));
+                    }
 
                     ImGui::TableNextColumn();
                     // show address
                     center_text_known("%03X", t3_width, ins1.address);
 
-                    // show opcode
-
+                    // show value at this address
                     ImGui::TableNextColumn();
                     center_text_known("%04X", t4_width, ins1.opcode);
 
@@ -956,7 +977,7 @@ void GUI::disassembly() {
                                 if (ImGui::Selectable(
                                             fmt::format("Follow to address 0x{0:03x}", imm12)
                                                     .c_str())) {
-                                    scroller.queue_scroll(imm12, true);
+                                    ds_handler.queue_scroll(imm12, true);
                                     ImGui::CloseCurrentPopup();
                                 }
                             }
@@ -971,12 +992,6 @@ void GUI::disassembly() {
                                           ImGuiSelectableFlags_SpanAllColumns |
                                                   ImGuiSelectableFlags_Disabled);
                     }
-                    // breakpoint icon
-                    ImGui::TableNextColumn();
-
-                    if (debugger.is_breakpoint_set(ins1.address)) {
-                        ImGui::Image(icon_textures[BREAKPOINT], ImVec2(font_size, font_size));
-                    }
                 }
             }
 
@@ -985,25 +1000,25 @@ void GUI::disassembly() {
             // debugger tells us when we've reached a PC we should scroll to
             if (debugger.reached_destination()) {
                 debugger.recv_destination();
-                scroller.queue_scroll(debugger.get_PC());
+                ds_handler.queue_scroll(debugger.get_PC());
             }
             // save last_scroll_val in case we scroll next frame
             last_scroll_val = ImGui::GetScrollY();
             // scroll now to any targets we might have
-            scroller.scroll_to_target();
+            ds_handler.scroll_to_target();
 
             ImGui::EndTable();
 
             if (ImGui::ImageButton(icon_textures[REFRESH], ImVec2(font_size, font_size))) {
                 disassembler.analyze();
-                scroller.queue_scroll(debugger.get_entry(), true);
+                ds_handler.queue_scroll(debugger.get_entry(), true);
             }
 
             ImGui::SameLine();
 
             if (ImGui::ImageButton(icon_textures[PAUSE], ImVec2(font_size, font_size))) {
                 debugger.pause();
-                scroller.queue_scroll(debugger.get_PC(), true);
+                ds_handler.queue_scroll(debugger.get_PC(), true);
             }
             ImGui::SameLine();
 
@@ -1031,13 +1046,13 @@ void GUI::disassembly() {
             ImGui::SetNextItemWidth(3 * font_size);
             if (ImGui::InputScalar("", ImGuiDataType_U16, &jump, nullptr, nullptr, "%03x",
                                    ImGuiInputTextFlags_EnterReturnsTrue)) {
-                scroller.queue_scroll(jump);
+                ds_handler.queue_scroll(jump);
                 jump = 0;
             }
 
-            if (scroller.show_left()) {
+            if (ds_handler.show_left()) {
                 if (ImGui::ImageButton(icon_textures[ARROW_LEFT], ImVec2(font_size, font_size))) {
-                    scroller.go_back();
+                    ds_handler.go_back();
                 }
             }
             else {
@@ -1045,9 +1060,9 @@ void GUI::disassembly() {
                                    ImVec2(font_size, font_size));
             }
             ImGui::SameLine();
-            if (scroller.show_right()) {
+            if (ds_handler.show_right()) {
                 if (ImGui::ImageButton(icon_textures[ARROW_RIGHT], ImVec2(font_size, font_size))) {
-                    scroller.go_forward();
+                    ds_handler.go_forward();
                 }
             }
             else {
