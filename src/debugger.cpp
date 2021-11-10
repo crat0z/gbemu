@@ -175,6 +175,8 @@ void     Debugger::set_DT(uint8_t val) const noexcept { proc.delay_timer = val; 
 uint16_t Debugger::get_PC() const noexcept { return proc.PC; }
 void     Debugger::set_PC(uint8_t val) const noexcept { proc.PC = val; }
 
+std::array<uint8_t, 4096>& Debugger::get_memory() const noexcept { return proc.memory; }
+
 void Debugger::reset_timer() const noexcept { proc.timer.reset(); }
 
 uint16_t Debugger::get_opcode() const noexcept { return next_opcode; }

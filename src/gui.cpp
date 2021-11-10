@@ -43,7 +43,8 @@ namespace {
         REGISTER_VIEW,
         EMULATOR_SETTINGS,
         MEMORY_VIEWER,
-        STACK_VIEWER
+        STACK_VIEWER,
+        ALL_DEBUG_WINDOWS
     };
 
     // const data
@@ -224,6 +225,8 @@ namespace {
 
     d_scroll_handler ds_handler;
 
+    d_scroll_handler mv_handler;
+
     Keys keymap;
 
     ImVec4 color_from_bytes(uint8_t r, uint8_t g, uint8_t b) {
@@ -238,6 +241,19 @@ namespace {
         ImGui::SetCursorPosX(x + ((width - item_size) / 2.0f));
     }
 
+    void right_align_cursor(float item_size, float offset) {
+        auto  width = ImGui::GetContentRegionAvail().x;
+        auto  x     = ImGui::GetCursorPosX();
+        auto& style = ImGui::GetStyle();
+        ImGui::SetCursorPosX(x + (width - item_size - offset));
+    }
+
+    void right_align_text(const char* format, float offset = 0.0f) {
+
+        right_align_cursor(ImGui::CalcTextSize(format).x, offset);
+        ImGui::Text(format);
+    }
+
     // centers text horizontally, if it knows the size.
     void center_text_known(const char* format, float size, ...) {
 
@@ -247,6 +263,12 @@ namespace {
         va_start(args, size);
         ImGui::TextV(format, args);
         va_end(args);
+    }
+
+    bool center_button(const char* label) {
+        auto width = ImGui::CalcTextSize(label);
+        center_cursor(width.x);
+        return ImGui::Button(label);
     }
 
     // centers a string
@@ -531,9 +553,10 @@ void GUI::emulator_settings() {
                     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
                     if (ImGui::BeginPopupModal("keybind", nullptr,
-                                               ImGuiWindowFlags_AlwaysAutoResize)) {
-                        ImGui::Text("Changing keybind for %01X", k.second);
-                        ImGui::Text("Press a key. Press ESC to cancel.");
+                                               ImGuiWindowFlags_AlwaysAutoResize |
+                                                       ImGuiWindowFlags_NoSavedSettings)) {
+                        center_text(fmt::format("Changing keybind for {}", k.second).c_str());
+                        center_text("Press a key. Press ESC to cancel.");
                         ImGui::CaptureKeyboardFromApp(true);
 
                         auto& io = ImGui::GetIO();
@@ -571,10 +594,11 @@ void GUI::emulator_settings() {
 
                         // key bound
                         if (ImGui::BeginPopupModal("already bound", nullptr,
-                                                   ImGuiWindowFlags_AlwaysAutoResize)) {
+                                                   ImGuiWindowFlags_AlwaysAutoResize |
+                                                           ImGuiWindowFlags_NoSavedSettings)) {
                             ImGui::Text("That key is already in use.");
 
-                            if (ImGui::Button("OK")) {
+                            if (center_button("OK")) {
                                 ImGui::CloseCurrentPopup();
                             }
                             ImGui::EndPopup();
@@ -582,18 +606,16 @@ void GUI::emulator_settings() {
                         // wrong key
 
                         if (ImGui::BeginPopupModal("wrong key", nullptr,
-                                                   ImGuiWindowFlags_AlwaysAutoResize)) {
+                                                   ImGuiWindowFlags_AlwaysAutoResize |
+                                                           ImGuiWindowFlags_NoSavedSettings)) {
                             const char* line1 = "Only alphanumeric keys allowed.";
                             const char* line2 = "Please try again.";
 
                             ImGui::Text(line1);
                             // center second line
-                            ImGui::SetCursorPosX((ImGui::GetContentRegionAvailWidth() -
-                                                  ImGui::CalcTextSize(line2).x) *
-                                                 0.5f);
-                            ImGui::Text(line2);
+                            center_text(line2);
 
-                            if (ImGui::Button("OK")) {
+                            if (center_button("OK")) {
                                 ImGui::CloseCurrentPopup();
                             }
                             ImGui::EndPopup();
@@ -737,6 +759,10 @@ void GUI::register_viewer() {
                             fmt::format("Follow to {0:03X} in disassembly", value).c_str())) {
                     ds_handler.queue_scroll(value, true);
                     ImGui::CloseCurrentPopup();
+                }
+                if (ImGui::Selectable(
+                            fmt::format("View {0:03X} in memory viewer", value).c_str())) {
+                    mv_handler.queue_scroll(value);
                 }
                 ImGui::EndPopup();
             }
@@ -926,8 +952,187 @@ void GUI::register_viewer() {
 
 void GUI::memory_viewer() {
 
+    static const float width      = ImGui::CalcTextSize("F").x;
+    static const float base_width = ImGui::CalcTextSize("FFF").x * 1.35f;
+
+    auto byte_to_printable = [&](char s) {
+        if (s >= 0x20 && s <= 0x7E) {
+            return s;
+        }
+        return '.';
+    };
+
     ImGui::Begin("Memory viewer");
-    if (ImGui::BeginTable("memory", 8)) {};
+    {
+        auto avail = ImGui::GetContentRegionAvail();
+        int  count = static_cast<int>(std::floor(avail.x / base_width)) + 1;
+
+        // only 3 modes rlly
+        if (count >= 19) {
+            count = 19;
+        }
+        else if (count >= 11) {
+            count = 11;
+        }
+        else {
+            count = 7;
+        }
+
+        center_text("Memory viewer");
+
+        if (ImGui::BeginTable("memory", count,
+                              ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp |
+                                      ImGuiTableFlags_NoHostExtendX)) {
+            auto cols     = count - 3;
+            auto cols_p1s = 1;
+            auto cols_p2e = count - 1;
+
+            auto b = (cols_p1s + cols_p2e) / 2;
+
+            auto cols_p1e = b;
+            auto cols_p2s = cols_p2e - b + 1;
+
+            ImGui::TableSetupScrollFreeze(0, 1);
+            ImGui::TableSetupColumn(
+                    "Base", ImGuiTableColumnFlags_NoHeaderLabel | ImGuiTableColumnFlags_WidthFixed,
+                    5 * width);
+
+            // first set
+            for (auto i = cols_p1s; i < cols_p1e; ++i) {
+                ImGui::TableSetupColumn(fmt::format("{0:01X}", i - 1).c_str(),
+                                        ImGuiTableColumnFlags_NoResize |
+                                                ImGuiTableColumnFlags_WidthFixed);
+            }
+
+            // center
+            ImGui::TableSetupColumn("###break", ImGuiTableColumnFlags_WidthStretch);
+
+            // second set
+            for (auto i = cols_p2s; i < cols_p2e; ++i) {
+                ImGui::TableSetupColumn(fmt::format("{0:01X}", i - 2).c_str(),
+                                        ImGuiTableColumnFlags_NoResize |
+                                                ImGuiTableColumnFlags_WidthFixed);
+            }
+
+            ImGui::TableSetupColumn("ASCII", ImGuiTableColumnFlags_NoHeaderLabel |
+                                                     ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableHeadersRow();
+
+            ImGuiListClipper clipper;
+            clipper.Begin(4096 / cols);
+
+            std::string var;
+            var.reserve(cols);
+
+            while (clipper.Step()) {
+                for (auto i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+                    // draw left number base thing
+                    uint16_t base = i * cols;
+                    ImGui::TableNextColumn();
+
+                    ImGui::Text("%03X", base);
+
+                    auto context_menu = [&](uint16_t addr, uint8_t v) {
+                        ImGui::PushID(addr);
+                        ImGui::Selectable(fmt::format("{0:02X}", v).c_str());
+
+                        if (ImGui::BeginPopupContextItem()) {
+                            if (ImGui::Selectable(
+                                        fmt::format("View address {0:03X} in disassembly", addr)
+                                                .c_str())) {
+                                ds_handler.queue_scroll(addr, true);
+                                ImGui::CloseCurrentPopup();
+                            }
+                            ImGui::EndPopup();
+                        }
+
+                        ImGui::PopID();
+                    };
+
+                    // draw rows
+                    // do first half
+                    auto real_index = 0;
+                    for (auto j = cols_p1s; j < cols_p1e; ++j) {
+                        ImGui::TableNextColumn();
+                        auto address = base + real_index;
+                        auto val     = debugger.get_memory()[base + real_index];
+
+                        context_menu(address, val);
+
+                        var += byte_to_printable(static_cast<char>(val));
+                        real_index++;
+                    }
+
+                    // do break
+                    ImGui::TableNextColumn();
+                    ImGui::Text("  ");
+
+                    //do second half
+                    for (auto j = cols_p2s; j < cols_p2e; ++j) {
+                        ImGui::TableNextColumn();
+                        auto address = base + real_index;
+                        auto val     = debugger.get_memory()[base + real_index];
+
+                        context_menu(address, val);
+
+                        var += byte_to_printable(static_cast<char>(val));
+                        real_index++;
+                    }
+
+                    ImGui::TableNextColumn();
+                    center_text(var.c_str());
+                    var.clear();
+                }
+            }
+
+            ImGui::EndTable();
+        };
+
+        /* if (ImGui::BeginTable("lol", 2,
+                              ImGuiTableFlags_Resizable | ImGuiTableFlags_NoHostExtendX)) {
+
+            ImGui::TableNextColumn();
+
+            auto avail = ImGui::GetContentRegionAvail();
+            avail.x -= base_width;
+            int count = static_cast<int>(std::floor(avail.x / width)) - 2;
+
+            // left side
+            if (ImGui::BeginTable("memory", count,
+                                  ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp |
+                                          ImGuiTableFlags_NoHostExtendX)) {
+                ImGui::TableSetupScrollFreeze(0, 1);
+                ImGui::TableSetupColumn("Base", ImGuiTableColumnFlags_NoHeaderLabel);
+                for (auto h = 0; h < count - 1; ++h) {
+                    ImGui::TableSetupColumn(fmt::format("{0:01X}", h).c_str());
+                }
+                ImGui::TableHeadersRow();
+
+                ImGuiListClipper clipper;
+                clipper.Begin(4096 / count);
+
+                while (clipper.Step()) {
+                    for (auto i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+                        // draw left number base thing
+                        uint16_t base = i * (count - 1);
+                        ImGui::TableNextColumn();
+                        center_text_known("%03X", width, base);
+
+                        // draw rows
+                        for (auto j = 0; j < count - 1; ++j) {
+                            ImGui::TableNextColumn();
+                            center_text_known("%02X", width, debugger.get_memory()[base + j]);
+                        }
+                    }
+                }
+
+                ImGui::EndTable();
+            };
+
+            ImGui::EndTable();
+        } */
+    }
+    ImGui::End();
 }
 
 void GUI::disassembly() {
@@ -938,8 +1143,7 @@ void GUI::disassembly() {
     float t3_width = ImGui::CalcTextSize("fff").x;
     float t4_width = ImGui::CalcTextSize("ffff").x;
 
-    ImGui::Begin("Disassembler", &window_state[DISASSEMBLER_WINDOW],
-                 ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Begin("Disassembler", &window_state[DISASSEMBLER_WINDOW], ImGuiWindowFlags_NoScrollbar);
 
     // disassembly view
     {
@@ -1169,18 +1373,31 @@ void GUI::prepare_imgui() {
 
         if (ImGui::BeginMenu("Debugger")) {
             if (ImGui::MenuItem("All windows")) {
-                window_state[REGISTER_VIEW]       = true;
-                window_state[DISASSEMBLER_WINDOW] = true;
-                window_state[STACK_VIEWER]        = true;
+                if (window_state[ALL_DEBUG_WINDOWS]) {
+                    window_state[REGISTER_VIEW]       = false;
+                    window_state[DISASSEMBLER_WINDOW] = false;
+                    window_state[STACK_VIEWER]        = false;
+                    window_state[MEMORY_VIEWER]       = false;
+                }
+                else {
+                    window_state[REGISTER_VIEW]       = true;
+                    window_state[DISASSEMBLER_WINDOW] = true;
+                    window_state[STACK_VIEWER]        = true;
+                    window_state[MEMORY_VIEWER]       = true;
+                }
+                toggle(window_state[ALL_DEBUG_WINDOWS]);
             }
             if (ImGui::MenuItem("Register view", nullptr, window_state[REGISTER_VIEW])) {
                 toggle(window_state[REGISTER_VIEW]);
             }
-            if (ImGui::MenuItem("Disassembly", nullptr, window_state[DISASSEMBLER_WINDOW])) {
+            if (ImGui::MenuItem("Disassembly view", nullptr, window_state[DISASSEMBLER_WINDOW])) {
                 toggle(window_state[DISASSEMBLER_WINDOW]);
             }
             if (ImGui::MenuItem("Stack view", nullptr, window_state[STACK_VIEWER])) {
                 toggle(window_state[STACK_VIEWER]);
+            }
+            if (ImGui::MenuItem("Memory view", nullptr, window_state[MEMORY_VIEWER])) {
+                toggle(window_state[MEMORY_VIEWER]);
             }
 
             ImGui::EndMenu();
@@ -1228,6 +1445,10 @@ void GUI::prepare_imgui() {
 
     if (window_state[LAUNCH_WINDOW]) {
         launch_settings();
+    }
+
+    if (window_state[MEMORY_VIEWER]) {
+        memory_viewer();
     }
 }
 

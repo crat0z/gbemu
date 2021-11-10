@@ -65,6 +65,8 @@ public:
     uint16_t get_PC() const noexcept;
     void     set_PC(uint8_t val) const noexcept;
 
+    std::array<uint8_t, 4096>& get_memory() const noexcept;
+
     void reset_timer() const noexcept;
 
     // debugger functions
