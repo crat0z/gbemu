@@ -705,6 +705,19 @@ void GUI::register_viewer() {
     auto draw_I = [&]() {
         ImGui::TableNextColumn();
         center_text("I");
+        ImGui::SameLine();
+
+        ImGui::Selectable("###I", false, ImGuiSelectableFlags_SpanAllColumns);
+
+        if (ImGui::BeginPopupContextItem()) {
+            uint16_t value = debugger.get_I() & 0xFFF;
+            if (ImGui::Selectable(fmt::format("Follow to {0:03X} in disassembly", value).c_str())) {
+                ds_handler.queue_scroll(value, true);
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+
         ImGui::TableNextColumn();
         colored_centered_text_known({ 255, 0, 0, 255 }, debugger.I_change, threesize, "%03X",
                                     debugger.get_I());
@@ -713,6 +726,18 @@ void GUI::register_viewer() {
     auto draw_PC = [&]() {
         ImGui::TableNextColumn();
         center_text("PC");
+        ImGui::SameLine();
+        ImGui::Selectable("###PC", false, ImGuiSelectableFlags_SpanAllColumns);
+
+        if (ImGui::BeginPopupContextItem()) {
+            uint16_t value = debugger.get_PC() & 0xFFF;
+            if (ImGui::Selectable(fmt::format("Follow to {0:03X} in disassembly", value).c_str())) {
+                ds_handler.queue_scroll(value, true);
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+
         ImGui::TableNextColumn();
         colored_centered_text_known({ 255, 0, 0, 255 }, debugger.PC_change, threesize, "%03X",
                                     debugger.get_PC());
@@ -745,6 +770,8 @@ void GUI::register_viewer() {
     if (count == 0) {
         count = 1;
     }
+
+    ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, { 0.5f, 0.0f });
 
     // draw outer table
     if (ImGui::BeginTable("allregisters", count,
@@ -844,21 +871,8 @@ void GUI::register_viewer() {
         }
     }
 
-    /* 
-        if (ImGui::BeginTable("special registers", 2, table_flags)) {
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            colored_text(debugger.dt_change, "D 0x%02X", debugger.get_DT());
-            ImGui::TableNextColumn();
-            colored_text(debugger.I_change, "I  0x%03X", debugger.get_I());
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            colored_text(debugger.st_change, "S 0x%02X", debugger.get_ST());
-            ImGui::TableNextColumn();
-            colored_text(debugger.PC_change, "PC 0x%03X", debugger.get_PC());
-            ImGui::EndTable();
-        }
-    }*/
+    ImGui::PopStyleVar();
+
     ImGui::End();
 }
 

@@ -23,7 +23,7 @@ private:
     uint16_t I = 0;
     uint16_t PC;
 
-    Stack stack;
+    Stack<uint16_t> stack;
 
     op operation;
 

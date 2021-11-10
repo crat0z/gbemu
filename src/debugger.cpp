@@ -158,7 +158,7 @@ bool Debugger::is_readable() const noexcept { return is_paused() && !being_debug
 uint16_t Debugger::fetch(uint16_t addr) noexcept { return proc.fetch(addr); }
 op       Debugger::decode(uint16_t opc) noexcept { return proc.decode(opc); }
 
-Stack& Debugger::get_stack() const noexcept { return proc.stack; }
+Stack<uint16_t>& Debugger::get_stack() const noexcept { return proc.stack; }
 
 uint16_t Debugger::get_V(uint8_t reg) const noexcept { return proc.V[reg]; }
 void     Debugger::set_V(uint8_t reg, uint8_t val) const noexcept { proc.V[reg] = val; }
