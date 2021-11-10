@@ -684,13 +684,34 @@ void GUI::launch_settings() {
 }
 
 void GUI::stack_viewer() {
-    ImGui::Begin("Stack view", &window_state[STACK_VIEWER]);
+    ImGui::Begin("Stack view", &window_state[STACK_VIEWER], ImGuiWindowFlags_NoTitleBar);
+    ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, { 0.50f, 0.0f });
     {
+        center_text("Stack view");
+        ImGui::BeginChild("stacks");
         auto& stack = debugger.get_stack();
-        for (auto v : stack) {
-            ImGui::Selectable(fmt::format("{0:03X}", v).c_str());
+        if (debugger.is_readable()) {
+
+            for (auto i = 15; i >= 0; --i) {
+                // if we actually are at a point we can print somethin
+
+                if (i + 1 <= stack.size()) {
+                    ImGui::Selectable(fmt::format("{0:03X}", stack[i]).c_str());
+                }
+                else {
+                    ImGui::Selectable("???");
+                }
+            }
         }
+        else {
+            for (auto i = 15; i >= 0; --i) {
+                ImGui::Selectable("???");
+            }
+        }
+
+        ImGui::EndChild();
     }
+    ImGui::PopStyleVar();
     ImGui::End();
 }
 
@@ -705,58 +726,85 @@ void GUI::register_viewer() {
     auto draw_I = [&]() {
         ImGui::TableNextColumn();
         center_text("I");
-        ImGui::SameLine();
 
-        ImGui::Selectable("###I", false, ImGuiSelectableFlags_SpanAllColumns);
+        if (debugger.is_readable()) {
+            ImGui::SameLine();
+            ImGui::Selectable("###I", false, ImGuiSelectableFlags_SpanAllColumns);
 
-        if (ImGui::BeginPopupContextItem()) {
-            uint16_t value = debugger.get_I() & 0xFFF;
-            if (ImGui::Selectable(fmt::format("Follow to {0:03X} in disassembly", value).c_str())) {
-                ds_handler.queue_scroll(value, true);
-                ImGui::CloseCurrentPopup();
+            if (ImGui::BeginPopupContextItem()) {
+                uint16_t value = debugger.get_I() & 0xFFF;
+                if (ImGui::Selectable(
+                            fmt::format("Follow to {0:03X} in disassembly", value).c_str())) {
+                    ds_handler.queue_scroll(value, true);
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
             }
-            ImGui::EndPopup();
-        }
 
-        ImGui::TableNextColumn();
-        colored_centered_text_known({ 255, 0, 0, 255 }, debugger.I_change, threesize, "%03X",
-                                    debugger.get_I());
+            ImGui::TableNextColumn();
+            colored_centered_text_known({ 255, 0, 0, 255 }, debugger.I_change, threesize, "%03X",
+                                        debugger.get_I());
+        }
+        else {
+            ImGui::TableNextColumn();
+            // fix this
+            center_text("???");
+        }
     };
 
     auto draw_PC = [&]() {
         ImGui::TableNextColumn();
         center_text("PC");
-        ImGui::SameLine();
-        ImGui::Selectable("###PC", false, ImGuiSelectableFlags_SpanAllColumns);
 
-        if (ImGui::BeginPopupContextItem()) {
-            uint16_t value = debugger.get_PC() & 0xFFF;
-            if (ImGui::Selectable(fmt::format("Follow to {0:03X} in disassembly", value).c_str())) {
-                ds_handler.queue_scroll(value, true);
-                ImGui::CloseCurrentPopup();
+        if (debugger.is_readable()) {
+            ImGui::SameLine();
+            ImGui::Selectable("###PC", false, ImGuiSelectableFlags_SpanAllColumns);
+
+            if (ImGui::BeginPopupContextItem()) {
+                uint16_t value = debugger.get_PC() & 0xFFF;
+                if (ImGui::Selectable(
+                            fmt::format("Follow to {0:03X} in disassembly", value).c_str())) {
+                    ds_handler.queue_scroll(value, true);
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
             }
-            ImGui::EndPopup();
-        }
 
-        ImGui::TableNextColumn();
-        colored_centered_text_known({ 255, 0, 0, 255 }, debugger.PC_change, threesize, "%03X",
-                                    debugger.get_PC());
+            ImGui::TableNextColumn();
+            colored_centered_text_known({ 255, 0, 0, 255 }, debugger.PC_change, threesize, "%03X",
+                                        debugger.get_PC());
+        }
+        else {
+            ImGui::TableNextColumn();
+            center_text("???");
+        }
     };
 
     auto draw_D = [&]() {
         ImGui::TableNextColumn();
         center_text("D");
         ImGui::TableNextColumn();
-        colored_centered_text_known({ 255, 0, 0, 255 }, debugger.dt_change, rhs_width, "%02X",
-                                    debugger.get_DT());
+        if (debugger.is_readable()) {
+            colored_centered_text_known({ 255, 0, 0, 255 }, debugger.dt_change, rhs_width, "%02X",
+                                        debugger.get_DT());
+        }
+        else {
+            center_text("??");
+        }
     };
 
     auto draw_S = [&]() {
         ImGui::TableNextColumn();
         center_text("S");
         ImGui::TableNextColumn();
-        colored_centered_text_known({ 255, 0, 0, 255 }, debugger.st_change, rhs_width, "%02X",
-                                    debugger.get_ST());
+
+        if (debugger.is_readable()) {
+            colored_centered_text_known({ 255, 0, 0, 255 }, debugger.st_change, rhs_width, "%02X",
+                                        debugger.get_ST());
+        }
+        else {
+            center_text("??");
+        }
     };
 
     // we check one time to calculate how much space we will need for our pair of register/values
@@ -796,7 +844,7 @@ void GUI::register_viewer() {
                                                 rhs_width, "%02X", debugger.get_V(index));
                 }
                 else {
-                    ImGui::Text("??");
+                    center_text("??");
                 }
 
                 ImGui::EndTable();
@@ -877,6 +925,7 @@ void GUI::register_viewer() {
 }
 
 void GUI::memory_viewer() {
+
     ImGui::Begin("Memory viewer");
     if (ImGui::BeginTable("memory", 8)) {};
 }
@@ -937,10 +986,14 @@ void GUI::disassembly() {
 
                     auto& ins1 = disassembler.found_instructions[2 * i];
 
-                    // PC icon
                     ImGui::TableNextColumn();
-                    if (debugger.get_PC() == ins1.address) {
-                        ImGui::Image(icon_textures[ARROW_RIGHT_PC], ImVec2(font_size, font_size));
+
+                    // PC icon
+                    if (debugger.is_readable()) {
+                        if (debugger.get_PC() == ins1.address) {
+                            ImGui::Image(icon_textures[ARROW_RIGHT_PC],
+                                         ImVec2(font_size, font_size));
+                        }
                     }
 
                     // breakpoint icon
@@ -971,7 +1024,7 @@ void GUI::disassembly() {
                             // display different text depending on if bp is set
                             if (debugger.is_breakpoint_set(ins1.address)) {
                                 if (ImGui::Selectable(
-                                            fmt::format("Remove breakpoint at address 0x{0:03x}",
+                                            fmt::format("Remove breakpoint at address 0x{0:03X}",
                                                         ins1.address)
                                                     .c_str())) {
                                     debugger.remove_breakpoint(ins1.address);
@@ -980,7 +1033,7 @@ void GUI::disassembly() {
                             }
                             else {
                                 if (ImGui::Selectable(
-                                            fmt::format("Add breakpoint at address 0x{0:03x}",
+                                            fmt::format("Add breakpoint at address 0x{0:03X}",
                                                         ins1.address)
                                                     .c_str())) {
                                     debugger.set_breakpoint(ins1.address);
@@ -991,7 +1044,7 @@ void GUI::disassembly() {
                             if (is_followable(ins1.operation)) {
                                 uint16_t imm12 = ins1.opcode & 0xFFF;
                                 if (ImGui::Selectable(
-                                            fmt::format("Follow to address 0x{0:03x}", imm12)
+                                            fmt::format("Follow to address 0x{0:03X}", imm12)
                                                     .c_str())) {
                                     ds_handler.queue_scroll(imm12, true);
                                     ImGui::CloseCurrentPopup();
@@ -1062,7 +1115,7 @@ void GUI::disassembly() {
             ImGui::SameLine();
 
             ImGui::SetNextItemWidth(3 * font_size);
-            if (ImGui::InputScalar("", ImGuiDataType_U16, &jump, nullptr, nullptr, "%03x",
+            if (ImGui::InputScalar("", ImGuiDataType_U16, &jump, nullptr, nullptr, "%03X",
                                    ImGuiInputTextFlags_EnterReturnsTrue)) {
                 ds_handler.queue_scroll(jump);
                 jump = 0;
