@@ -5,8 +5,37 @@
 #include <iostream>
 #include <fmt/ranges.h>
 #include <thread>
+#include <fstream>
+namespace {
+
+    void read_file(const std::string& name, uint16_t addr, uint8_t* data) {
+        std::ifstream file;
+        file.open(name, std::ios_base::binary);
+        file.seekg(0, std::ios::end);
+        size_t size = file.tellg();
+        file.seekg(0, std::ios::beg);
+        file.read(reinterpret_cast<char*>(data + addr), size);
+        file.close();
+    }
+} // namespace
 
 Debugger::Debugger(Chip8& p) : proc{ p } {}
+
+void Debugger::new_game(const std::string& filepath, uint16_t addr, uint16_t entry, bool paused) {
+    using namespace std::chrono_literals;
+
+    proc.is_ready = false;
+    std::this_thread::sleep_for(100ms);
+
+    proc.reset_state();
+    proc.PC = entry;
+    read_file(filepath, addr, proc.memory.data());
+
+    proc.base_address = addr;
+    proc.entry_point  = entry;
+
+    proc.is_ready = true;
+}
 
 // save current emu state
 void Debugger::save_emu_state() noexcept {
@@ -118,7 +147,12 @@ void Debugger::step_out() noexcept {
 }
 
 void Debugger::cycle() noexcept {
-    if (breakpoints[proc.PC] || reached_destination()) {
+    // if we hit a breakpoint, we've reached a destination
+    if (breakpoints[proc.PC]) {
+        destination = proc.PC;
+        pause();
+    }
+    else if (reached_destination()) {
         pause();
     }
     else if (being_debugged()) {

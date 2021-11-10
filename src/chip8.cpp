@@ -28,19 +28,9 @@ const uint8_t fontset[] = {
 
 static uint16_t swap_byte_order(uint16_t s) { return (s >> 8) | (s << 8); }
 
-Chip8::Chip8() {
+Chip8::Chip8() : stack(16) {
     std::srand(std::time(nullptr));
     is_ready = false;
-}
-
-void Chip8::read_file(const std::string& name, uint16_t addr) {
-    std::ifstream file;
-    file.open(name, std::ios_base::binary);
-    file.seekg(0, std::ios::end);
-    size_t size = file.tellg();
-    file.seekg(0, std::ios::beg);
-    file.read(reinterpret_cast<char*>(memory.data() + addr), size);
-    file.close();
 }
 
 void Chip8::copy_font_data() noexcept {
@@ -69,23 +59,6 @@ void Chip8::reset_state() {
     cycle_count = 0;
     delay_timer = 0;
     sound_timer = 0;
-}
-
-// creates new game, always
-void Chip8::new_game(const std::string& filepath, uint16_t addr, uint16_t entry, bool paused) {
-    using namespace std::chrono_literals;
-
-    is_ready = false;
-    std::this_thread::sleep_for(100ms);
-
-    reset_state();
-    PC = entry;
-    read_file(filepath, addr);
-
-    base_address = addr;
-    entry_point  = entry;
-
-    is_ready = true;
 }
 
 uint16_t Chip8::fetch(uint16_t addr) {

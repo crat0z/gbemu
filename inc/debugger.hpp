@@ -48,6 +48,8 @@ public:
 
     Debugger(Chip8& p);
 
+    void new_game(const std::string& filepath, uint16_t entry, uint16_t addr, bool paused);
+
     Stack<uint16_t>& get_stack() const noexcept;
 
     uint16_t get_V(uint8_t reg) const noexcept;

@@ -60,8 +60,6 @@ public:
     std::array<bool, 16> keys = {};
 
     Chip8();
-    // new game with filepath, entry and writing memory to addr
-    void new_game(const std::string& filepath, uint16_t entry, uint16_t addr, bool paused);
 };
 
 #endif

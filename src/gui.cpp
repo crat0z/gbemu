@@ -693,7 +693,7 @@ void GUI::launch_settings() {
 
     if (ImGui::Button("OK")) {
         // new game
-        emu.new_game(last_file_name, entry_setting, base_address, launch_paused);
+        debugger.new_game(last_file_name, entry_setting, base_address, launch_paused);
 
         if (launch_paused) {
             debugger.pause();
@@ -1202,7 +1202,6 @@ void GUI::disassembly() {
 
                     // breakpoint icon
                     ImGui::TableNextColumn();
-
                     if (debugger.is_breakpoint_set(ins1.address)) {
                         ImGui::Image(icon_textures[BREAKPOINT], ImVec2(font_size, font_size));
                     }

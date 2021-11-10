@@ -20,7 +20,9 @@ public:
     // could segfault
     std::mutex mut;
 
-    Stack(size_t res = 16) { data.reserve(res); }
+    Stack() = default;
+
+    Stack(size_t reserve_size) { data.reserve(reserve_size); }
 
     size_t size() const noexcept { return data.size(); }
 
@@ -43,13 +45,13 @@ public:
 
     std::vector<T>::iterator       begin() noexcept { return data.begin(); }
     std::vector<T>::iterator       end() noexcept { return data.end(); }
-    std::vector<T>::const_iterator cbegin() noexcept { return data.cbegin(); }
-    std::vector<T>::const_iterator cend() noexcept { return data.cend(); }
+    std::vector<T>::const_iterator cbegin() const noexcept { return data.cbegin(); }
+    std::vector<T>::const_iterator cend() const noexcept { return data.cend(); }
 
     std::vector<T>::reverse_iterator       rbegin() noexcept { return data.rbegin(); }
     std::vector<T>::reverse_iterator       rend() noexcept { return data.rend(); }
-    std::vector<T>::const_reverse_iterator crbegin() noexcept { return data.crbegin(); }
-    std::vector<T>::const_reverse_iterator crend() noexcept { return data.crend(); }
+    std::vector<T>::const_reverse_iterator crbegin() const noexcept { return data.crbegin(); }
+    std::vector<T>::const_reverse_iterator crend() const noexcept { return data.crend(); }
 };
 
 #endif
