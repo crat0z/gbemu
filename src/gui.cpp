@@ -225,7 +225,38 @@ namespace {
 
     d_scroll_handler ds_handler;
 
-    d_scroll_handler mv_handler;
+    struct m_scroll_handler {
+
+        ImGuiListClipper clipper;
+
+        uint16_t target_addr;
+
+        int count;
+
+        // queue up a new scroll target. optionally destroys forward history we've kept
+        void queue_scroll(uint16_t addr) { set_value(addr); }
+
+        void set_value(uint16_t v) {
+            if (v == 0) {
+                v = 1;
+            }
+            target_addr = v / count;
+        }
+        // actually do the scrolling, call this at particular spot
+        void scroll_to_target(int c) {
+            count = c;
+            if (target_addr) {
+
+                float item_pos_y = clipper.StartPosY + clipper.ItemsHeight * (target_addr);
+                ImGui::SetScrollFromPosY(item_pos_y - ImGui::GetWindowPos().y);
+                target_addr = 0;
+            }
+
+            clipper = ImGuiListClipper();
+        }
+    };
+
+    m_scroll_handler mv_handler;
 
     Keys keymap;
 
@@ -1018,14 +1049,14 @@ void GUI::memory_viewer() {
                                                      ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableHeadersRow();
 
-            ImGuiListClipper clipper;
-            clipper.Begin(4096 / cols);
+            mv_handler.clipper.Begin(4096 / cols);
 
             std::string var;
             var.reserve(cols);
 
-            while (clipper.Step()) {
-                for (auto i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+            while (mv_handler.clipper.Step()) {
+                for (auto i = mv_handler.clipper.DisplayStart; i < mv_handler.clipper.DisplayEnd;
+                     i++) {
                     // draw left number base thing
                     uint16_t base = i * cols;
                     ImGui::TableNextColumn();
@@ -1084,6 +1115,8 @@ void GUI::memory_viewer() {
                     var.clear();
                 }
             }
+
+            mv_handler.scroll_to_target(cols);
 
             ImGui::EndTable();
         };
