@@ -388,12 +388,12 @@ namespace core {
             for (uint8_t i = 0; i < n; ++i) {
                 std::bitset<8> line = memory[I + i];
 
-                uint8_t currY = (y + i) % 32;
+                uint8_t currY = (y + i) % Y_PIXELS;
 
                 // 8 pixels per line, to right
                 for (uint8_t j = 0; j < 8; ++j) {
 
-                    uint8_t currX = (x + j) % 64;
+                    uint8_t currX = (x + j) % X_PIXELS;
 
                     // 7 - j because 0 actually is least significant bit
                     if (!pixel_unset && framebuffer[currY][currX] && line[7 - j]) {

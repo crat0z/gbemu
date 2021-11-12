@@ -9,6 +9,7 @@ namespace {
 
     std::unordered_map<uint16_t, std::shared_ptr<core::basic_block>> done;
 
+    // check if `val` is an opcode that breaks a basic block
     bool is_jump_or_ret(op val) {
         static std::array<op, 11> jumps = { op::JP,    op::JP_V0, op::SE_I, op::SE_R, op::SNE_I,
                                             op::SNE_R, op::SKP,   op::SKNP, op::RET,  op::UNKNOWN };
@@ -24,9 +25,9 @@ namespace {
 namespace GUI {
 
     DisassemblyView::DisassemblyView(core::EmuWrapper& e, float fs) : DbgComponent(e, fs) {
-        found_instructions.reserve(4096);
+        found_instructions.reserve(MAX_MEMORY);
 
-        for (auto i = 0; i < 4096; ++i) {
+        for (auto i = 0; i < MAX_MEMORY; ++i) {
             found_instructions.emplace_back(i);
         }
     }
@@ -215,7 +216,7 @@ namespace GUI {
             ImGui::SameLine();
             if (ImGui::ImageButton(global::icon_textures()[REFRESH],
                                    ImVec2(font_size, font_size))) {
-                analyze();
+                first_analysis();
                 queue_scroll(emu.get_entry(), true);
             }
 
@@ -391,10 +392,9 @@ namespace GUI {
         }
     }
 
-    /*
-    still implementing, in particular calls will ruin things
-*/
-    void DisassemblyView::analyze() {
+    // statically analyze the rom from entry and find all branches it can
+    // note that indirect jumps or calls cannot be found in this manner
+    void DisassemblyView::first_analysis() {
 
         if (!emu.is_ready())
             return;
@@ -417,14 +417,16 @@ namespace GUI {
         }
 
         // remove invalid instructions in list
-
         std::vector<core::Instruction> newlist;
+        newlist.reserve(MAX_MEMORY);
 
         for (auto i = 0; i < found_instructions.size();) {
             auto inc = found_instructions[i].length;
             newlist.emplace_back(std::move(found_instructions[i]));
             i += inc;
         }
+
+        newlist.shrink_to_fit();
 
         found_instructions = std::move(newlist);
     }

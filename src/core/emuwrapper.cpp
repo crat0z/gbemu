@@ -39,7 +39,7 @@ namespace core {
         proc.is_ready = true;
     }
 
-    std::array<std::array<bool, 64>, 32>& EmuWrapper::frame_buffer() noexcept {
+    std::array<std::array<bool, X_PIXELS>, Y_PIXELS>& EmuWrapper::frame_buffer() noexcept {
         return proc.framebuffer;
     }
 
@@ -215,7 +215,7 @@ namespace core {
     uint16_t EmuWrapper::get_PC() noexcept { return proc.PC; }
     void     EmuWrapper::set_PC(uint8_t val) noexcept { proc.PC = val; }
 
-    std::array<uint8_t, 4096>& EmuWrapper::get_memory() noexcept { return proc.memory; }
+    std::array<uint8_t, MAX_MEMORY>& EmuWrapper::get_memory() noexcept { return proc.memory; }
 
     std::array<bool, 16>& EmuWrapper::get_keys() noexcept { return proc.keys; }
 

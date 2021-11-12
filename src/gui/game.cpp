@@ -2,9 +2,6 @@
 #include "gui/imgui_helpers.hpp"
 #include "global.hpp"
 
-constexpr float X_PIXELS = 64.0;
-constexpr float Y_PIXELS = 32.0;
-
 namespace GUI {
 
     Game::Game(core::EmuWrapper& e) : GUIComponent(0, true), emu(e) {}
@@ -71,9 +68,9 @@ namespace GUI {
         vMin.x += x_offset;
         vMin.y += y_offset;
 
-        for (auto i = 0; i < 32; ++i) {
+        for (auto i = 0; i < Y_PIXELS; ++i) {
             auto y = vMin.y + i * scale;
-            for (auto j = 0; j < 64; ++j) {
+            for (auto j = 0; j < X_PIXELS; ++j) {
                 auto x = vMin.x + j * scale;
                 if (emu.frame_buffer()[i][j]) {
                     draw_list->AddRectFilled(ImVec2{ x, y }, ImVec2{ x + scale, y + scale }, white,

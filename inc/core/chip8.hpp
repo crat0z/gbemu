@@ -8,6 +8,7 @@
 #include "core/timer.hpp"
 #include "core/opcodes.hpp"
 #include "core/stack.hpp"
+#include "core/emulatorconstants.hpp"
 
 namespace core {
     class Chip8 {
@@ -17,9 +18,9 @@ namespace core {
 
         void copy_font_data() noexcept;
 
-        std::array<uint8_t, 4096> memory = {};
-        std::array<uint8_t, 16>   V      = {};
-        std::array<uint8_t, 4>    val    = {};
+        std::array<uint8_t, MAX_MEMORY> memory = {};
+        std::array<uint8_t, 16>         V      = {};
+        std::array<uint8_t, 4>          val    = {};
 
         uint16_t I = 0;
         uint16_t PC;
@@ -56,7 +57,7 @@ namespace core {
         void reset_state();
 
     public:
-        std::array<std::array<bool, 64>, 32> framebuffer = {};
+        std::array<std::array<bool, X_PIXELS>, Y_PIXELS> framebuffer = {};
 
         std::array<bool, 16> keys = {};
 

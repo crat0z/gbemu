@@ -10,10 +10,10 @@
 namespace core {
 
     class EmuWrapper {
-        std::array<bool, 4096> breakpoints = {};
+        std::array<bool, MAX_MEMORY> breakpoints = {};
 
-        std::array<uint8_t, 4096> prev_memory = {};
-        std::array<uint8_t, 16>   prev_V      = {};
+        std::array<uint8_t, MAX_MEMORY> prev_memory = {};
+        std::array<uint8_t, 16>         prev_V      = {};
 
         uint16_t prev_I  = 0;
         uint16_t prev_PC = 0;
@@ -52,7 +52,7 @@ namespace core {
 
         void new_game(const std::string& filepath, uint16_t entry, uint16_t addr, bool paused);
 
-        std::array<std::array<bool, 64>, 32>& frame_buffer() noexcept;
+        std::array<std::array<bool, X_PIXELS>, Y_PIXELS>& frame_buffer() noexcept;
 
         Stack<uint16_t>& get_stack() noexcept;
 
@@ -71,7 +71,7 @@ namespace core {
         uint16_t get_PC() noexcept;
         void     set_PC(uint8_t val) noexcept;
 
-        std::array<uint8_t, 4096>& get_memory() noexcept;
+        std::array<uint8_t, MAX_MEMORY>& get_memory() noexcept;
 
         std::array<bool, 16>& get_keys() noexcept;
 

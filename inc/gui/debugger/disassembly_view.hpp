@@ -25,7 +25,7 @@ namespace GUI {
 
         float last_scroll_val;
 
-        void analyze();
+        void first_analysis();
 
         bool  show_left();
         bool  show_right();

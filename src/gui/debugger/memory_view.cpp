@@ -77,7 +77,7 @@ namespace GUI {
                 ImGui::TableHeadersRow();
 
                 ImGuiListClipper clipper;
-                clipper.Begin(4096 / cols);
+                clipper.Begin(MAX_MEMORY / cols);
 
                 std::string var;
                 var.reserve(cols);
