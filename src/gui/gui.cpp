@@ -252,11 +252,11 @@ namespace GUI {
             auto& io = ImGui::GetIO();
 
             if (event.type == SDL_QUIT) {
-                done = true;
+                exit(0);
             }
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE &&
                 event.window.windowID == SDL_GetWindowID(window)) {
-                done = true;
+                exit(0);
             }
 
             if (!io.WantCaptureKeyboard) {

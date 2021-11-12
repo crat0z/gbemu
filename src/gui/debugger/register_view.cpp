@@ -9,7 +9,7 @@ namespace GUI {
     void RegisterView::draw_window() {
         static const float width = ImGui::CalcTextSize("F").x;
 
-        static const float pair_width = 3 * width;
+        static const float pair_width = 4.1 * width;
 
         auto draw_I = [&]() {
             ImGui::TableNextColumn();
