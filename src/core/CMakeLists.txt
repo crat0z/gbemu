@@ -1,0 +1,1 @@
+target_sources(chip8emu PRIVATE chip8.cpp emuwrapper.cpp opcodes.cpp basicblock.cpp)
