@@ -142,7 +142,8 @@ namespace GUI {
                 ImGui::EndTable();
             };
 
-            if (ImGui::InputScalar("", ImGuiDataType_U16, &jump, nullptr, nullptr, "%03X",
+            ImGui::SetNextItemWidth(3 * font_size);
+            if (ImGui::InputScalar("###jump to", ImGuiDataType_U16, &jump, nullptr, nullptr, "%03X",
                                    ImGuiInputTextFlags_EnterReturnsTrue)) {
                 next_scroll = jump;
 

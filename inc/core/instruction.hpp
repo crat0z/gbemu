@@ -1,6 +1,7 @@
 #ifndef INSTRUCTION_HPP
 #define INSTRUCTION_HPP
 #include "core/opcodes.hpp"
+#include <fmt/format.h>
 
 namespace core {
     struct Instruction {
@@ -24,7 +25,7 @@ namespace core {
                 : address{ addr },
                   opcode{ 0 },
                   operation{ op::UNKNOWN },
-                  length{ 0 },
+                  length{ 1 },
                   mnemonic{ "" } {}
 
         // length = 2 always at this point, change in future
@@ -34,6 +35,21 @@ namespace core {
                   operation{ decode(opc) },
                   length{ 2 },
                   mnemonic{ opcode_mnemonic(opc) } {}
+
+        std::string opcode_string() const noexcept {
+            // every instruction is at least one byte long
+
+            auto tmp = opcode;
+
+            std::string ret = fmt::format("{:02X}", tmp & 0xFF);
+
+            for (auto i = 0; i < length - 1; ++i) {
+                tmp >>= 8;
+                ret.append(fmt::format(" {:02X}", tmp & 0xFF));
+            }
+
+            return ret;
+        }
     };
 } // namespace core
 
