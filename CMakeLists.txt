@@ -3,8 +3,6 @@ cmake_minimum_required (VERSION 3.16)
 
 project(chip8emu)
 
-set(CMAKE_CXX_STANDARD 20)
-
 set(MY_INCLUDES ${chip8emu_SOURCE_DIR}/inc)
 
 # temporary stuff, until fedora gets 2.0.17
