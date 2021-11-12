@@ -134,7 +134,7 @@ namespace GUI {
 
                 if (next_scroll) {
                     float item_pos_y =
-                            clipper.StartPosY + clipper.ItemsHeight * (next_scroll / count);
+                            clipper.StartPosY + clipper.ItemsHeight * (next_scroll / cols);
                     ImGui::SetScrollFromPosY(item_pos_y - ImGui::GetWindowPos().y);
                     next_scroll = 0;
                 }
