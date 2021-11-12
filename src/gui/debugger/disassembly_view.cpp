@@ -132,9 +132,9 @@ namespace GUI {
                                     ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchProp |
                                     ImGuiTableFlags_PadOuterX | ImGuiTableFlags_Resizable;
 
-            auto test = ImGui::GetContentRegionMax();
+            auto max = ImGui::GetContentRegionMax();
 
-            ImVec2 outer = ImVec2(0.0f, test.y - 4.5 * font_size);
+            ImVec2 outer = ImVec2(0.0f, max.y - 3.0 * font_size);
 
             if (ImGui::BeginTable("text_table", 5, flags, outer)) {
                 ImGui::TableSetupScrollFreeze(0, 1);
@@ -262,75 +262,75 @@ namespace GUI {
                 ds_handler.scroll_to_target();
 
                 ImGui::EndTable();
+            }
 
-                if (ImGui::ImageButton(global::icon_textures()[REFRESH],
+            // go back
+            if (ds_handler.show_left()) {
+                if (ImGui::ImageButton(global::icon_textures()[ARROW_LEFT],
                                        ImVec2(font_size, font_size))) {
-                    analyze();
-                    ds_handler.queue_scroll(emu.get_entry(), true);
+                    ds_handler.go_back();
                 }
-
-                ImGui::SameLine();
-
-                if (ImGui::ImageButton(global::icon_textures()[PAUSE],
+            }
+            else {
+                ImGui::ImageButton(global::icon_textures()[ARROW_LEFT_INACTIVE],
+                                   ImVec2(font_size, font_size));
+            }
+            ImGui::SameLine();
+            // go forward
+            if (ds_handler.show_right()) {
+                if (ImGui::ImageButton(global::icon_textures()[ARROW_RIGHT],
                                        ImVec2(font_size, font_size))) {
-                    emu.pause();
-                    ds_handler.queue_scroll(emu.get_PC(), true);
+                    ds_handler.go_forward();
                 }
-                ImGui::SameLine();
+            }
+            else {
+                ImGui::ImageButton(global::icon_textures()[ARROW_RIGHT_INACTIVE],
+                                   ImVec2(font_size, font_size));
+            }
+            ImGui::SameLine();
+            // jump to address
+            ImGui::SetNextItemWidth(3 * font_size);
+            if (ImGui::InputScalar("", ImGuiDataType_U16, &jump, nullptr, nullptr, "%03X",
+                                   ImGuiInputTextFlags_EnterReturnsTrue)) {
+                ds_handler.queue_scroll(jump);
+                jump = 0;
+            }
+            ImGui::SameLine();
+            if (ImGui::ImageButton(global::icon_textures()[REFRESH],
+                                   ImVec2(font_size, font_size))) {
+                analyze();
+                ds_handler.queue_scroll(emu.get_entry(), true);
+            }
 
-                if (ImGui::ImageButton(global::icon_textures()[STEP_OVER],
-                                       ImVec2(font_size, font_size))) {
-                    emu.step_over();
-                }
+            ImGui::SameLine();
 
-                ImGui::SameLine();
-                if (ImGui::ImageButton(global::icon_textures()[STEP_INTO],
-                                       ImVec2(font_size, font_size))) {
-                    emu.single_step();
-                }
+            if (ImGui::ImageButton(global::icon_textures()[PAUSE], ImVec2(font_size, font_size))) {
+                emu.pause();
+                ds_handler.queue_scroll(emu.get_PC(), true);
+            }
+            ImGui::SameLine();
 
-                ImGui::SameLine();
-                if (ImGui::ImageButton(global::icon_textures()[STEP_OUT],
-                                       ImVec2(font_size, font_size))) {
-                    emu.step_out();
-                }
+            if (ImGui::ImageButton(global::icon_textures()[STEP_OVER],
+                                   ImVec2(font_size, font_size))) {
+                emu.step_over();
+            }
 
-                ImGui::SameLine();
-                if (ImGui::ImageButton(global::icon_textures()[CONTINUE],
-                                       ImVec2(font_size, font_size))) {
-                    emu.continue_emu();
-                }
+            ImGui::SameLine();
+            if (ImGui::ImageButton(global::icon_textures()[STEP_INTO],
+                                   ImVec2(font_size, font_size))) {
+                emu.single_step();
+            }
 
-                ImGui::SameLine();
+            ImGui::SameLine();
+            if (ImGui::ImageButton(global::icon_textures()[STEP_OUT],
+                                   ImVec2(font_size, font_size))) {
+                emu.step_out();
+            }
 
-                ImGui::SetNextItemWidth(3 * font_size);
-                if (ImGui::InputScalar("", ImGuiDataType_U16, &jump, nullptr, nullptr, "%03X",
-                                       ImGuiInputTextFlags_EnterReturnsTrue)) {
-                    ds_handler.queue_scroll(jump);
-                    jump = 0;
-                }
-
-                if (ds_handler.show_left()) {
-                    if (ImGui::ImageButton(global::icon_textures()[ARROW_LEFT],
-                                           ImVec2(font_size, font_size))) {
-                        ds_handler.go_back();
-                    }
-                }
-                else {
-                    ImGui::ImageButton(global::icon_textures()[ARROW_LEFT_INACTIVE],
-                                       ImVec2(font_size, font_size));
-                }
-                ImGui::SameLine();
-                if (ds_handler.show_right()) {
-                    if (ImGui::ImageButton(global::icon_textures()[ARROW_RIGHT],
-                                           ImVec2(font_size, font_size))) {
-                        ds_handler.go_forward();
-                    }
-                }
-                else {
-                    ImGui::ImageButton(global::icon_textures()[ARROW_RIGHT_INACTIVE],
-                                       ImVec2(font_size, font_size));
-                }
+            ImGui::SameLine();
+            if (ImGui::ImageButton(global::icon_textures()[CONTINUE],
+                                   ImVec2(font_size, font_size))) {
+                emu.continue_emu();
             }
         }
 

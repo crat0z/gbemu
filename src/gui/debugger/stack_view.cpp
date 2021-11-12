@@ -7,10 +7,10 @@ namespace GUI {
     StackView::StackView(core::EmuWrapper& e, float fs) : DbgComponent(e, fs) {}
 
     void StackView::draw_window() {
-        ImGui::Begin("Stack view", &window_state, ImGuiWindowFlags_NoTitleBar);
+
+        ImGui::Begin("Stack view", &window_state);
         ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, { 0.50f, 0.0f });
         {
-            helpers::center_text("Stack view");
             ImGui::BeginChild("stacks");
             auto& stack = emu.get_stack();
             if (emu.is_readable()) {

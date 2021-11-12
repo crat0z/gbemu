@@ -11,6 +11,8 @@ namespace GUI {
         static const float width      = ImGui::CalcTextSize("F").x;
         static const float base_width = ImGui::CalcTextSize("FFF").x * 1.35f;
 
+        static uint16_t jump = 0;
+
         auto byte_to_printable = [&](char s) {
             if (s >= 0x20 && s <= 0x7E) {
                 return s;
@@ -18,7 +20,7 @@ namespace GUI {
             return '.';
         };
 
-        ImGui::Begin("Memory viewer");
+        ImGui::Begin("Memory viewer", &window_state, ImGuiWindowFlags_NoScrollbar);
         {
             auto avail = ImGui::GetContentRegionAvail();
             int  count = static_cast<int>(std::floor(avail.x / base_width)) + 1;
@@ -34,20 +36,22 @@ namespace GUI {
                 count = 7;
             }
 
-            helpers::center_text("Memory viewer");
+            auto max = ImGui::GetContentRegionMax();
+
+            ImVec2 outer = ImVec2(0.0f, max.y - 3.0 * font_size);
 
             if (ImGui::BeginTable("memory", count,
                                   ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp |
                                           ImGuiTableFlags_NoHostExtendX |
-                                          ImGuiTableFlags_NoHostExtendY)) {
-                auto cols     = count - 3;
-                auto cols_p1s = 1;
-                auto cols_p2e = count - 1;
+                                          ImGuiTableFlags_NoHostExtendY,
+                                  outer)) {
 
-                auto b = (cols_p1s + cols_p2e) / 2;
+                auto begin = 1;
+                auto end   = count - 1;
 
-                auto cols_p1e = b;
-                auto cols_p2s = cols_p2e - b + 1;
+                auto cols = count - 3;
+
+                auto brk = (count - 3) / 2 + 1;
 
                 ImGui::TableSetupScrollFreeze(0, 1);
                 ImGui::TableSetupColumn("Base",
@@ -55,21 +59,17 @@ namespace GUI {
                                                 ImGuiTableColumnFlags_WidthFixed,
                                         5 * width);
 
-                // first set
-                for (auto i = cols_p1s; i < cols_p1e; ++i) {
-                    ImGui::TableSetupColumn(fmt::format("{0:01X}", i - 1).c_str(),
-                                            ImGuiTableColumnFlags_NoResize |
-                                                    ImGuiTableColumnFlags_WidthFixed);
-                }
-
-                // center
-                ImGui::TableSetupColumn("###break", ImGuiTableColumnFlags_WidthStretch);
-
-                // second set
-                for (auto i = cols_p2s; i < cols_p2e; ++i) {
-                    ImGui::TableSetupColumn(fmt::format("{0:01X}", i - 2).c_str(),
-                                            ImGuiTableColumnFlags_NoResize |
-                                                    ImGuiTableColumnFlags_WidthFixed);
+                auto real_count = 0;
+                for (auto i = begin; i < end; ++i) {
+                    if (i == brk) {
+                        ImGui::TableSetupColumn("###break", ImGuiTableColumnFlags_WidthStretch);
+                    }
+                    else {
+                        ImGui::TableSetupColumn(fmt::format("{0:01X}", real_count).c_str(),
+                                                ImGuiTableColumnFlags_NoResize |
+                                                        ImGuiTableColumnFlags_WidthFixed);
+                        real_count++;
+                    }
                 }
 
                 ImGui::TableSetupColumn("ASCII", ImGuiTableColumnFlags_NoHeaderLabel |
@@ -109,34 +109,21 @@ namespace GUI {
                             ImGui::PopID();
                         };
 
-                        // draw rows
-                        // do first half
                         auto real_index = 0;
-                        for (auto j = cols_p1s; j < cols_p1e; ++j) {
+                        for (auto i = begin; i < end; ++i) {
                             ImGui::TableNextColumn();
-                            auto address = base + real_index;
-                            auto val     = emu.get_memory()[base + real_index];
+                            if (i == brk) {
+                                ImGui::Text(" ");
+                            }
+                            else {
+                                auto address = base + real_index;
+                                auto val     = emu.get_memory()[base + real_index];
 
-                            context_menu(address, val);
+                                context_menu(address, val);
 
-                            var += byte_to_printable(static_cast<char>(val));
-                            real_index++;
-                        }
-
-                        // do break
-                        ImGui::TableNextColumn();
-                        ImGui::Text(" ");
-
-                        //do second half
-                        for (auto j = cols_p2s; j < cols_p2e; ++j) {
-                            ImGui::TableNextColumn();
-                            auto address = base + real_index;
-                            auto val     = emu.get_memory()[base + real_index];
-
-                            context_menu(address, val);
-
-                            var += byte_to_printable(static_cast<char>(val));
-                            real_index++;
+                                var += byte_to_printable(static_cast<char>(val));
+                                real_index++;
+                            }
                         }
 
                         ImGui::TableNextColumn();
@@ -145,10 +132,22 @@ namespace GUI {
                     }
                 }
 
+                if (next_scroll) {
+                    float item_pos_y =
+                            clipper.StartPosY + clipper.ItemsHeight * (next_scroll / count);
+                    ImGui::SetScrollFromPosY(item_pos_y - ImGui::GetWindowPos().y);
+                    next_scroll = 0;
+                }
+
                 ImGui::EndTable();
             };
 
-            helpers::center_button("OK");
+            if (ImGui::InputScalar("", ImGuiDataType_U16, &jump, nullptr, nullptr, "%03X",
+                                   ImGuiInputTextFlags_EnterReturnsTrue)) {
+                next_scroll = jump;
+
+                jump = 0;
+            }
         }
         ImGui::End();
     }

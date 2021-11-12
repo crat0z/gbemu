@@ -47,7 +47,7 @@ namespace GUI {
 
         ImGui::Checkbox("launch paused", &launch_paused);
 
-        if (ImGui::Button("OK")) {
+        if (helpers::center_button("OK")) {
             // new game
             emu.new_game(last_file_name, entry_setting, base_address, launch_paused);
 
