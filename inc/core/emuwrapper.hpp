@@ -56,20 +56,20 @@ namespace core {
 
         Stack<uint16_t>& get_stack() noexcept;
 
-        uint16_t get_V(uint8_t reg) noexcept;
+        uint8_t& get_V(uint8_t reg) noexcept;
         void     set_V(uint8_t reg, uint8_t val) noexcept;
 
-        uint16_t get_I() noexcept;
-        void     set_I(uint8_t val) noexcept;
+        uint16_t& get_I() noexcept;
+        void      set_I(uint8_t val) noexcept;
 
-        uint16_t get_ST() noexcept;
+        uint8_t& get_ST() noexcept;
         void     set_ST(uint8_t val) noexcept;
 
-        uint16_t get_DT() noexcept;
+        uint8_t& get_DT() noexcept;
         void     set_DT(uint8_t val) noexcept;
 
-        uint16_t get_PC() noexcept;
-        void     set_PC(uint8_t val) noexcept;
+        uint16_t& get_PC() noexcept;
+        void      set_PC(uint8_t val) noexcept;
 
         std::array<uint8_t, MAX_MEMORY>& get_memory() noexcept;
 

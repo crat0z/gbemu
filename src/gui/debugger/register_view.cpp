@@ -36,6 +36,7 @@ namespace GUI {
                 }
 
                 ImGui::TableNextColumn();
+
                 helpers::colored_centered_text_known({ 255, 0, 0, 255 }, emu.I_change, pair_width,
                                                      "%03X", emu.get_I());
             }
@@ -107,7 +108,6 @@ namespace GUI {
         // we check one time to calculate how much space we will need for our pair of register/values
         ImGui::Begin("Registers", &window_state);
 
-        helpers::center_text("Registers");
         // calculate how many pairs we can draw horizontally
         auto avail = ImGui::GetContentRegionAvail();
         int  count = static_cast<int>(std::floor(avail.x / pair_width));

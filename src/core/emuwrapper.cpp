@@ -200,20 +200,20 @@ namespace core {
 
     Stack<uint16_t>& EmuWrapper::get_stack() noexcept { return proc.stack; }
 
-    uint16_t EmuWrapper::get_V(uint8_t reg) noexcept { return proc.V[reg]; }
+    uint8_t& EmuWrapper::get_V(uint8_t reg) noexcept { return proc.V[reg]; }
     void     EmuWrapper::set_V(uint8_t reg, uint8_t val) noexcept { proc.V[reg] = val; }
 
-    uint16_t EmuWrapper::get_I() noexcept { return proc.I; }
-    void     EmuWrapper::set_I(uint8_t val) noexcept { proc.I = val; }
+    uint16_t& EmuWrapper::get_I() noexcept { return proc.I; }
+    void      EmuWrapper::set_I(uint8_t val) noexcept { proc.I = val; }
 
-    uint16_t EmuWrapper::get_ST() noexcept { return proc.sound_timer; }
+    uint8_t& EmuWrapper::get_ST() noexcept { return proc.sound_timer; }
     void     EmuWrapper::set_ST(uint8_t val) noexcept { proc.sound_timer = val; }
 
-    uint16_t EmuWrapper::get_DT() noexcept { return proc.delay_timer; }
+    uint8_t& EmuWrapper::get_DT() noexcept { return proc.delay_timer; }
     void     EmuWrapper::set_DT(uint8_t val) noexcept { proc.delay_timer = val; }
 
-    uint16_t EmuWrapper::get_PC() noexcept { return proc.PC; }
-    void     EmuWrapper::set_PC(uint8_t val) noexcept { proc.PC = val; }
+    uint16_t& EmuWrapper::get_PC() noexcept { return proc.PC; }
+    void      EmuWrapper::set_PC(uint8_t val) noexcept { proc.PC = val; }
 
     std::array<uint8_t, MAX_MEMORY>& EmuWrapper::get_memory() noexcept { return proc.memory; }
 
