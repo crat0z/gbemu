@@ -8,6 +8,8 @@ namespace GUI {
 
     void StackView::draw_window() {
 
+        ImGui::SetNextWindowSize({ 300, 200 }, ImGuiCond_FirstUseEver);
+
         ImGui::Begin("Stack view", &window_state);
         ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, { 0.50f, 0.0f });
         {

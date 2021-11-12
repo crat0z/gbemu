@@ -20,6 +20,8 @@ namespace GUI {
             return '.';
         };
 
+        ImGui::SetNextWindowSize({ 430, 500 }, ImGuiCond_FirstUseEver);
+
         ImGui::Begin("Memory viewer", &window_state, ImGuiWindowFlags_NoScrollbar);
         {
             auto avail = ImGui::GetContentRegionAvail();

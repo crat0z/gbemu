@@ -36,9 +36,9 @@ namespace GUI {
         static uint16_t jump;
 
         // widths for text in the table for centering
-        static float t2_width = ImGui::CalcTextSize("ff").x;
-        static float t3_width = ImGui::CalcTextSize("fff").x;
-        static float t4_width = ImGui::CalcTextSize("ffff").x;
+        static float width = ImGui::CalcTextSize("F").x;
+
+        ImGui::SetNextWindowSize({ 400, 500 }, ImGuiCond_FirstUseEver);
 
         ImGui::Begin("Disassembler", &window_state, ImGuiWindowFlags_NoScrollbar);
 
@@ -105,7 +105,7 @@ namespace GUI {
 
                         ImGui::TableNextColumn();
                         // show address
-                        helpers::center_text_known("%03X", t3_width, ins1.address);
+                        helpers::center_text_known("%03X", 3 * width, ins1.address);
 
                         // show value at this address
                         ImGui::TableNextColumn();

@@ -7,11 +7,9 @@ namespace GUI {
     RegisterView::RegisterView(core::EmuWrapper& e, float fs) : DbgComponent(e, fs) {}
 
     void RegisterView::draw_window() {
-        static const float onesize    = ImGui::CalcTextSize("A").x;
-        static const float lhs_width  = ImGui::CalcTextSize("V0").x;
-        static const float rhs_width  = ImGui::CalcTextSize("FF").x;
-        static const float threesize  = ImGui::CalcTextSize("FFF").x;
-        static const float pair_width = lhs_width + rhs_width + ((lhs_width + rhs_width) / 2.0f);
+        static const float width = ImGui::CalcTextSize("F").x;
+
+        static const float pair_width = 3 * width;
 
         auto draw_I = [&]() {
             ImGui::TableNextColumn();
@@ -24,21 +22,21 @@ namespace GUI {
                 if (ImGui::BeginPopupContextItem()) {
                     uint16_t value = emu.get_I() & 0xFFF;
                     if (ImGui::Selectable(
-                                fmt::format("Follow to {0:03X} in disassembly", value).c_str())) {
+                                fmt::format("View {0:03X} in disassembly", value).c_str())) {
                         message = DbgMessage{ dbg_component::disassembly_view, dbg_action::update,
                                               ScrollMessage{ value, true } };
                         ImGui::CloseCurrentPopup();
                     }
-                    if (ImGui::Selectable(
-                                fmt::format("View {0:03X} in memory viewer", value).c_str())) {
+                    if (ImGui::Selectable(fmt::format("View {0:03X} in memory", value).c_str())) {
                         message = DbgMessage{ dbg_component::memory_view, dbg_action::scroll,
                                               ScrollMessage{ value } };
+                        ImGui::CloseCurrentPopup();
                     }
                     ImGui::EndPopup();
                 }
 
                 ImGui::TableNextColumn();
-                helpers::colored_centered_text_known({ 255, 0, 0, 255 }, emu.I_change, threesize,
+                helpers::colored_centered_text_known({ 255, 0, 0, 255 }, emu.I_change, pair_width,
                                                      "%03X", emu.get_I());
             }
             else {
@@ -59,7 +57,7 @@ namespace GUI {
                 if (ImGui::BeginPopupContextItem()) {
                     uint16_t value = emu.get_PC() & 0xFFF;
                     if (ImGui::Selectable(
-                                fmt::format("Follow to {0:03X} in disassembly", value).c_str())) {
+                                fmt::format("View {0:03X} in disassembly", value).c_str())) {
                         message = DbgMessage(dbg_component::disassembly_view, dbg_action::scroll,
                                              ScrollMessage{ value });
                         ImGui::CloseCurrentPopup();
@@ -68,7 +66,7 @@ namespace GUI {
                 }
 
                 ImGui::TableNextColumn();
-                helpers::colored_centered_text_known({ 255, 0, 0, 255 }, emu.PC_change, threesize,
+                helpers::colored_centered_text_known({ 255, 0, 0, 255 }, emu.PC_change, pair_width,
                                                      "%03X", emu.get_PC());
             }
             else {
@@ -82,7 +80,7 @@ namespace GUI {
             helpers::center_text("D");
             ImGui::TableNextColumn();
             if (emu.is_readable()) {
-                helpers::colored_centered_text_known({ 255, 0, 0, 255 }, emu.dt_change, rhs_width,
+                helpers::colored_centered_text_known({ 255, 0, 0, 255 }, emu.dt_change, 2 * width,
                                                      "%02X", emu.get_DT());
             }
             else {
@@ -96,13 +94,15 @@ namespace GUI {
             ImGui::TableNextColumn();
 
             if (emu.is_readable()) {
-                helpers::colored_centered_text_known({ 255, 0, 0, 255 }, emu.st_change, rhs_width,
+                helpers::colored_centered_text_known({ 255, 0, 0, 255 }, emu.st_change, 2 * width,
                                                      "%02X", emu.get_ST());
             }
             else {
                 helpers::center_text("??");
             }
         };
+
+        ImGui::SetNextWindowSize({ 300, 300 }, ImGuiCond_FirstUseEver);
 
         // we check one time to calculate how much space we will need for our pair of register/values
         ImGui::Begin("Registers", &window_state);
@@ -133,12 +133,12 @@ namespace GUI {
                                     ImGuiTableFlags_NoPadInnerX | ImGuiTableFlags_NoPadOuterX,
                             { pair_width, 0.0f })) {
                     ImGui::TableNextColumn();
-                    helpers::center_text_known("V%01x", lhs_width, index);
+                    helpers::center_text_known("V%01x", 2 * width, index);
                     ImGui::TableNextColumn();
 
                     if (emu.is_readable()) {
                         helpers::colored_centered_text_known({ 255, 0, 0, 255 },
-                                                             emu.reg_changes[index], rhs_width,
+                                                             emu.reg_changes[index], 2 * width,
                                                              "%02X", emu.get_V(index));
                     }
                     else {
