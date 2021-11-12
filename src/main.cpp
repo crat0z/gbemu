@@ -1,8 +1,8 @@
-#include "gui.hpp"
+#include "gui/gui.hpp"
 
 int main(int argc, char** argv) {
 
-    GUI instance;
+    GUI::Main instance;
 
     instance.run();
 }

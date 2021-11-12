@@ -1,0 +1,1 @@
+target_sources(chip8emu PRIVATE keymap.cpp)
