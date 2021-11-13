@@ -23,7 +23,7 @@ namespace GUI {
                     uint16_t value = emu.get_I() & 0xFFF;
                     if (ImGui::Selectable(
                                 fmt::format("View {0:03X} in disassembly", value).c_str())) {
-                        message = DbgMessage{ dbg_component::disassembly_view, dbg_action::update,
+                        message = DbgMessage{ dbg_component::disassembly_view, dbg_action::scroll,
                                               ScrollMessage{ value, true } };
                         ImGui::CloseCurrentPopup();
                     }

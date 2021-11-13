@@ -32,7 +32,7 @@ namespace core {
         // will be set by those functions, and we can check every cycle if we've reached,
         // and if so, signal to caller (usually GUI windows) of this event, and change
         // state of debugger
-        uint16_t destination;
+        uint16_t destination = 0xFFFF;
 
         void get_next_instruction() noexcept;
         void save_emu_state() noexcept;

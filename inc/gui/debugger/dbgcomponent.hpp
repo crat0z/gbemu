@@ -16,7 +16,8 @@ namespace GUI {
         DbgComponent() = delete;
 
     public:
-        DbgComponent(core::EmuWrapper& e, float fs) : GUIComponent(fs), emu{ e } {}
+        DbgComponent(core::EmuWrapper& e, float fs)
+                : GUIComponent(fs), emu{ e }, message{ std::nullopt } {}
 
         std::optional<DbgMessage> get_message() {
             auto ret = std::move(message);
