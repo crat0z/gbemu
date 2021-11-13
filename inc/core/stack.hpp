@@ -12,6 +12,12 @@
 template<typename T>
 class Stack {
 
+    typedef typename std::vector<T>::iterator       iterator;
+    typedef typename std::vector<T>::const_iterator const_iterator;
+
+    typedef typename std::vector<T>::reverse_iterator       reverse_iterator;
+    typedef typename std::vector<T>::const_reverse_iterator const_reverse_iterator;
+
     std::vector<T> data;
 
 public:
@@ -43,15 +49,15 @@ public:
 
     bool empty() const noexcept { return data.empty(); }
 
-    std::vector<T>::iterator       begin() noexcept { return data.begin(); }
-    std::vector<T>::iterator       end() noexcept { return data.end(); }
-    std::vector<T>::const_iterator cbegin() const noexcept { return data.cbegin(); }
-    std::vector<T>::const_iterator cend() const noexcept { return data.cend(); }
+    iterator       begin() noexcept { return data.begin(); }
+    iterator       end() noexcept { return data.end(); }
+    const_iterator cbegin() const noexcept { return data.cbegin(); }
+    const_iterator cend() const noexcept { return data.cend(); }
 
-    std::vector<T>::reverse_iterator       rbegin() noexcept { return data.rbegin(); }
-    std::vector<T>::reverse_iterator       rend() noexcept { return data.rend(); }
-    std::vector<T>::const_reverse_iterator crbegin() const noexcept { return data.crbegin(); }
-    std::vector<T>::const_reverse_iterator crend() const noexcept { return data.crend(); }
+    reverse_iterator       rbegin() noexcept { return data.rbegin(); }
+    reverse_iterator       rend() noexcept { return data.rend(); }
+    const_reverse_iterator crbegin() const noexcept { return data.crbegin(); }
+    const_reverse_iterator crend() const noexcept { return data.crend(); }
 };
 
 #endif

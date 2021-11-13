@@ -12,19 +12,6 @@ namespace GUI {
             ImGui::SetCursorPosX(x + ((width - item_size) / 2.0f));
         }
 
-        void right_align_cursor(float item_size, float offset) {
-            auto  width = ImGui::GetContentRegionAvail().x;
-            auto  x     = ImGui::GetCursorPosX();
-            auto& style = ImGui::GetStyle();
-            ImGui::SetCursorPosX(x + (width - item_size - offset));
-        }
-
-        void right_align_text(const char* format, float offset) {
-
-            right_align_cursor(ImGui::CalcTextSize(format).x, offset);
-            ImGui::Text(format);
-        }
-
         // centers text horizontally, if it knows the size.
         void center_text_known(const char* format, float size, ...) {
 
@@ -36,10 +23,10 @@ namespace GUI {
             va_end(args);
         }
 
-        bool center_button(const char* label) {
+        bool center_button(const char* label, const ImVec2& size) {
             auto width = ImGui::CalcTextSize(label);
             center_cursor(width.x);
-            return ImGui::Button(label);
+            return ImGui::Button(label, size);
         }
 
         // centers a string

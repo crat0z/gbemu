@@ -1,29 +1,39 @@
 set(CMAKE_WARN_DEPRECATED FALSE)
 cmake_minimum_required (VERSION 3.16)
 
-set(CMAKE_C_COMPILER_AR gcc-ar)
-set(CMAKE_C_COMPILER_RANLIB gcc-ranlib)
-
 project(chip8emu CXX)
 
+if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(USE_CLANG TRUE)
+elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+    set(USE_GCC TRUE)
+elseif(MSVC)
+    set(USE_MSVC TRUE)
+endif()
+
+if(USE_CLANG)
+    set(CMAKE_C_COMPILER_AR llvm-ar)
+    set(CMAKE_C_COMPILER_RANLIB llvm-ranlib)
+elseif(USE_GCC)
+    set(CMAKE_C_COMPILER_AR gcc-ar)
+    set(CMAKE_C_COMPILER_RANLIB gcc-ranlib)
+endif()
+
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "shared libs")
 
 set(MY_INCLUDES ${chip8emu_SOURCE_DIR}/inc)
 
-# temporary stuff, until fedora gets 2.0.17
-set(SDL_JACK OFF)
-set(SDL_PIPEWIRE OFF)
-set(SDL_ESD OFF)
-set(SDL_RPI OFF)
+# sdl2
 set(SDL2_INCLUDE_DIR ${chip8emu_SOURCE_DIR}/deps/SDL/include)
 
 add_subdirectory(deps/SDL)
 
 # sdl image
-set(SUPPORT_JPG OFF)
-set(SUPPORT_PNG OFF)
-set(SUPPORT_WEBP OFF)
-set(BUILD_SHOWIMAGE OFF)
+set(BUILD_SHOWIMAGE OFF CACHE BOOL "SDL_image showimage")
+set(SUPPORT_JPG OFF CACHE BOOL "SDL_image JPG")
+set(SUPPORT_PNG OFF CACHE BOOL "SDL_image PNG")
+set(SUPPORT_WEBP OFF CACHE BOOL "SDL_image WEBP")
 
 add_subdirectory(deps/SDL_image)
 

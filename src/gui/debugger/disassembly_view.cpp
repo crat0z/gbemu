@@ -498,6 +498,8 @@ namespace GUI {
                     return center_index;
                 case -1:
                     return impl(v, begin, center_index - 1, impl);
+                default: // should never hit here...
+                    return 0;
                 }
             };
             return find_position_impl(v, begin, end, find_position_impl);

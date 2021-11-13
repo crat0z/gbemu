@@ -6,14 +6,10 @@ namespace GUI {
 
         void center_cursor(float item_size);
 
-        void right_align_cursor(float item_size, float offset);
-
-        void right_align_text(const char* format, float offset = 0.0f);
-
         // centers text horizontally, if it knows the size.
         void center_text_known(const char* format, float size, ...);
 
-        bool center_button(const char* label);
+        bool center_button(const char* label, const ImVec2& size = ImVec2(0.0f, 0.0f));
 
         // centers a string
         void center_text(const char* format);
