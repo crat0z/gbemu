@@ -1,7 +1,12 @@
 set(CMAKE_WARN_DEPRECATED FALSE)
 cmake_minimum_required (VERSION 3.16)
 
-project(chip8emu)
+set(CMAKE_C_COMPILER_AR gcc-ar)
+set(CMAKE_C_COMPILER_RANLIB gcc-ranlib)
+
+project(chip8emu CXX)
+
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 
 set(MY_INCLUDES ${chip8emu_SOURCE_DIR}/inc)
 
@@ -37,9 +42,11 @@ target_include_directories(imgui PUBLIC ${IMGUI_PATH} PUBLIC ${IMGUI_BACKENDS} P
 # fmtlib
 add_subdirectory(deps/fmt)
 
+find_package(Threads REQUIRED)
+
 # this project
 add_subdirectory(src)
 
 target_include_directories(chip8emu PUBLIC ${SDL2_INCLUDE_DIR} PUBLIC ${IMGUI_PATH} PUBLIC ${IMGUI_BACKENDS} PUBLIC ${SDL_IMAGE_INCLUDE_DIR} PUBLIC ${MY_INCLUDES})
 
-target_link_libraries(chip8emu SDL2 SDL2_image imgui fmt::fmt)
+target_link_libraries(chip8emu SDL2 SDL2_image imgui fmt::fmt Threads::Threads)
