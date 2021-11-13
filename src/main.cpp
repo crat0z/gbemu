@@ -5,4 +5,6 @@ int main(int argc, char** argv) {
     GUI::Main instance;
 
     instance.run();
+
+    return 0;
 }

@@ -27,13 +27,14 @@ namespace GUI {
     Main::Main() {
         SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER);
 
-        SDL_WindowFlags flags = (SDL_WindowFlags)(SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
+        SDL_WindowFlags flags =
+                (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
 
         window = SDL_CreateWindow("chip8emu", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1500,
                                   900, flags);
 
         renderer = SDL_CreateRenderer(window, -1,
-                                      SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
+                                      SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_SOFTWARE);
 
         ImGui::CreateContext();
         auto& io = ImGui::GetIO();
@@ -287,19 +288,19 @@ namespace GUI {
 
         auto gfx_thread = [&](std::future<void> exit) {
             while (exit.wait_for(std::chrono::nanoseconds(1)) == std::future_status::timeout) {
-                draw();
-                handle_input();
+                while (!emu.is_paused() && emu.is_ready()) {
+                    emu.cycle();
+                }
+                std::this_thread::sleep_for(100ms);
+                emu.reset_timer();
             }
         };
 
         std::thread thread(gfx_thread, std::move(signal));
 
         while (!done) {
-            while (!emu.is_paused() && emu.is_ready()) {
-                emu.cycle();
-            }
-            std::this_thread::sleep_for(100ms);
-            emu.reset_timer();
+            draw();
+            handle_input();
         }
 
         // set promise value, signal to gfx thread to end

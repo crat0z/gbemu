@@ -1,6 +1,9 @@
 set(CMAKE_WARN_DEPRECATED FALSE)
 cmake_minimum_required (VERSION 3.16)
 
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
 project(chip8emu CXX)
 
 if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -19,13 +22,20 @@ elseif(USE_GCC)
     set(CMAKE_C_COMPILER_RANLIB gcc-ranlib)
 endif()
 
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+# set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "shared libs")
 
 set(MY_INCLUDES ${chip8emu_SOURCE_DIR}/inc)
 
 # sdl2
 set(SDL2_INCLUDE_DIR ${chip8emu_SOURCE_DIR}/deps/SDL/include)
+
+if(USE_MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    set(SDL_LIBC ON CACHE BOOL "use SDL libc")
+    set(SDL_FORCE_STATIC_VCRT ON CACHE BOOL "force static vcrt")
+endif()
 
 add_subdirectory(deps/SDL)
 
@@ -59,4 +69,4 @@ add_subdirectory(src)
 
 target_include_directories(chip8emu PUBLIC ${SDL2_INCLUDE_DIR} PUBLIC ${IMGUI_PATH} PUBLIC ${IMGUI_BACKENDS} PUBLIC ${SDL_IMAGE_INCLUDE_DIR} PUBLIC ${MY_INCLUDES})
 
-target_link_libraries(chip8emu SDL2 SDL2_image imgui fmt::fmt Threads::Threads)
+target_link_libraries(chip8emu PRIVATE SDL2-static SDL2::SDL2main SDL2_image imgui fmt::fmt Threads::Threads)

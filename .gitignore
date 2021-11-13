@@ -1,8 +1,5 @@
 .vscode/
-config/auth_key
-chatbot/model/*
-chatbot/__pycache__
-chatbot/cache_dir
+CMakeSettings.json
 
 ##### Windows
 # Windows thumbnail cache files
