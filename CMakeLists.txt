@@ -39,7 +39,14 @@ else()
         set(CMAKE_C_COMPILER_AR gcc-ar)
         set(CMAKE_C_COMPILER_RANLIB gcc-ranlib)
     endif()
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT result)
+    if(result)
+        set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    endif()
+
 endif()
 
 

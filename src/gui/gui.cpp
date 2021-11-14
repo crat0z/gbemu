@@ -26,8 +26,8 @@ namespace GUI {
         window = SDL_CreateWindow("chip8emu", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1500,
                                   900, flags);
 
-        renderer =
-                SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_SOFTWARE);
+        renderer = SDL_CreateRenderer(window, -1,
+                                      SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
 
         ImGui::CreateContext();
         auto& io = ImGui::GetIO();
@@ -213,7 +213,8 @@ namespace GUI {
 
         auto send_to_type = [&](const std::type_info& type, const GUIMessage& msg) {
             for (auto& w : windows) {
-                if (typeid(*w) == type) {
+                auto ref = w.get();
+                if (typeid(*ref) == type) {
                     w->process_message(msg);
                 }
             }
