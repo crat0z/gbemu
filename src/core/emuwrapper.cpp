@@ -33,6 +33,8 @@ namespace core {
         proc.PC = entry;
         read_file(filepath, addr, proc.memory.data());
 
+        proc.copy_font_data();
+
         proc.base_address = addr;
         proc.entry_point  = entry;
 

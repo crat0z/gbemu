@@ -4,7 +4,7 @@
 
 namespace GUI {
 
-    RegisterView::RegisterView(core::EmuWrapper& e, float fs) : DbgComponent(e, fs) {}
+    RegisterView::RegisterView(float fs, core::EmuWrapper& e) : DbgComponent(fs, e) {}
 
     void RegisterView::draw_window() {
         static const float width = ImGui::CalcTextSize("F").x;
@@ -23,12 +23,12 @@ namespace GUI {
                     uint16_t value = emu.get_I() & 0xFFF;
                     if (ImGui::Selectable(
                                 fmt::format("View {0:03X} in disassembly", value).c_str())) {
-                        message = DbgMessage{ dbg_component::disassembly_view, dbg_action::scroll,
+                        message = GUIMessage{ gui_component::disassembly_view, gui_action::scroll,
                                               ScrollMessage{ value, true } };
                         ImGui::CloseCurrentPopup();
                     }
                     if (ImGui::Selectable(fmt::format("View {0:03X} in memory", value).c_str())) {
-                        message = DbgMessage{ dbg_component::memory_view, dbg_action::scroll,
+                        message = GUIMessage{ gui_component::memory_view, gui_action::scroll,
                                               ScrollMessage{ value } };
                         ImGui::CloseCurrentPopup();
                     }
@@ -59,7 +59,7 @@ namespace GUI {
                     uint16_t value = emu.get_PC() & 0xFFF;
                     if (ImGui::Selectable(
                                 fmt::format("View {0:03X} in disassembly", value).c_str())) {
-                        message = DbgMessage{ dbg_component::disassembly_view, dbg_action::scroll,
+                        message = GUIMessage{ gui_component::disassembly_view, gui_action::scroll,
                                               ScrollMessage{ value } };
                         ImGui::CloseCurrentPopup();
                     }
@@ -222,6 +222,6 @@ namespace GUI {
     }
 
     // dont do shit at all bruh
-    void RegisterView::process_dbg_msg(DbgMessage m) { return; }
+    void RegisterView::process_message(GUIMessage m) { return; }
 
 } // namespace GUI

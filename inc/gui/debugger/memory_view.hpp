@@ -9,11 +9,11 @@ namespace GUI {
         uint16_t next_scroll;
 
     public:
-        MemoryView(core::EmuWrapper& e, float fs);
+        MemoryView(float fs, core::EmuWrapper& e);
 
         void draw_window() override;
 
-        void process_dbg_msg(DbgMessage m) override;
+        void process_message(GUIMessage m) override;
     };
 } // namespace GUI
 #endif

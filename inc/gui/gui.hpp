@@ -2,6 +2,7 @@
 #include <imgui.h>
 #include "core/emuwrapper.hpp"
 #include "gui/guicomponent.hpp"
+#include "gui/game.hpp"
 #include <memory>
 
 namespace GUI {
@@ -10,9 +11,13 @@ namespace GUI {
         SDL_Window*   window;
         SDL_Renderer* renderer;
 
+        float font_size = 20.0f;
+
         core::EmuWrapper emu;
 
-        std::vector<std::shared_ptr<GUIComponent>> windows;
+        Game game_window;
+
+        std::vector<std::unique_ptr<GUIComponent>> windows;
 
         bool done = false;
 

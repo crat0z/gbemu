@@ -53,6 +53,8 @@ namespace GUI {
 
             if (launch_paused) {
                 emu.pause();
+
+                message = GUIMessage(gui_component::all, gui_action::new_game);
             }
 
             window_state = false;

@@ -4,8 +4,8 @@
 #include <ctime>
 #include <thread>
 #include <future>
-
 #include "core/chip8.hpp"
+#include "core/bytes.hpp"
 
 const uint8_t fontset[] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -26,11 +26,11 @@ const uint8_t fontset[] = {
     0xF0, 0x80, 0xF0, 0x80, 0x80 // F
 };
 
-static uint16_t swap_byte_order(uint16_t s) { return (s >> 8) | (s << 8); }
-
 namespace core {
     Chip8::Chip8() : stack(16) {
         std::srand(std::time(nullptr));
+        copy_font_data();
+
         is_ready = false;
     }
 
@@ -518,4 +518,4 @@ namespace core {
 
         cycle_count++;
     }
-}
+} // namespace core

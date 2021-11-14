@@ -49,11 +49,11 @@ namespace GUI {
         void go_forward();
 
     public:
-        DisassemblyView(core::EmuWrapper& e, float fs);
+        DisassemblyView(float fs, core::EmuWrapper& e);
 
         void draw_window() override;
 
-        void process_dbg_msg(DbgMessage m) override;
+        void process_message(GUIMessage m) override;
     };
 } // namespace GUI
 #endif

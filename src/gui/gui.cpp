@@ -1,46 +1,38 @@
 #include "gui/gui.hpp"
 #include <imgui_impl_sdl.h>
 #include <imgui_impl_sdlrenderer.h>
+#include <chrono>
+#include <thread>
+#include <future>
 #include "global.hpp"
 #include "roboto_medium.hpp"
 #include "gui/icons.hpp"
 #include "gui/imgui_helpers.hpp"
-#include <chrono>
-#include <thread>
-#include <future>
-#include "gui/debugger/debugger.hpp"
-#include "gui/game.hpp"
 #include "gui/launcher.hpp"
 #include "gui/settings.hpp"
-
-enum order
-{
-
-    DEBUGGER,
-    LAUNCHER,
-    SETTINGS,
-    GAME
-};
+#include "gui/debugger/disassembly_view.hpp"
+#include "gui/debugger/memory_view.hpp"
+#include "gui/debugger/register_view.hpp"
+#include "gui/debugger/stack_view.hpp"
 
 namespace GUI {
 
-    Main::Main() {
+    Main::Main() : game_window(emu) {
         SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER);
 
-        SDL_WindowFlags flags =
-                (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
+        SDL_WindowFlags flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI |
+                                                  SDL_WINDOW_RESIZABLE);
 
         window = SDL_CreateWindow("chip8emu", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1500,
                                   900, flags);
 
-        renderer = SDL_CreateRenderer(window, -1,
-                                      SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_SOFTWARE);
+        renderer =
+                SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_SOFTWARE);
 
         ImGui::CreateContext();
         auto& io = ImGui::GetIO();
 
         // fix for modularity
-        float font_size = 20.0f;
 
         io.Fonts->AddFontFromMemoryCompressedBase85TTF(roboto_medium_compressed_data_base85,
                                                        font_size);
@@ -55,12 +47,6 @@ namespace GUI {
         global::icon_textures() = generate_icons(font_size, renderer);
 
         style();
-
-        // initialize window objects
-        windows.emplace_back(std::make_shared<Debugger>(font_size, emu));
-        windows.emplace_back(std::make_shared<Launcher>(font_size, emu));
-        windows.emplace_back(std::make_shared<Settings>(font_size));
-        windows.emplace_back(std::make_shared<Game>(emu));
     }
 
     Main::~Main() {
@@ -167,11 +153,11 @@ namespace GUI {
         if (ImGui::BeginMainMenuBar()) {
 
             if (ImGui::BeginMenu("Emulator")) {
-                if (ImGui::MenuItem("Open new ROM")) {
-                    toggle(windows[LAUNCHER]->is_enabled());
+                if (ImGui::MenuItem("Launcher")) {
+                    windows.emplace_back(std::make_unique<Launcher>(font_size, emu));
                 }
                 if (ImGui::MenuItem("Settings")) {
-                    toggle(windows[SETTINGS]->is_enabled());
+                    windows.emplace_back(std::make_unique<Settings>(font_size));
                 }
 
                 ImGui::EndMenu();
@@ -179,22 +165,24 @@ namespace GUI {
 
             if (ImGui::BeginMenu("Debugger")) {
 
-                auto dbg = std::dynamic_pointer_cast<Debugger>(windows[DEBUGGER]);
+                if (ImGui::MenuItem("All windows")) {
+                    windows.emplace_back(std::make_unique<RegisterView>(font_size, emu));
+                    windows.emplace_back(std::make_unique<DisassemblyView>(font_size, emu));
+                    windows.emplace_back(std::make_unique<StackView>(font_size, emu));
+                    windows.emplace_back(std::make_unique<MemoryView>(font_size, emu));
+                }
 
-                if (ImGui::MenuItem("All windows", nullptr, windows[DEBUGGER]->is_enabled())) {
-                    windows[DEBUGGER]->toggle_window();
+                if (ImGui::MenuItem("Register view")) {
+                    windows.emplace_back(std::make_unique<RegisterView>(font_size, emu));
                 }
-                if (ImGui::MenuItem("Register view", nullptr, dbg->get_rv())) {
-                    toggle(dbg->get_rv());
+                if (ImGui::MenuItem("Disassembly view")) {
+                    windows.emplace_back(std::make_unique<DisassemblyView>(font_size, emu));
                 }
-                if (ImGui::MenuItem("Disassembly view", nullptr, dbg->get_dv())) {
-                    toggle(dbg->get_dv());
+                if (ImGui::MenuItem("Stack view")) {
+                    windows.emplace_back(std::make_unique<StackView>(font_size, emu));
                 }
-                if (ImGui::MenuItem("Stack view", nullptr, dbg->get_sv())) {
-                    toggle(dbg->get_sv());
-                }
-                if (ImGui::MenuItem("Memory view", nullptr, dbg->get_mv())) {
-                    toggle(dbg->get_mv());
+                if (ImGui::MenuItem("Memory view")) {
+                    windows.emplace_back(std::make_unique<MemoryView>(font_size, emu));
                 }
 
                 ImGui::EndMenu();
@@ -210,10 +198,84 @@ namespace GUI {
             ImGui::EndMainMenuBar();
         }
 
-        for (auto w : windows) {
-            if (w->is_enabled()) {
-                w->draw_window();
+        game_window.draw_window();
+
+        // draw our windows
+        for (auto it = windows.begin(); it != windows.end();) {
+            if ((*it)->is_enabled()) {
+                (*it)->draw_window();
+                it++;
             }
+            else {
+                it = windows.erase(it);
+            }
+        }
+
+        auto forward_message = [&](std::optional<GUIMessage> g) {
+            if (g.has_value()) {
+                auto& msg = g.value();
+                switch (msg.target) {
+                case gui_component::all: {
+                    for (auto& w : windows) {
+                        w->process_message(msg);
+                    }
+                    break;
+                }
+                case gui_component::disassembly_view: {
+                    for (auto& w : windows) {
+                        if (typeid(*w) == typeid(DisassemblyView)) {
+                            w->process_message(msg);
+                        }
+                    }
+                    break;
+                }
+                case gui_component::register_view: {
+                    for (auto& w : windows) {
+                        if (typeid(*w) == typeid(RegisterView)) {
+                            w->process_message(msg);
+                        }
+                    }
+                    break;
+                }
+                case gui_component::memory_view: {
+                    for (auto& w : windows) {
+                        if (typeid(*w) == typeid(MemoryView)) {
+                            w->process_message(msg);
+                        }
+                    }
+                    break;
+                }
+                case gui_component::stack_view: {
+                    for (auto& w : windows) {
+                        if (typeid(*w) == typeid(StackView)) {
+                            w->process_message(msg);
+                        }
+                    }
+                    break;
+                }
+                case gui_component::launcher: {
+                    for (auto& w : windows) {
+                        if (typeid(*w) == typeid(Launcher)) {
+                            w->process_message(msg);
+                        }
+                    }
+                    break;
+                }
+                case gui_component::settings: {
+                    for (auto& w : windows) {
+                        if (typeid(*w) == typeid(Settings)) {
+                            w->process_message(msg);
+                        }
+                    }
+                    break;
+                }
+                }
+            }
+        };
+
+        // check for any messages
+        for (auto& w : windows) {
+            forward_message(w->get_message());
         }
 
         if (demo_window) {

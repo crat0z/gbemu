@@ -4,7 +4,7 @@
 
 namespace GUI {
 
-    StackView::StackView(core::EmuWrapper& e, float fs) : DbgComponent(e, fs) {}
+    StackView::StackView(float fs, core::EmuWrapper& e) : DbgComponent(fs, e) {}
 
     void StackView::draw_window() {
 
@@ -38,6 +38,6 @@ namespace GUI {
         ImGui::End();
     }
 
-    void StackView::process_dbg_msg(DbgMessage m) { return; }
+    void StackView::process_message(GUIMessage m) { return; }
 
 } // namespace GUI

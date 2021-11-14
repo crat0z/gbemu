@@ -5,7 +5,7 @@
 
 namespace GUI {
 
-    MemoryView::MemoryView(core::EmuWrapper& e, float fs) : DbgComponent(e, fs), next_scroll{ 0 } {}
+    MemoryView::MemoryView(float fs, core::EmuWrapper& e) : DbgComponent(fs, e), next_scroll{ 0 } {}
 
     void MemoryView::draw_window() {
         static const float width      = ImGui::CalcTextSize("F").x;
@@ -101,8 +101,8 @@ namespace GUI {
                                             fmt::format("View address {0:03X} in disassembly", addr)
                                                     .c_str())) {
                                     message =
-                                            DbgMessage{ dbg_component::disassembly_view,
-                                                        dbg_action::scroll, ScrollMessage{ addr } };
+                                            GUIMessage{ gui_component::disassembly_view,
+                                                        gui_action::scroll, ScrollMessage{ addr } };
                                     ImGui::CloseCurrentPopup();
                                 }
                                 ImGui::EndPopup();
@@ -157,10 +157,15 @@ namespace GUI {
         ImGui::End();
     }
 
-    void MemoryView::process_dbg_msg(DbgMessage msg) {
-        if (msg.act == dbg_action::scroll) {
-            auto m      = std::any_cast<ScrollMessage>(msg.data);
-            next_scroll = m.target_address;
+    void MemoryView::process_message(GUIMessage msg) {
+        if (msg.act == gui_action::scroll) {
+            auto m = std::any_cast<ScrollMessage>(msg.data);
+            if (m.target_address == 0) {
+                next_scroll = 1;
+            }
+            else {
+                next_scroll = m.target_address;
+            }
         }
     }
 

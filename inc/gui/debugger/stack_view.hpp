@@ -8,10 +8,10 @@ namespace GUI {
     class StackView : public DbgComponent {
 
     public:
-        StackView(core::EmuWrapper& e, float fs);
+        StackView(float fs, core::EmuWrapper& e);
         void draw_window() override;
 
-        void process_dbg_msg(DbgMessage m) override;
+        void process_message(GUIMessage m) override;
     };
 } // namespace GUI
 

@@ -24,12 +24,16 @@ namespace {
 
 namespace GUI {
 
-    DisassemblyView::DisassemblyView(core::EmuWrapper& e, float fs)
-            : DbgComponent(e, fs), target_addr{ 0 } {
+    DisassemblyView::DisassemblyView(float fs, core::EmuWrapper& e)
+            : DbgComponent(fs, e), target_addr{ 0 } {
         found_instructions.reserve(MAX_MEMORY);
 
         for (auto i = 0; i < MAX_MEMORY; ++i) {
             found_instructions.emplace_back(i);
+        }
+
+        if (e.is_ready()) {
+            first_analysis();
         }
     }
 
@@ -141,7 +145,7 @@ namespace GUI {
                                 }
                                 // follow to jump target in disassembly
                                 if (is_followable(ins1.operation)) {
-                                    uint16_t imm12 = ins1.opcode & 0xFFF;
+                                    uint16_t imm12 = swap_byte_order(ins1.opcode) & 0xFFF;
                                     if (ImGui::Selectable(
                                                 fmt::format("Follow to address 0x{0:03X}", imm12)
                                                         .c_str())) {
@@ -206,12 +210,13 @@ namespace GUI {
                 queue_scroll(jump);
                 jump = 0;
             }
-            ImGui::SameLine();
+            // below not really needed anymore maybe remove
+            /* ImGui::SameLine();
             if (ImGui::ImageButton(global::icon_textures()[REFRESH],
                                    ImVec2(font_size, font_size))) {
                 first_analysis();
                 queue_scroll(emu.get_entry(), true);
-            }
+            } */
 
             ImGui::SameLine();
 
@@ -542,10 +547,14 @@ namespace GUI {
         set_value(ret);
     }
 
-    void DisassemblyView::process_dbg_msg(DbgMessage msg) {
-        if (msg.act == dbg_action::scroll) {
+    void DisassemblyView::process_message(GUIMessage msg) {
+        if (msg.act == gui_action::scroll) {
             auto m = std::any_cast<ScrollMessage>(msg.data);
             queue_scroll(m.target_address, m.save_history);
+        }
+        else if (msg.act == gui_action::new_game) {
+            first_analysis();
+            queue_scroll(emu.get_entry(), true);
         }
     }
 

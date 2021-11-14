@@ -1,1 +1,1 @@
-target_sources(chip8emu PRIVATE debugger.cpp disassembly_view.cpp memory_view.cpp register_view.cpp stack_view.cpp)
+target_sources(chip8emu PRIVATE disassembly_view.cpp memory_view.cpp register_view.cpp stack_view.cpp)
