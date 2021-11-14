@@ -24,7 +24,8 @@ namespace {
 
 namespace GUI {
 
-    DisassemblyView::DisassemblyView(core::EmuWrapper& e, float fs) : DbgComponent(e, fs) {
+    DisassemblyView::DisassemblyView(core::EmuWrapper& e, float fs)
+            : DbgComponent(e, fs), target_addr{ 0 } {
         found_instructions.reserve(MAX_MEMORY);
 
         for (auto i = 0; i < MAX_MEMORY; ++i) {
@@ -76,10 +77,6 @@ namespace GUI {
 
                 clipper.Begin(found_instructions.size());
 
-                ImGui::PushStyleColor(ImGuiCol_Header, helpers::color_from_bytes(80, 80, 80));
-
-                ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, { 0.5f, 0.0f });
-
                 while (clipper.Step()) {
                     for (auto i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
                         ImGui::TableNextRow();
@@ -105,7 +102,7 @@ namespace GUI {
 
                         ImGui::TableNextColumn();
                         // show address
-                        helpers::center_text_known("%03X", 3 * width, ins1.address);
+                        helpers::center_text(fmt::format("{:03X}", ins1.address).c_str());
 
                         // show value at this address
                         ImGui::TableNextColumn();
@@ -116,8 +113,10 @@ namespace GUI {
                         if (ins1.operation != op::UNKNOWN) {
 
                             ImGui::PushID(ins1.address);
-                            ImGui::Selectable(fmt::format("{0}", ins1.mnemonic).c_str(), false,
-                                              ImGuiSelectableFlags_SpanAllColumns);
+
+                            helpers::center_text(fmt::format("{0}", ins1.mnemonic).c_str());
+                            ImGui::SameLine();
+                            ImGui::Selectable("###dis", false, ImGuiSelectableFlags_SpanAllColumns);
 
                             // menu for right clicks
                             if (ImGui::BeginPopupContextItem()) {
@@ -157,16 +156,10 @@ namespace GUI {
                             ImGui::PopID();
                         }
                         else {
-                            ImGui::Selectable(fmt::format("???????", ins1.address).c_str(), false,
-                                              ImGuiSelectableFlags_SpanAllColumns |
-                                                      ImGuiSelectableFlags_Disabled);
+                            helpers::disabled_centered_text("???????");
                         }
                     }
                 }
-
-                ImGui::PopStyleVar();
-
-                ImGui::PopStyleColor();
 
                 // debugger tells us when we've reached a PC we should scroll to
                 if (emu.reached_destination()) {
@@ -461,6 +454,8 @@ namespace GUI {
 
     // queue up a new scroll target. optionally destroys forward history we've kept
     void DisassemblyView::queue_scroll(uint16_t addr, bool save_to_history) {
+        assert(addr <= 0xFFF);
+
         if (save_to_history) {
             push();
         }

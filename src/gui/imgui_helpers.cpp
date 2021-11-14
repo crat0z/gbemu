@@ -12,17 +12,6 @@ namespace GUI {
             ImGui::SetCursorPosX(x + ((width - item_size) / 2.0f));
         }
 
-        // centers text horizontally, if it knows the size.
-        void center_text_known(const char* format, float size, ...) {
-
-            center_cursor(size);
-
-            va_list args;
-            va_start(args, size);
-            ImGui::TextV(format, args);
-            va_end(args);
-        }
-
         bool center_button(const char* label, const ImVec2& size) {
             auto width = ImGui::CalcTextSize(label);
             center_cursor(width.x);
@@ -36,33 +25,31 @@ namespace GUI {
             ImGui::Text(format);
         }
 
-        void colored_centered_text_known(const ImVec4& colour, bool cond, float size,
-                                         const char* format, ...) {
-            va_list args;
-            va_start(args, format);
+        void colored_centered_text(const ImVec4& colour, bool cond, const char* format) {
 
-            center_cursor(size);
+            center_cursor(ImGui::CalcTextSize(format).x);
 
             if (cond) {
-                ImGui::TextColoredV(colour, format, args);
+                ImGui::TextColored(colour, format);
             }
             else {
-                ImGui::TextV(format, args);
+                ImGui::Text(format);
             }
-            va_end(args);
         }
 
-        void colored_text(const ImVec4& colour, bool cond, const char* format, ...) {
+        void colored_text(const ImVec4& colour, bool cond, const char* format) {
 
-            va_list args;
-            va_start(args, format);
             if (cond) {
-                ImGui::TextColoredV(colour, format, args);
+                ImGui::TextColored(colour, format);
             }
             else {
-                ImGui::TextV(format, args);
+                ImGui::Text(format);
             }
-            va_end(args);
+        }
+
+        void disabled_centered_text(const char* format) {
+            auto& style = ImGui::GetStyle();
+            colored_centered_text(style.Colors[ImGuiCol_TextDisabled], true, format);
         }
 
         ImVec4 color_from_bytes(uint8_t r, uint8_t g, uint8_t b) {

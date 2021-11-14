@@ -4,6 +4,7 @@
 namespace GUI {
     enum class dbg_component
     {
+        all,
         disassembly_view,
         memory_view,
         register_view,

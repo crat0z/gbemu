@@ -27,14 +27,20 @@ namespace GUI {
         if (msg.has_value()) {
             auto m = msg.value();
             switch (m.target) {
-            case dbg_component::disassembly_view:
+            case dbg_component::disassembly_view: {
                 dv.process_dbg_msg(m);
-            case dbg_component::memory_view:
+            } break;
+            case dbg_component::memory_view: {
                 mv.process_dbg_msg(m);
-            case dbg_component::register_view:
+            } break;
+            case dbg_component::register_view: {
                 rv.process_dbg_msg(m);
-            case dbg_component::stack_view:
+                break;
+            }
+            case dbg_component::stack_view: {
                 sv.process_dbg_msg(m);
+                break;
+            }
             }
         }
     }

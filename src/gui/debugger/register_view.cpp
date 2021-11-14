@@ -9,7 +9,7 @@ namespace GUI {
     void RegisterView::draw_window() {
         static const float width = ImGui::CalcTextSize("F").x;
 
-        static const float pair_width = 4.1 * width;
+        static const float pair_width = 4.5 * width;
 
         auto draw_I = [&]() {
             ImGui::TableNextColumn();
@@ -37,13 +37,13 @@ namespace GUI {
 
                 ImGui::TableNextColumn();
 
-                helpers::colored_centered_text_known({ 255, 0, 0, 255 }, emu.I_change, pair_width,
-                                                     "%03X", emu.get_I());
+                helpers::colored_centered_text({ 255, 0, 0, 255 }, emu.I_change,
+                                               fmt ::format("{:03X}", emu.get_I()).c_str());
             }
             else {
                 ImGui::TableNextColumn();
                 // fix this
-                helpers::center_text("???");
+                helpers::disabled_centered_text("???");
             }
         };
 
@@ -67,12 +67,12 @@ namespace GUI {
                 }
 
                 ImGui::TableNextColumn();
-                helpers::colored_centered_text_known({ 255, 0, 0, 255 }, emu.PC_change, pair_width,
-                                                     "%03X", emu.get_PC());
+                helpers::colored_centered_text({ 255, 0, 0, 255 }, emu.PC_change,
+                                               fmt::format("{:03X}", emu.get_PC()).c_str());
             }
             else {
                 ImGui::TableNextColumn();
-                helpers::center_text("???");
+                helpers::disabled_centered_text("???");
             }
         };
 
@@ -81,11 +81,11 @@ namespace GUI {
             helpers::center_text("D");
             ImGui::TableNextColumn();
             if (emu.is_readable()) {
-                helpers::colored_centered_text_known({ 255, 0, 0, 255 }, emu.dt_change, 2 * width,
-                                                     "%02X", emu.get_DT());
+                helpers::colored_centered_text({ 255, 0, 0, 255 }, emu.dt_change,
+                                               fmt::format("{:02X}", emu.get_DT()).c_str());
             }
             else {
-                helpers::center_text("??");
+                helpers::disabled_centered_text("??");
             }
         };
 
@@ -95,11 +95,11 @@ namespace GUI {
             ImGui::TableNextColumn();
 
             if (emu.is_readable()) {
-                helpers::colored_centered_text_known({ 255, 0, 0, 255 }, emu.st_change, 2 * width,
-                                                     "%02X", emu.get_ST());
+                helpers::colored_centered_text({ 255, 0, 0, 255 }, emu.st_change,
+                                               fmt::format("{:02X}", emu.get_ST()).c_str());
             }
             else {
-                helpers::center_text("??");
+                helpers::disabled_centered_text("??");
             }
         };
 
@@ -116,8 +116,6 @@ namespace GUI {
             count = 1;
         }
 
-        ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, { 0.5f, 0.0f });
-
         // draw outer table
         if (ImGui::BeginTable("allregisters", count,
                               ImGuiTableFlags_NoHostExtendX | ImGuiTableFlags_SizingStretchSame |
@@ -133,16 +131,16 @@ namespace GUI {
                                     ImGuiTableFlags_NoPadInnerX | ImGuiTableFlags_NoPadOuterX,
                             { pair_width, 0.0f })) {
                     ImGui::TableNextColumn();
-                    helpers::center_text_known("V%01x", 2 * width, index);
+                    helpers::center_text(fmt::format("V{:01x}", index).c_str());
                     ImGui::TableNextColumn();
 
                     if (emu.is_readable()) {
-                        helpers::colored_centered_text_known({ 255, 0, 0, 255 },
-                                                             emu.reg_changes[index], 2 * width,
-                                                             "%02X", emu.get_V(index));
+                        helpers::colored_centered_text(
+                                { 255, 0, 0, 255 }, emu.reg_changes[index],
+                                fmt::format("{:02X}", emu.get_V(index)).c_str());
                     }
                     else {
-                        helpers::center_text("??");
+                        helpers::disabled_centered_text("??");
                     }
 
                     ImGui::EndTable();
@@ -219,8 +217,6 @@ namespace GUI {
                 ImGui::EndTable();
             }
         }
-
-        ImGui::PopStyleVar();
 
         ImGui::End();
     }

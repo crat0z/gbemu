@@ -5,7 +5,7 @@
 
 namespace GUI {
 
-    MemoryView::MemoryView(core::EmuWrapper& e, float fs) : DbgComponent(e, fs) {}
+    MemoryView::MemoryView(core::EmuWrapper& e, float fs) : DbgComponent(e, fs), next_scroll{ 0 } {}
 
     void MemoryView::draw_window() {
         static const float width      = ImGui::CalcTextSize("F").x;
@@ -45,7 +45,7 @@ namespace GUI {
             if (ImGui::BeginTable("memory", count,
                                   ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp |
                                           ImGuiTableFlags_NoHostExtendX |
-                                          ImGuiTableFlags_NoHostExtendY,
+                                          ImGuiTableFlags_NoHostExtendY | ImGuiTableFlags_RowBg,
                                   outer)) {
 
                 auto begin = 1;
@@ -67,7 +67,7 @@ namespace GUI {
                         ImGui::TableSetupColumn("###break", ImGuiTableColumnFlags_WidthStretch);
                     }
                     else {
-                        ImGui::TableSetupColumn(fmt::format("{0:01X}", real_count).c_str(),
+                        ImGui::TableSetupColumn(fmt::format(".{0:01X}", real_count).c_str(),
                                                 ImGuiTableColumnFlags_NoResize |
                                                         ImGuiTableColumnFlags_WidthFixed);
                         real_count++;
@@ -135,6 +135,8 @@ namespace GUI {
                 }
 
                 if (next_scroll) {
+                    assert(next_scroll <= 0xFFF);
+
                     float item_pos_y =
                             clipper.StartPosY + clipper.ItemsHeight * (next_scroll / cols);
                     ImGui::SetScrollFromPosY(item_pos_y - ImGui::GetWindowPos().y);

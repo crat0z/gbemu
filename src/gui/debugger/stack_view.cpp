@@ -11,7 +11,6 @@ namespace GUI {
         ImGui::SetNextWindowSize({ 300, 200 }, ImGuiCond_FirstUseEver);
 
         ImGui::Begin("Stack view", &window_state);
-        ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, { 0.50f, 0.0f });
         {
             ImGui::BeginChild("stacks");
             auto& stack = emu.get_stack();
@@ -24,19 +23,18 @@ namespace GUI {
                         ImGui::Selectable(fmt::format("{0:03X}", stack[i]).c_str());
                     }
                     else {
-                        ImGui::Selectable("???");
+                        helpers::disabled_centered_text("???");
                     }
                 }
             }
             else {
                 for (auto i = 15; i >= 0; --i) {
-                    ImGui::Selectable("???");
+                    helpers::disabled_centered_text("???");
                 }
             }
 
             ImGui::EndChild();
         }
-        ImGui::PopStyleVar();
         ImGui::End();
     }
 
