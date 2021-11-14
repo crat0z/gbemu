@@ -14,28 +14,39 @@ elseif(MSVC)
     set(USE_MSVC TRUE)
 endif()
 
-if(USE_CLANG)
-    set(CMAKE_C_COMPILER_AR llvm-ar)
-    set(CMAKE_C_COMPILER_RANLIB llvm-ranlib)
-elseif(USE_GCC)
-    set(CMAKE_C_COMPILER_AR gcc-ar)
-    set(CMAKE_C_COMPILER_RANLIB gcc-ranlib)
-endif()
-
-# set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "shared libs")
 
-set(MY_INCLUDES ${chip8emu_SOURCE_DIR}/inc)
-
-# sdl2
-set(SDL2_INCLUDE_DIR ${chip8emu_SOURCE_DIR}/deps/SDL/include)
-
+# statically build on windows
 if(USE_MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     set(SDL_LIBC ON CACHE BOOL "use SDL libc")
     set(SDL_FORCE_STATIC_VCRT ON CACHE BOOL "force static vcrt")
 endif()
+
+# enable LTO in release builds
+if($<CONFIG:Debug>)
+    if(USE_MSVC) # allows for hot reload while debugging with MSVC
+        set(CMAKE_CXX_FLAGS_DEBUG "/ZI")
+        set(CMAKE_SHARED_LINKER_FLAGS "/SAFESEH:NO")
+        set(CMAKE_EXE_LINKER_FLAGS "/SAFESEH:NO")
+    endif()
+else()
+    # fixes cmake unable to find ar/ranlib on linux
+    if(USE_CLANG)
+        set(CMAKE_C_COMPILER_AR llvm-ar)
+        set(CMAKE_C_COMPILER_RANLIB llvm-ranlib)
+    elseif(USE_GCC)
+        set(CMAKE_C_COMPILER_AR gcc-ar)
+        set(CMAKE_C_COMPILER_RANLIB gcc-ranlib)
+    endif()
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+endif()
+
+
+set(MY_INCLUDES ${chip8emu_SOURCE_DIR}/inc)
+
+# sdl2
+set(SDL2_INCLUDE_DIR ${chip8emu_SOURCE_DIR}/deps/SDL/include)
 
 add_subdirectory(deps/SDL)
 
