@@ -18,9 +18,10 @@ namespace GUI {
         GUIComponent(float fs, bool start = true)
                 : window_state{ start }, font_size{ fs }, message{ std::nullopt } {}
 
+        virtual ~GUIComponent() {}
+
         bool& is_enabled() { return window_state; }
 
-        virtual void toggle_window() { window_state = !window_state; }
         virtual void draw_window() = 0;
 
         std::optional<GUIMessage> get_message() {

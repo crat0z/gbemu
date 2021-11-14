@@ -211,7 +211,15 @@ namespace GUI {
             }
         }
 
-        auto forward_message = [&](std::optional<GUIMessage> g) {
+        auto send_to_type = [&](const std::type_info& type, const GUIMessage& msg) {
+            for (auto& w : windows) {
+                if (typeid(*w) == type) {
+                    w->process_message(msg);
+                }
+            }
+        };
+
+        auto forward_message = [&](const std::optional<GUIMessage>& g) {
             if (g.has_value()) {
                 auto& msg = g.value();
                 switch (msg.target) {
@@ -222,51 +230,27 @@ namespace GUI {
                     break;
                 }
                 case gui_component::disassembly_view: {
-                    for (auto& w : windows) {
-                        if (typeid(*w) == typeid(DisassemblyView)) {
-                            w->process_message(msg);
-                        }
-                    }
+                    send_to_type(typeid(DisassemblyView), msg);
                     break;
                 }
                 case gui_component::register_view: {
-                    for (auto& w : windows) {
-                        if (typeid(*w) == typeid(RegisterView)) {
-                            w->process_message(msg);
-                        }
-                    }
+                    send_to_type(typeid(RegisterView), msg);
                     break;
                 }
                 case gui_component::memory_view: {
-                    for (auto& w : windows) {
-                        if (typeid(*w) == typeid(MemoryView)) {
-                            w->process_message(msg);
-                        }
-                    }
+                    send_to_type(typeid(MemoryView), msg);
                     break;
                 }
                 case gui_component::stack_view: {
-                    for (auto& w : windows) {
-                        if (typeid(*w) == typeid(StackView)) {
-                            w->process_message(msg);
-                        }
-                    }
+                    send_to_type(typeid(StackView), msg);
                     break;
                 }
                 case gui_component::launcher: {
-                    for (auto& w : windows) {
-                        if (typeid(*w) == typeid(Launcher)) {
-                            w->process_message(msg);
-                        }
-                    }
+                    send_to_type(typeid(Launcher), msg);
                     break;
                 }
                 case gui_component::settings: {
-                    for (auto& w : windows) {
-                        if (typeid(*w) == typeid(Settings)) {
-                            w->process_message(msg);
-                        }
-                    }
+                    send_to_type(typeid(Settings), msg);
                     break;
                 }
                 }

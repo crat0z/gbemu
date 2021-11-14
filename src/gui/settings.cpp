@@ -101,12 +101,9 @@ namespace GUI {
                             if (ImGui::BeginPopupModal("wrong key", nullptr,
                                                        ImGuiWindowFlags_AlwaysAutoResize |
                                                                ImGuiWindowFlags_NoSavedSettings)) {
-                                const char* line1 = "Only alphanumeric keys allowed.";
-                                const char* line2 = "Please try again.";
 
-                                ImGui::Text(line1);
-                                // center second line
-                                helpers::center_text(line2);
+                                ImGui::Text("Only alphanumeric keys allowed.");
+                                helpers::center_text("Please try again.");
 
                                 if (helpers::center_button("OK")) {
                                     ImGui::CloseCurrentPopup();

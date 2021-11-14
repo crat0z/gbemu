@@ -24,7 +24,7 @@ if(USE_MSVC)
 endif()
 
 # enable LTO in release builds
-if($<CONFIG:Debug>)
+if($<CONFIG:Debug> OR CMAKE_BUILD_TYPE STREQUAL "Debug")
     if(USE_MSVC) # allows for hot reload while debugging with MSVC
         set(CMAKE_CXX_FLAGS_DEBUG "/ZI")
         set(CMAKE_SHARED_LINKER_FLAGS "/SAFESEH:NO")
