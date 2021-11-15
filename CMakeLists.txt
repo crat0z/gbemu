@@ -14,6 +14,12 @@ elseif(MSVC)
     set(USE_MSVC TRUE)
 endif()
 
+if($<CONFIG:Debug> OR CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(DEBUG_BUILD TRUE)
+else()
+    set(RELEASE_BUILD TRUE)
+endif()
+
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "shared libs")
 
 # statically build on windows
@@ -23,32 +29,29 @@ if(USE_MSVC)
     set(SDL_FORCE_STATIC_VCRT ON CACHE BOOL "force static vcrt")
 endif()
 
-# enable LTO in release builds
-if($<CONFIG:Debug> OR CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(DEBUG_BUILD)
     if(USE_MSVC) # allows for hot reload while debugging with MSVC
         set(CMAKE_CXX_FLAGS_DEBUG "/ZI")
         set(CMAKE_SHARED_LINKER_FLAGS "/SAFESEH:NO")
         set(CMAKE_EXE_LINKER_FLAGS "/SAFESEH:NO")
     endif()
 else()
-    # fixes cmake unable to find ar/ranlib on linux
-    if(USE_CLANG)
-        set(CMAKE_C_COMPILER_AR llvm-ar)
-        set(CMAKE_C_COMPILER_RANLIB llvm-ranlib)
-    elseif(USE_GCC)
-        set(CMAKE_C_COMPILER_AR gcc-ar)
-        set(CMAKE_C_COMPILER_RANLIB gcc-ranlib)
-    endif()
-
+    # try to enable IPO/LTO
     include(CheckIPOSupported)
     check_ipo_supported(RESULT result)
     if(result)
         set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+        # fixes cmake unable to find ar/ranlib on linux
+        if(USE_CLANG)
+            set(CMAKE_C_COMPILER_AR llvm-ar)
+            set(CMAKE_C_COMPILER_RANLIB llvm-ranlib)
+        elseif(USE_GCC)
+            set(CMAKE_C_COMPILER_AR gcc-ar)
+            set(CMAKE_C_COMPILER_RANLIB gcc-ranlib)
+        endif()
     endif()
-
 endif()
-
 
 set(MY_INCLUDES ${chip8emu_SOURCE_DIR}/inc)
 
@@ -88,3 +91,22 @@ add_subdirectory(src)
 target_include_directories(chip8emu PUBLIC ${SDL2_INCLUDE_DIR} PUBLIC ${IMGUI_PATH} PUBLIC ${IMGUI_BACKENDS} PUBLIC ${SDL_IMAGE_INCLUDE_DIR} PUBLIC ${MY_INCLUDES})
 
 target_link_libraries(chip8emu PRIVATE SDL2-static SDL2::SDL2main SDL2_image imgui fmt::fmt Threads::Threads)
+
+target_compile_features(chip8emu PRIVATE cxx_std_20)
+
+# clang/gcc options
+if(USE_CLANG OR USE_GCC)
+    list(APPEND FLAGS "-Wall" "-Wextra" "-Wpedantic")
+    if(RELEASE_BUILD)
+        list(APPEND FLAGS "-Werror")
+    endif()
+else()
+# MSVC/clang-cl options
+    list(APPEND FLAGS "/permissive-" "/W4")
+    if(RELEASE_BUILD)
+        list(APPEND FLAGS "/WX")
+    endif()
+endif()
+
+target_compile_options(chip8emu PRIVATE ${FLAGS})
+
