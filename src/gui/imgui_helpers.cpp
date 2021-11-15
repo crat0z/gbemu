@@ -22,7 +22,7 @@ namespace GUI {
         void center_text(const char* format) {
             center_cursor(ImGui::CalcTextSize(format).x);
 
-            ImGui::Text(format);
+            ImGui::Text("%s", format);
         }
 
         void colored_centered_text(const ImVec4& colour, bool cond, const char* format) {
@@ -30,20 +30,20 @@ namespace GUI {
             center_cursor(ImGui::CalcTextSize(format).x);
 
             if (cond) {
-                ImGui::TextColored(colour, format);
+                ImGui::TextColored(colour, "%s", format);
             }
             else {
-                ImGui::Text(format);
+                ImGui::Text("%s", format);
             }
         }
 
         void colored_text(const ImVec4& colour, bool cond, const char* format) {
 
             if (cond) {
-                ImGui::TextColored(colour, format);
+                ImGui::TextColored(colour, "%s", format);
             }
             else {
-                ImGui::Text(format);
+                ImGui::Text("%s", format);
             }
         }
 

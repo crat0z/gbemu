@@ -33,8 +33,8 @@ namespace GUI {
     };
 
     struct ScrollMessage {
-        uint16_t target_address;
-        bool     save_history;
+        uint16_t target_address = 0;
+        bool     save_history   = false;
     };
 } // namespace GUI
 

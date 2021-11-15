@@ -8,8 +8,6 @@ namespace GUI {
     public:
         RegisterView(float fs, core::EmuWrapper& e);
         void draw_window() override;
-
-        void process_message(GUIMessage m) override;
     };
 } // namespace GUI
 #endif

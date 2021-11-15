@@ -222,6 +222,5 @@ namespace GUI {
     }
 
     // dont do shit at all bruh
-    void RegisterView::process_message(GUIMessage m) { return; }
 
 } // namespace GUI

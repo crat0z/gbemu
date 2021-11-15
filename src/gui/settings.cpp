@@ -54,7 +54,7 @@ namespace GUI {
 
                             auto& io = ImGui::GetIO();
                             // check every key
-                            for (int i = 0; i < sizeof(io.KeysDown); ++i) {
+                            for (size_t i = 0; i < sizeof(io.KeysDown); ++i) {
                                 SDL_Scancode scancode = static_cast<SDL_Scancode>(i);
 
                                 if (ImGui::IsKeyDown(i)) {

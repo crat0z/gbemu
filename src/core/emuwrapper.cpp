@@ -26,6 +26,8 @@ namespace core {
                               bool paused) {
         using namespace std::chrono_literals;
 
+        emu_paused = paused;
+
         proc.is_ready = false;
         std::this_thread::sleep_for(100ms);
 

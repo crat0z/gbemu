@@ -144,8 +144,6 @@ namespace GUI {
         static bool demo_window    = false;
         static bool metrics_window = false;
 
-        auto toggle = [](bool& r) { r ^= true; };
-
         global::dock_id() = ImGui::DockSpaceOverViewport(
                 ImGui::GetMainViewport(),
                 ImGuiDockNodeFlags_AutoHideTabBar | ImGuiDockNodeFlags_PassthruCentralNode);

@@ -19,7 +19,7 @@ namespace GUI {
         filebrowser.Display();
 
         if (filebrowser.HasSelected()) {
-            last_file_name = std::move(filebrowser.GetSelected().string());
+            last_file_name = filebrowser.GetSelected().string();
             filebrowser.ClearSelected();
         }
 

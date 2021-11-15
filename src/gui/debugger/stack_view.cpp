@@ -17,10 +17,9 @@ namespace GUI {
             if (emu.is_readable()) {
 
                 for (auto i = 15; i >= 0; --i) {
-                    // if we actually are at a point we can print somethin
 
-                    if (i + 1 <= stack.size()) {
-                        ImGui::Selectable(fmt::format("{0:03X}", stack[i]).c_str());
+                    if (static_cast<size_t>(i) < stack.size()) {
+                        helpers::center_text(fmt::format("{0:03X}", stack[i]).c_str());
                     }
                     else {
                         helpers::disabled_centered_text("???");
@@ -37,7 +36,5 @@ namespace GUI {
         }
         ImGui::End();
     }
-
-    void StackView::process_message(GUIMessage m) { return; }
 
 } // namespace GUI

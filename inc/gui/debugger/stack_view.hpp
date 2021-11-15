@@ -10,8 +10,6 @@ namespace GUI {
     public:
         StackView(float fs, core::EmuWrapper& e);
         void draw_window() override;
-
-        void process_message(GUIMessage m) override;
     };
 } // namespace GUI
 

@@ -181,7 +181,6 @@ std::string opcode_mnemonic(uint16_t opcode) {
         val[i] = (opcode >> (4 * (3 - i))) & 0xF;
     }
 
-    auto imm4  = opcode & 0xF;
     auto imm8  = opcode & 0xFF;
     auto imm12 = opcode & 0xFFF;
 

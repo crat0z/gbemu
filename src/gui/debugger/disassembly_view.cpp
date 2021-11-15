@@ -418,7 +418,7 @@ namespace GUI {
         std::vector<core::Instruction> newlist;
         newlist.reserve(MAX_MEMORY);
 
-        for (auto i = 0; i < found_instructions.size();) {
+        for (size_t i = 0; i < found_instructions.size();) {
             auto inc = found_instructions[i].length;
             newlist.emplace_back(std::move(found_instructions[i]));
             i += inc;

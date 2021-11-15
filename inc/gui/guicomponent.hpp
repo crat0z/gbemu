@@ -16,7 +16,7 @@ namespace GUI {
 
     public:
         GUIComponent(float fs, bool start = true)
-                : window_state{ start }, font_size{ fs }, message{ std::nullopt } {}
+                : message{ std::nullopt }, window_state{ start }, font_size{ fs } {}
 
         virtual ~GUIComponent() {}
 
@@ -30,7 +30,7 @@ namespace GUI {
             return ret;
         }
 
-        virtual void process_message(GUIMessage msg) {}
+        virtual void process_message([[maybe_unused]] GUIMessage msg) {}
     };
 } // namespace GUI
 
