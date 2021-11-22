@@ -1,1 +1,1 @@
-target_sources(chip8emu PRIVATE chip8.cpp emuwrapper.cpp opcodes.cpp basicblock.cpp)
+target_sources(gbemu PRIVATE gameboy.cpp emuwrapper.cpp opcodes.cpp basicblock.cpp gameboy_opcodes.cpp)

@@ -11,42 +11,6 @@ namespace GUI {
 
         static const float pair_width = 4.5F * width;
 
-        auto draw_I = [&]() {
-            ImGui::TableNextColumn();
-            helpers::center_text("I");
-
-            if (emu.is_readable()) {
-                ImGui::SameLine();
-                ImGui::Selectable("###I", false, ImGuiSelectableFlags_SpanAllColumns);
-
-                if (ImGui::BeginPopupContextItem()) {
-                    uint16_t value = emu.get_I() & 0xFFF;
-                    if (ImGui::Selectable(
-                                fmt::format("View {0:03X} in disassembly", value).c_str())) {
-                        message = GUIMessage{ gui_component::disassembly_view, gui_action::scroll,
-                                              ScrollMessage{ value, true } };
-                        ImGui::CloseCurrentPopup();
-                    }
-                    if (ImGui::Selectable(fmt::format("View {0:03X} in memory", value).c_str())) {
-                        message = GUIMessage{ gui_component::memory_view, gui_action::scroll,
-                                              ScrollMessage{ value } };
-                        ImGui::CloseCurrentPopup();
-                    }
-                    ImGui::EndPopup();
-                }
-
-                ImGui::TableNextColumn();
-
-                helpers::colored_centered_text({ 255, 0, 0, 255 }, emu.I_change,
-                                               fmt ::format("{:03X}", emu.get_I()).c_str());
-            }
-            else {
-                ImGui::TableNextColumn();
-                // fix this
-                helpers::disabled_centered_text("???");
-            }
-        };
-
         auto draw_PC = [&]() {
             ImGui::TableNextColumn();
             helpers::center_text("PC");
@@ -73,33 +37,6 @@ namespace GUI {
             else {
                 ImGui::TableNextColumn();
                 helpers::disabled_centered_text("???");
-            }
-        };
-
-        auto draw_D = [&]() {
-            ImGui::TableNextColumn();
-            helpers::center_text("D");
-            ImGui::TableNextColumn();
-            if (emu.is_readable()) {
-                helpers::colored_centered_text({ 255, 0, 0, 255 }, emu.dt_change,
-                                               fmt::format("{:02X}", emu.get_DT()).c_str());
-            }
-            else {
-                helpers::disabled_centered_text("??");
-            }
-        };
-
-        auto draw_S = [&]() {
-            ImGui::TableNextColumn();
-            helpers::center_text("S");
-            ImGui::TableNextColumn();
-
-            if (emu.is_readable()) {
-                helpers::colored_centered_text({ 255, 0, 0, 255 }, emu.st_change,
-                                               fmt::format("{:02X}", emu.get_ST()).c_str());
-            }
-            else {
-                helpers::disabled_centered_text("??");
             }
         };
 
@@ -135,9 +72,9 @@ namespace GUI {
                     ImGui::TableNextColumn();
 
                     if (emu.is_readable()) {
-                        helpers::colored_centered_text(
+                        /* helpers::colored_centered_text(
                                 { 255, 0, 0, 255 }, emu.reg_changes[index],
-                                fmt::format("{:02X}", emu.get_V(index)).c_str());
+                                fmt::format("{:02X}", emu.get_V(index)).c_str()); */
                     }
                     else {
                         helpers::disabled_centered_text("??");
@@ -155,10 +92,8 @@ namespace GUI {
                                   ImGuiTableFlags_NoHostExtendX |
                                           ImGuiTableFlags_SizingStretchSame |
                                           ImGuiTableFlags_Borders | ImGuiTableFlags_NoPadInnerX)) {
-                draw_I();
                 draw_PC();
-                draw_D();
-                draw_S();
+
                 ImGui::EndTable();
             }
         }
@@ -168,10 +103,7 @@ namespace GUI {
                                   ImGuiTableFlags_NoHostExtendX |
                                           ImGuiTableFlags_SizingStretchSame |
                                           ImGuiTableFlags_Borders | ImGuiTableFlags_NoPadInnerX)) {
-                draw_I();
                 draw_PC();
-                draw_D();
-                draw_S();
                 ImGui::EndTable();
             }
         }
@@ -194,8 +126,6 @@ namespace GUI {
                             ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoHostExtendX |
                                     ImGuiTableFlags_NoPadInnerX | ImGuiTableFlags_NoPadOuterX)) {
 
-                    draw_I();
-
                     draw_PC();
 
                     ImGui::EndTable();
@@ -207,9 +137,6 @@ namespace GUI {
                             "Timers", 2,
                             ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoHostExtendX |
                                     ImGuiTableFlags_NoPadInnerX | ImGuiTableFlags_NoPadOuterX)) {
-
-                    draw_D();
-                    draw_S();
 
                     ImGui::EndTable();
                 }

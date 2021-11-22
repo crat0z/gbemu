@@ -79,7 +79,7 @@ namespace GUI {
                 ImGui::TableHeadersRow();
 
                 ImGuiListClipper clipper;
-                clipper.Begin(MAX_MEMORY / cols);
+                clipper.Begin(8192 / cols);
 
                 std::string var;
                 var.reserve(cols);
@@ -118,13 +118,14 @@ namespace GUI {
                                 ImGui::Text(" ");
                             }
                             else {
-                                auto address = base + real_index;
+                                // FIX
+                                /* auto address = base + real_index;
                                 auto val     = emu.get_memory()[base + real_index];
 
                                 context_menu(address, val);
 
                                 var += byte_to_printable(static_cast<char>(val));
-                                real_index++;
+                                real_index++; */
                             }
                         }
 

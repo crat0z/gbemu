@@ -1,27 +1,21 @@
 #ifndef EMUWRAPPER_HPP
 #define EMUWRAPPER_HPP
 
-#include "core/chip8.hpp"
+#include "core/gameboy.hpp"
 #include <vector>
 
-// a wrapper around Chip8 class to allow for debugging functionality
-// without cluttering chip8 class itself
+// a wrapper around Gameboy class to allow for debugging functionality
+// without cluttering Gameboy class itself
 
 namespace core {
 
     class EmuWrapper {
-        std::array<bool, MAX_MEMORY> breakpoints = {};
+        std::array<bool, 8192> breakpoints = {};
 
-        std::array<uint8_t, MAX_MEMORY> prev_memory = {};
-        std::array<uint8_t, 16>         prev_V      = {};
+        std::array<uint8_t, 8192> prev_memory = {};
+        Registers                 prev_r;
 
-        uint16_t prev_I  = 0;
-        uint16_t prev_PC = 0;
-
-        uint8_t prev_dt = 0;
-        uint8_t prev_st = 0;
-
-        Chip8 proc;
+        Gameboy proc;
 
         op       next_operation;
         uint16_t next_opcode;
@@ -52,10 +46,6 @@ namespace core {
 
         void new_game(const std::string& filepath, uint16_t entry, uint16_t addr, bool paused);
 
-        std::array<std::array<bool, X_PIXELS>, Y_PIXELS>& frame_buffer() noexcept;
-
-        Stack<uint16_t>& get_stack() noexcept;
-
         uint8_t& get_V(uint8_t reg) noexcept;
         void     set_V(uint8_t reg, uint8_t val) noexcept;
 
@@ -71,7 +61,7 @@ namespace core {
         uint16_t& get_PC() noexcept;
         void      set_PC(uint8_t val) noexcept;
 
-        std::array<uint8_t, MAX_MEMORY>& get_memory() noexcept;
+        std::array<uint8_t, 8192>& get_memory() noexcept;
 
         std::array<bool, 16>& get_keys() noexcept;
 
@@ -107,7 +97,7 @@ namespace core {
         void remove_breakpoint(uint16_t address) noexcept;
         bool is_breakpoint_set(uint16_t address) const noexcept;
 
-        // delegates to Chip8 in case of changes in future
+        // delegates to Gameboy in case of changes in future
         uint16_t fetch(uint16_t addr) noexcept;
         op       decode(uint16_t opc) noexcept;
     };

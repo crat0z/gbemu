@@ -23,7 +23,7 @@ namespace GUI {
         SDL_WindowFlags flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI |
                                                   SDL_WINDOW_RESIZABLE);
 
-        window = SDL_CreateWindow("chip8emu", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1500,
+        window = SDL_CreateWindow("gbemu", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1500,
                                   900, flags);
 
         renderer = SDL_CreateRenderer(window, -1,
@@ -305,7 +305,7 @@ namespace GUI {
                 exit(0);
             }
 
-            if (!io.WantCaptureKeyboard) {
+            /* if (!io.WantCaptureKeyboard) {
                 auto input_key = event.key.keysym.sym;
 
                 auto mapping = global::keymap().translate_key(input_key);
@@ -319,7 +319,7 @@ namespace GUI {
                         emu.get_keys()[*mapping] = false;
                     }
                 }
-            }
+            } */
         }
     }
 
@@ -337,7 +337,6 @@ namespace GUI {
                     emu.cycle();
                 }
                 std::this_thread::sleep_for(100ms);
-                emu.reset_timer();
             }
         };
 

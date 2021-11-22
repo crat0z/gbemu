@@ -27,9 +27,9 @@ namespace GUI {
 
     DisassemblyView::DisassemblyView(float fs, core::EmuWrapper& e)
             : DbgComponent(fs, e), target_addr{ 0 } {
-        found_instructions.reserve(MAX_MEMORY);
+        found_instructions.reserve(8192);
 
-        for (auto i = 0; i < MAX_MEMORY; ++i) {
+        for (auto i = 0; i < 8192; ++i) {
             found_instructions.emplace_back(i);
         }
 
@@ -401,7 +401,8 @@ namespace GUI {
         control_flow_graph.clear();
         done.clear();
 
-        rec_cfg(emu.get_entry(), 0);
+        // FIX, not sure if this is entry of gb atm
+        rec_cfg(0x100, 0);
 
         std::sort(control_flow_graph.begin(), control_flow_graph.end(),
                   [](std::shared_ptr<core::basic_block> lhs,
@@ -417,7 +418,7 @@ namespace GUI {
 
         // remove invalid instructions in list
         std::vector<core::Instruction> newlist;
-        newlist.reserve(MAX_MEMORY);
+        newlist.reserve(8192);
 
         for (size_t i = 0; i < found_instructions.size();) {
             auto inc = found_instructions[i].length;
@@ -551,7 +552,8 @@ namespace GUI {
         }
         else if (msg.act == gui_action::new_game) {
             first_analysis();
-            queue_scroll(emu.get_entry(), true);
+            // FIX, dont know if this is entry on gb atm
+            queue_scroll(0x100, true);
         }
     }
 

@@ -1,4 +1,4 @@
-add_executable(chip8emu main.cpp)
+add_executable(gbemu main.cpp)
 
 add_subdirectory(gui)
 add_subdirectory(core)

@@ -1,5 +1,5 @@
-# chip8emu
-another chip8 emulator written in C++, comes with a debugger, see preview
+# gbemu
+another Gameboy emulator written in C++, comes with a debugger, see preview
 
 # preview
 ![debugger](https://i.imgur.com/2kGX79f.png)

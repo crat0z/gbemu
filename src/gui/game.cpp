@@ -7,11 +7,8 @@ namespace GUI {
     Game::Game(core::EmuWrapper& e) : GUIComponent(0, true), emu(e) {}
 
     void Game::draw_window() {
-        ImU32 white = ImColor(global::white_vec());
+        /* ImU32 white = ImColor(global::white_vec());
         ImU32 black = ImColor(global::black_vec());
-        /*
-        styles for the game window.
-    */
 
         // vars
         ImGui::PushStyleColor(ImGuiCol_ChildBg, global::black_vec());
@@ -35,10 +32,6 @@ namespace GUI {
         ImGui::SetNextWindowSize(vp->WorkSize, ImGuiCond_Once);
 
         ImGui::Begin("game window", nullptr, win_flags);
-
-        /* 
-            menu bar is where most functionality will be
-        */
 
         ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
@@ -85,7 +78,7 @@ namespace GUI {
 
         ImGui::End();
         ImGui::PopStyleVar(2);
-        ImGui::PopStyleColor();
+        ImGui::PopStyleColor(); */
     }
 
 } // namespace GUI

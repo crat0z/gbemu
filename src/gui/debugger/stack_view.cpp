@@ -13,8 +13,7 @@ namespace GUI {
         ImGui::Begin("Stack view", &window_state);
         {
             ImGui::BeginChild("stacks");
-            auto& stack = emu.get_stack();
-            if (emu.is_readable()) {
+            /* if (emu.is_readable()) {
 
                 for (auto i = 15; i >= 0; --i) {
 
@@ -31,7 +30,7 @@ namespace GUI {
                     helpers::disabled_centered_text("???");
                 }
             }
-
+ */
             ImGui::EndChild();
         }
         ImGui::End();

@@ -4,7 +4,7 @@ cmake_minimum_required (VERSION 3.16)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-project(chip8emu CXX)
+project(gbemu CXX)
 
 if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(USE_CLANG TRUE)
@@ -53,10 +53,10 @@ else()
     endif()
 endif()
 
-set(MY_INCLUDES ${chip8emu_SOURCE_DIR}/inc)
+set(MY_INCLUDES ${gbemu_SOURCE_DIR}/inc)
 
 # sdl2
-set(SDL2_INCLUDE_DIR ${chip8emu_SOURCE_DIR}/deps/SDL/include)
+set(SDL2_INCLUDE_DIR ${gbemu_SOURCE_DIR}/deps/SDL/include)
 
 add_subdirectory(deps/SDL)
 
@@ -68,12 +68,12 @@ set(SUPPORT_WEBP OFF CACHE BOOL "SDL_image WEBP")
 
 add_subdirectory(deps/SDL_image)
 
-set(SDL_IMAGE_INCLUDE_DIR ${chip8emu_SOURCE_DIR}/deps/SDL_image)
+set(SDL_IMAGE_INCLUDE_DIR ${gbemu_SOURCE_DIR}/deps/SDL_image)
 
 target_compile_definitions(SDL2_image PRIVATE -DLOAD_SVG)
 
 # imgui
-set(IMGUI_PATH ${chip8emu_SOURCE_DIR}/deps/imgui)
+set(IMGUI_PATH ${gbemu_SOURCE_DIR}/deps/imgui)
 set(IMGUI_BACKENDS ${IMGUI_PATH}/backends)
 
 file(GLOB IMGUI_SOURCES ${IMGUI_PATH}/*.cpp ${IMGUI_BACKENDS}/imgui_impl_sdl.cpp ${IMGUI_BACKENDS}/imgui_impl_sdlrenderer.cpp)
@@ -88,15 +88,15 @@ find_package(Threads REQUIRED)
 # this project
 add_subdirectory(src)
 
-target_include_directories(chip8emu PUBLIC ${SDL2_INCLUDE_DIR} PUBLIC ${IMGUI_PATH} PUBLIC ${IMGUI_BACKENDS} PUBLIC ${SDL_IMAGE_INCLUDE_DIR} PUBLIC ${MY_INCLUDES})
+target_include_directories(gbemu PUBLIC ${SDL2_INCLUDE_DIR} PUBLIC ${IMGUI_PATH} PUBLIC ${IMGUI_BACKENDS} PUBLIC ${SDL_IMAGE_INCLUDE_DIR} PUBLIC ${MY_INCLUDES})
 
-target_link_libraries(chip8emu PRIVATE SDL2-static SDL2::SDL2main SDL2_image imgui fmt::fmt Threads::Threads)
+target_link_libraries(gbemu PRIVATE SDL2-static SDL2::SDL2main SDL2_image imgui fmt::fmt Threads::Threads)
 
-target_compile_features(chip8emu PRIVATE cxx_std_20)
+target_compile_features(gbemu PRIVATE cxx_std_20)
 
 # clang/gcc options
 if(USE_CLANG OR USE_GCC)
-    list(APPEND FLAGS "-Wall" "-Wextra" "-Wpedantic")
+    list(APPEND FLAGS "-Wall" "-Wextra" "-Wpedantic" "-fms-extensions")
     if(RELEASE_BUILD)
         list(APPEND FLAGS "-Werror")
     endif()
@@ -108,5 +108,5 @@ else()
     endif()
 endif()
 
-target_compile_options(chip8emu PRIVATE ${FLAGS})
+target_compile_options(gbemu PRIVATE ${FLAGS})
 

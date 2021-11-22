@@ -32,42 +32,18 @@ namespace core {
         std::this_thread::sleep_for(100ms);
 
         proc.reset_state();
-        proc.PC = entry;
-        read_file(filepath, addr, proc.memory.data());
-
-        proc.copy_font_data();
-
-        proc.base_address = addr;
-        proc.entry_point  = entry;
+        proc.r.PC = entry;
+        // FIX
+        // read_file(filepath, addr, proc.ram.data());
 
         proc.is_ready = true;
     }
 
-    std::array<std::array<bool, X_PIXELS>, Y_PIXELS>& EmuWrapper::frame_buffer() noexcept {
-        return proc.framebuffer;
-    }
-
     // save current emu state
-    void EmuWrapper::save_emu_state() noexcept {
-        prev_V      = proc.V;
-        prev_memory = proc.memory;
-        prev_PC     = proc.PC;
-        prev_I      = proc.I;
-        prev_dt     = proc.delay_timer;
-        prev_st     = proc.sound_timer;
-    }
+    void EmuWrapper::save_emu_state() noexcept { prev_r = proc.r; }
 
     // update changed registers etc
-    void EmuWrapper::update_state() noexcept {
-        for (auto i = 0; i < 16; ++i) {
-            reg_changes[i] = (prev_V[i] != proc.V[i]);
-        }
-
-        I_change  = (prev_I != proc.I);
-        PC_change = (prev_PC != proc.PC);
-        dt_change = (prev_dt != proc.delay_timer);
-        st_change = (prev_st != proc.sound_timer);
-    }
+    void EmuWrapper::update_state() noexcept {}
 
     void EmuWrapper::set_destination(uint16_t addr) noexcept {
         destination = addr;
@@ -79,10 +55,6 @@ namespace core {
     void EmuWrapper::debug_cycle(bool reset_timer) noexcept {
         save_emu_state();
 
-        if (reset_timer) {
-            proc.timer.reset();
-        }
-
         proc.cycle();
 
         update_state();
@@ -90,7 +62,7 @@ namespace core {
 
     void EmuWrapper::get_next_instruction() noexcept {
         // we can safely decode next instruction
-        next_opcode = proc.fetch(proc.PC);
+        next_opcode = proc.fetch(proc.r.PC);
 
         // update our instruction info
         next_operation = decode(next_opcode);
@@ -128,7 +100,7 @@ namespace core {
     void EmuWrapper::single_step() noexcept {
         if (is_paused()) {
             debug_cycle(true);
-            set_destination(proc.PC);
+            set_destination(proc.r.PC);
         }
     }
 
@@ -138,7 +110,7 @@ namespace core {
             get_next_instruction();
 
             if (next_operation == op::CALL || next_operation == op::SYS) {
-                set_destination(proc.PC + 2);
+                set_destination(proc.r.PC + 2);
                 unpause();
             }
             else {
@@ -149,17 +121,17 @@ namespace core {
 
     void EmuWrapper::step_out() noexcept {
         if (is_paused()) {
-            if (!proc.stack.empty()) {
+            /* if (!proc.stack.empty()) {
                 set_destination(proc.stack.back() + 2);
                 unpause();
-            }
+            } */
         }
     }
 
     void EmuWrapper::cycle() noexcept {
         // if we hit a breakpoint, we've reached a destination
-        if (breakpoints[proc.PC]) {
-            destination = proc.PC;
+        if (breakpoints[proc.r.PC]) {
+            destination = proc.r.PC;
             pause();
         }
         else if (reached_destination()) {
@@ -173,7 +145,7 @@ namespace core {
         }
     }
 
-    bool EmuWrapper::reached_destination() const noexcept { return proc.PC == destination; }
+    bool EmuWrapper::reached_destination() const noexcept { return proc.r.PC == destination; }
 
     void EmuWrapper::recv_destination() noexcept {
         destination = 0xffff;
@@ -191,8 +163,6 @@ namespace core {
 
     bool EmuWrapper::is_breakpoint_set(uint16_t addr) const noexcept { return breakpoints[addr]; }
 
-    uint16_t EmuWrapper::get_entry() const noexcept { return proc.entry_point; }
-
     bool EmuWrapper::being_debugged() const noexcept { return debugging; }
     bool EmuWrapper::is_ready() const noexcept { return proc.is_ready; }
     bool EmuWrapper::is_paused() const noexcept { return emu_paused; }
@@ -202,28 +172,8 @@ namespace core {
     uint16_t EmuWrapper::fetch(uint16_t addr) noexcept { return proc.fetch(addr); }
     op       EmuWrapper::decode(uint16_t opc) noexcept { return proc.decode(opc); }
 
-    Stack<uint16_t>& EmuWrapper::get_stack() noexcept { return proc.stack; }
-
-    uint8_t& EmuWrapper::get_V(uint8_t reg) noexcept { return proc.V[reg]; }
-    void     EmuWrapper::set_V(uint8_t reg, uint8_t val) noexcept { proc.V[reg] = val; }
-
-    uint16_t& EmuWrapper::get_I() noexcept { return proc.I; }
-    void      EmuWrapper::set_I(uint8_t val) noexcept { proc.I = val; }
-
-    uint8_t& EmuWrapper::get_ST() noexcept { return proc.sound_timer; }
-    void     EmuWrapper::set_ST(uint8_t val) noexcept { proc.sound_timer = val; }
-
-    uint8_t& EmuWrapper::get_DT() noexcept { return proc.delay_timer; }
-    void     EmuWrapper::set_DT(uint8_t val) noexcept { proc.delay_timer = val; }
-
-    uint16_t& EmuWrapper::get_PC() noexcept { return proc.PC; }
-    void      EmuWrapper::set_PC(uint8_t val) noexcept { proc.PC = val; }
-
-    std::array<uint8_t, MAX_MEMORY>& EmuWrapper::get_memory() noexcept { return proc.memory; }
-
-    std::array<bool, 16>& EmuWrapper::get_keys() noexcept { return proc.keys; }
-
-    void EmuWrapper::reset_timer() noexcept { proc.timer.reset(); }
+    uint16_t& EmuWrapper::get_PC() noexcept { return proc.r.PC; }
+    void      EmuWrapper::set_PC(uint8_t val) noexcept { proc.r.PC = val; }
 
     uint16_t EmuWrapper::get_opcode() const noexcept { return next_opcode; }
 } // namespace core
