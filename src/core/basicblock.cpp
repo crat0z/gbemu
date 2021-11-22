@@ -1,5 +1,7 @@
 #include "core/basicblock.hpp"
 
+#include <utility>
+
 namespace core {
 
     std::shared_ptr<basic_block> basic_block::true_branch() { return to_block_true; }
@@ -22,7 +24,7 @@ namespace core {
 
     // append an instruction rvalue
     void basic_block::append(Instruction&& rv) {
-        if (instructions.size() == 0) {
+        if (instructions.empty()) {
             start_address = rv.address;
         }
         end_address = rv.address;
@@ -91,7 +93,7 @@ namespace core {
         this->add_reference(new_block->end_address, this->start_address);
 
         // our new_block now has unconditional jump
-        new_block->to_block_true = this_ptr;
+        new_block->to_block_true = std::move(this_ptr);
 
         return new_block;
     }

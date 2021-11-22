@@ -14,7 +14,7 @@ namespace GUI {
         static ImGuiWindowFlags launch_window_settings =
                 ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDocking;
 
-        static std::string last_file_name = "";
+        static std::string last_file_name;
 
         filebrowser.Display();
 
@@ -32,12 +32,12 @@ namespace GUI {
         ImGui::TextWrapped("file chosen: %s", last_file_name.c_str());
 
         ImGui::Separator();
-        ImGui::SetNextItemWidth(150.0f);
+        ImGui::SetNextItemWidth(150.0F);
 
         ImGui::InputScalar(
                 "entry point (hex)", ImGuiDataType_U16, &entry_setting, nullptr, nullptr, "%03x",
                 ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_AutoSelectAll);
-        ImGui::SetNextItemWidth(150.0f);
+        ImGui::SetNextItemWidth(150.0F);
 
         ImGui::InputScalar(
                 "base address (hex)", ImGuiDataType_U16, &base_address, nullptr, nullptr, "%03x",

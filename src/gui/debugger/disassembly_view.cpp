@@ -15,8 +15,9 @@ namespace {
                                             op::SNE_R, op::SKP,   op::SKNP, op::RET,  op::UNKNOWN };
 
         for (auto j : jumps) {
-            if (j == val)
+            if (j == val) {
                 return true;
+            }
         }
         return false;
     }
@@ -433,20 +434,16 @@ namespace GUI {
     bool DisassemblyView::show_right() { return !fw_history.empty(); }
 
     float DisassemblyView::fix_float(float v) {
-        if (v == 0.0f) {
+        if (v == 0.0F) {
             return v += FLT_MIN;
         }
-        else {
-            return v;
-        }
+        return v;
     }
     uint16_t DisassemblyView::fix_u16(uint16_t v) {
         if (v == 0) {
             return v + 1;
         }
-        else {
-            return v;
-        }
+        return v;
     }
     // called to clear the forward stack, i.e., we've gone back, and decided
     // to go down another path of history

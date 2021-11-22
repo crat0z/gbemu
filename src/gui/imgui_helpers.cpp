@@ -9,7 +9,7 @@ namespace GUI {
             auto width = ImGui::GetContentRegionAvail().x;
             auto x     = ImGui::GetCursorPosX();
 
-            ImGui::SetCursorPosX(x + ((width - item_size) / 2.0f));
+            ImGui::SetCursorPosX(x + ((width - item_size) / 2.0F));
         }
 
         bool center_button(const char* label, const ImVec2& size) {

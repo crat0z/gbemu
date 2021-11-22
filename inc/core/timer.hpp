@@ -3,7 +3,7 @@
 // constexpr timer
 template<int64_t f>
 class CETimer {
-    typedef std::chrono::steady_clock clock;
+    using clock = std::chrono::steady_clock;
 
 public:
     CETimer() {}
@@ -31,7 +31,7 @@ public:
 };
 
 class Timer {
-    typedef std::chrono::steady_clock clock;
+    using clock = std::chrono::steady_clock;
 
     clock::time_point start;
 

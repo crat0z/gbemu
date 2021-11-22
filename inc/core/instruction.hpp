@@ -24,11 +24,7 @@ namespace core {
         ~Instruction() = default;
 
         Instruction(uint16_t addr)
-                : address{ addr },
-                  opcode{ 0 },
-                  operation{ op::UNKNOWN },
-                  length{ 1 },
-                  mnemonic{ "" } {}
+                : address{ addr }, opcode{ 0 }, operation{ op::UNKNOWN }, length{ 1 }, mnemonic{} {}
 
         // length = 2 always at this point, change in future
         Instruction(uint16_t addr, uint16_t opc)

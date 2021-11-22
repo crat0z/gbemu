@@ -9,7 +9,7 @@ namespace GUI {
 
     void MemoryView::draw_window() {
         static const float width      = ImGui::CalcTextSize("F").x;
-        static const float base_width = ImGui::CalcTextSize("FFF").x * 1.35f;
+        static const float base_width = ImGui::CalcTextSize("FFF").x * 1.35F;
 
         static uint16_t jump = 0;
 
@@ -40,7 +40,7 @@ namespace GUI {
 
             auto max = ImGui::GetContentRegionMax();
 
-            ImVec2 outer = ImVec2(0.0f, max.y - 3.0 * font_size);
+            ImVec2 outer = ImVec2(0.0F, max.y - 3.0 * font_size);
 
             if (ImGui::BeginTable("memory", count,
                                   ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp |
@@ -134,7 +134,7 @@ namespace GUI {
                     }
                 }
 
-                if (next_scroll) {
+                if (next_scroll != 0) {
                     assert(next_scroll <= 0xFFF);
 
                     float item_pos_y =

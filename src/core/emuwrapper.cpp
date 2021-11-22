@@ -20,9 +20,9 @@ namespace {
 } // namespace
 
 namespace core {
-    EmuWrapper::EmuWrapper() {}
+    EmuWrapper::EmuWrapper() = default;
 
-    void EmuWrapper::new_game(const std::string& filepath, uint16_t addr, uint16_t entry,
+    void EmuWrapper::new_game(const std::string& filepath, uint16_t entry, uint16_t addr,
                               bool paused) {
         using namespace std::chrono_literals;
 

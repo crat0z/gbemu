@@ -220,7 +220,7 @@ namespace GUI {
 
         auto forward_message = [&](const std::optional<GUIMessage>& g) {
             if (g.has_value()) {
-                auto& msg = g.value();
+                const auto& msg = g.value();
                 switch (msg.target) {
                 case gui_component::all: {
                     for (auto& w : windows) {
@@ -291,7 +291,7 @@ namespace GUI {
         // handle keys
         SDL_Event event;
 
-        while (SDL_PollEvent(&event)) {
+        while (SDL_PollEvent(&event) != 0) {
             // check to see if each event is one of our keys
             ImGui_ImplSDL2_ProcessEvent(&event);
 

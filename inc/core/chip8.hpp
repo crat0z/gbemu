@@ -56,11 +56,11 @@ namespace core {
         void read_file(const std::string& name, uint16_t addr);
         void reset_state();
 
-    public:
         std::array<std::array<bool, X_PIXELS>, Y_PIXELS> framebuffer = {};
 
         std::array<bool, 16> keys = {};
 
+    public:
         Chip8();
     };
 } // namespace core
