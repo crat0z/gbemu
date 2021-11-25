@@ -7,6 +7,7 @@
 #include "core/gameboy.hpp"
 #include "core/gameboy_opcodes.hpp"
 #include "core/str_opcodes.hpp"
+
 namespace core {
     Gameboy::Gameboy()
             : op_table(create_table()),
@@ -39,33 +40,20 @@ namespace core {
     void Gameboy::cycle() {
         static auto result = 0;
 
-        /* while (result) {
+        while (result) {
             // wait for it
-            while (timer.update()) {}
+            while (!timer.update()) {}
             result--;
-        } */
-
-        //std::cout << ctx.print();
+        }
 
         auto op = ctx.imm8();
 
         if (op == 0xCB) {
-            op = ctx.imm8();
-
-            //std::cout << op_cb_str_table[op](ctx);
-            //std::cout << '\n';
+            op     = ctx.imm8();
             result = cb_table[op](ctx);
         }
         else {
-            //std::cout << op_str_table[op](ctx);
-            //std::cout << '\n';
             result = op_table[op](ctx);
-        }
-
-        if (ctx.m[0xFF02] == 0x81) {
-            char ch = static_cast<char>(ctx.m[0xFF01]);
-            std::cout << ch;
-            ctx.m[0xFF02] = 0x1;
         }
     }
 } // namespace core

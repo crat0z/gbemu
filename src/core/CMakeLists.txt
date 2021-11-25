@@ -1,1 +1,1 @@
-target_sources(gbemu PRIVATE gameboy.cpp str_opcodes.cpp emuwrapper.cpp opcodes.cpp basicblock.cpp gameboy_opcodes.cpp)
+target_sources(gbemu PRIVATE gameboy.cpp str_opcodes.cpp emuwrapper.cpp opcodes.cpp basicblock.cpp gameboy_opcodes.cpp context.cpp memory.cpp registers.cpp)

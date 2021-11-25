@@ -4,9 +4,10 @@
 #include <array>
 #include <string>
 
-struct Context;
-
-std::array<std::string (*)(Context&), 256> opcode_strings();
-std::array<std::string (*)(Context&), 256> cb_opcode_strings();
+namespace core {
+    struct Context;
+}
+std::array<std::string (*)(core::Context&), 256> opcode_strings();
+std::array<std::string (*)(core::Context&), 256> cb_opcode_strings();
 
 #endif

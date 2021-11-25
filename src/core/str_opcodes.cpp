@@ -1,1208 +1,1493 @@
 #include <fmt/format.h>
-#include "core/gameboy.hpp"
+#include "core/str_opcodes.hpp"
+#include "core/context.hpp"
 
-std::string opcode_str_0x00([[maybe_unused]] Context& ctx) { return std::string("NOP"); }
-std::string opcode_str_0x01([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x00([[maybe_unused]] core::Context& ctx) { return std::string("NOP"); }
+std::string opcode_str_0x01([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "BC", fmt::format("{:#06x}", ctx.peek16()));
 }
-std::string opcode_str_0x02([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x02([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "(BC)", 'A');
 }
-std::string opcode_str_0x03([[maybe_unused]] Context& ctx) { return fmt::format("INC {}", "BC"); }
-std::string opcode_str_0x04([[maybe_unused]] Context& ctx) { return fmt::format("INC {}", 'B'); }
-std::string opcode_str_0x05([[maybe_unused]] Context& ctx) { return fmt::format("DEC {}", 'B'); }
-std::string opcode_str_0x06([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x03([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("INC {}", "BC");
+}
+std::string opcode_str_0x04([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("INC {}", 'B');
+}
+std::string opcode_str_0x05([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("DEC {}", 'B');
+}
+std::string opcode_str_0x06([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'B', fmt::format("{:#04x}", ctx.peek8()));
 }
-std::string opcode_str_0x07([[maybe_unused]] Context& ctx) { return std::string("RLCA"); }
-std::string opcode_str_0x08([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x07([[maybe_unused]] core::Context& ctx) { return std::string("RLCA"); }
+std::string opcode_str_0x08([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", fmt::format("({:#06x})", ctx.peek16()), "SP");
 }
-std::string opcode_str_0x09([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x09([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADD {},{}", "HL", "BC");
 }
-std::string opcode_str_0x0a([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x0a([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'A', "(BC)");
 }
-std::string opcode_str_0x0b([[maybe_unused]] Context& ctx) { return fmt::format("DEC {}", "BC"); }
-std::string opcode_str_0x0c([[maybe_unused]] Context& ctx) { return fmt::format("INC {}", 'C'); }
-std::string opcode_str_0x0d([[maybe_unused]] Context& ctx) { return fmt::format("DEC {}", 'C'); }
-std::string opcode_str_0x0e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x0b([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("DEC {}", "BC");
+}
+std::string opcode_str_0x0c([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("INC {}", 'C');
+}
+std::string opcode_str_0x0d([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("DEC {}", 'C');
+}
+std::string opcode_str_0x0e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'C', fmt::format("{:#04x}", ctx.peek8()));
 }
-std::string opcode_str_0x0f([[maybe_unused]] Context& ctx) { return std::string("RRCA"); }
-std::string opcode_str_0x10([[maybe_unused]] Context& ctx) { return fmt::format("STOP {}", 0); }
-std::string opcode_str_0x11([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x0f([[maybe_unused]] core::Context& ctx) { return std::string("RRCA"); }
+std::string opcode_str_0x10([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("STOP {}", 0);
+}
+std::string opcode_str_0x11([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "DE", fmt::format("{:#06x}", ctx.peek16()));
 }
-std::string opcode_str_0x12([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x12([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "(DE)", 'A');
 }
-std::string opcode_str_0x13([[maybe_unused]] Context& ctx) { return fmt::format("INC {}", "DE"); }
-std::string opcode_str_0x14([[maybe_unused]] Context& ctx) { return fmt::format("INC {}", 'D'); }
-std::string opcode_str_0x15([[maybe_unused]] Context& ctx) { return fmt::format("DEC {}", 'D'); }
-std::string opcode_str_0x16([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x13([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("INC {}", "DE");
+}
+std::string opcode_str_0x14([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("INC {}", 'D');
+}
+std::string opcode_str_0x15([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("DEC {}", 'D');
+}
+std::string opcode_str_0x16([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'D', fmt::format("{:#04x}", ctx.peek8()));
 }
-std::string opcode_str_0x17([[maybe_unused]] Context& ctx) { return std::string("RLA"); }
-std::string opcode_str_0x18([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x17([[maybe_unused]] core::Context& ctx) { return std::string("RLA"); }
+std::string opcode_str_0x18([[maybe_unused]] core::Context& ctx) {
     return fmt::format("JR {}", ctx.peek8_signed());
 }
-std::string opcode_str_0x19([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x19([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADD {},{}", "HL", "DE");
 }
-std::string opcode_str_0x1a([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x1a([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'A', "(DE)");
 }
-std::string opcode_str_0x1b([[maybe_unused]] Context& ctx) { return fmt::format("DEC {}", "DE"); }
-std::string opcode_str_0x1c([[maybe_unused]] Context& ctx) { return fmt::format("INC {}", 'E'); }
-std::string opcode_str_0x1d([[maybe_unused]] Context& ctx) { return fmt::format("DEC {}", 'E'); }
-std::string opcode_str_0x1e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x1b([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("DEC {}", "DE");
+}
+std::string opcode_str_0x1c([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("INC {}", 'E');
+}
+std::string opcode_str_0x1d([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("DEC {}", 'E');
+}
+std::string opcode_str_0x1e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'E', fmt::format("{:#04x}", ctx.peek8()));
 }
-std::string opcode_str_0x1f([[maybe_unused]] Context& ctx) { return std::string("RRA"); }
-std::string opcode_str_0x20([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x1f([[maybe_unused]] core::Context& ctx) { return std::string("RRA"); }
+std::string opcode_str_0x20([[maybe_unused]] core::Context& ctx) {
     return fmt::format("JR {},{}", "NZ", ctx.peek8_signed());
 }
-std::string opcode_str_0x21([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x21([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "HL", fmt::format("{:#06x}", ctx.peek16()));
 }
-std::string opcode_str_0x22([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x22([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "(HL+)", 'A');
 }
-std::string opcode_str_0x23([[maybe_unused]] Context& ctx) { return fmt::format("INC {}", "HL"); }
-std::string opcode_str_0x24([[maybe_unused]] Context& ctx) { return fmt::format("INC {}", 'H'); }
-std::string opcode_str_0x25([[maybe_unused]] Context& ctx) { return fmt::format("DEC {}", 'H'); }
-std::string opcode_str_0x26([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x23([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("INC {}", "HL");
+}
+std::string opcode_str_0x24([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("INC {}", 'H');
+}
+std::string opcode_str_0x25([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("DEC {}", 'H');
+}
+std::string opcode_str_0x26([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'H', fmt::format("{:#04x}", ctx.peek8()));
 }
-std::string opcode_str_0x27([[maybe_unused]] Context& ctx) { return std::string("DAA"); }
-std::string opcode_str_0x28([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x27([[maybe_unused]] core::Context& ctx) { return std::string("DAA"); }
+std::string opcode_str_0x28([[maybe_unused]] core::Context& ctx) {
     return fmt::format("JR {},{}", 'Z', ctx.peek8_signed());
 }
-std::string opcode_str_0x29([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x29([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADD {},{}", "HL", "HL");
 }
-std::string opcode_str_0x2a([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x2a([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'A', "(HL+)");
 }
-std::string opcode_str_0x2b([[maybe_unused]] Context& ctx) { return fmt::format("DEC {}", "HL"); }
-std::string opcode_str_0x2c([[maybe_unused]] Context& ctx) { return fmt::format("INC {}", 'L'); }
-std::string opcode_str_0x2d([[maybe_unused]] Context& ctx) { return fmt::format("DEC {}", 'L'); }
-std::string opcode_str_0x2e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x2b([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("DEC {}", "HL");
+}
+std::string opcode_str_0x2c([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("INC {}", 'L');
+}
+std::string opcode_str_0x2d([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("DEC {}", 'L');
+}
+std::string opcode_str_0x2e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'L', fmt::format("{:#04x}", ctx.peek8()));
 }
-std::string opcode_str_0x2f([[maybe_unused]] Context& ctx) { return std::string("CPL"); }
-std::string opcode_str_0x30([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x2f([[maybe_unused]] core::Context& ctx) { return std::string("CPL"); }
+std::string opcode_str_0x30([[maybe_unused]] core::Context& ctx) {
     return fmt::format("JR {},{}", "NC", ctx.peek8_signed());
 }
-std::string opcode_str_0x31([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x31([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "SP", fmt::format("{:#06x}", ctx.peek16()));
 }
-std::string opcode_str_0x32([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x32([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "(HL-)", 'A');
 }
-std::string opcode_str_0x33([[maybe_unused]] Context& ctx) { return fmt::format("INC {}", "SP"); }
-std::string opcode_str_0x34([[maybe_unused]] Context& ctx) { return fmt::format("INC {}", "(HL)"); }
-std::string opcode_str_0x35([[maybe_unused]] Context& ctx) { return fmt::format("DEC {}", "(HL)"); }
-std::string opcode_str_0x36([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x33([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("INC {}", "SP");
+}
+std::string opcode_str_0x34([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("INC {}", "(HL)");
+}
+std::string opcode_str_0x35([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("DEC {}", "(HL)");
+}
+std::string opcode_str_0x36([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "(HL)", fmt::format("{:#04x}", ctx.peek8()));
 }
-std::string opcode_str_0x37([[maybe_unused]] Context& ctx) { return std::string("SCF"); }
-std::string opcode_str_0x38([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x37([[maybe_unused]] core::Context& ctx) { return std::string("SCF"); }
+std::string opcode_str_0x38([[maybe_unused]] core::Context& ctx) {
     return fmt::format("JR {},{}", 'C', ctx.peek8_signed());
 }
-std::string opcode_str_0x39([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x39([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADD {},{}", "HL", "SP");
 }
-std::string opcode_str_0x3a([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x3a([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'A', "(HL-)");
 }
-std::string opcode_str_0x3b([[maybe_unused]] Context& ctx) { return fmt::format("DEC {}", "SP"); }
-std::string opcode_str_0x3c([[maybe_unused]] Context& ctx) { return fmt::format("INC {}", 'A'); }
-std::string opcode_str_0x3d([[maybe_unused]] Context& ctx) { return fmt::format("DEC {}", 'A'); }
-std::string opcode_str_0x3e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x3b([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("DEC {}", "SP");
+}
+std::string opcode_str_0x3c([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("INC {}", 'A');
+}
+std::string opcode_str_0x3d([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("DEC {}", 'A');
+}
+std::string opcode_str_0x3e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'A', fmt::format("{:#04x}", ctx.peek8()));
 }
-std::string opcode_str_0x3f([[maybe_unused]] Context& ctx) { return std::string("CCF"); }
-std::string opcode_str_0x40([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x3f([[maybe_unused]] core::Context& ctx) { return std::string("CCF"); }
+std::string opcode_str_0x40([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'B', 'B');
 }
-std::string opcode_str_0x41([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x41([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'B', 'C');
 }
-std::string opcode_str_0x42([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x42([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'B', 'D');
 }
-std::string opcode_str_0x43([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x43([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'B', 'E');
 }
-std::string opcode_str_0x44([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x44([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'B', 'H');
 }
-std::string opcode_str_0x45([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x45([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'B', 'L');
 }
-std::string opcode_str_0x46([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x46([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'B', "(HL)");
 }
-std::string opcode_str_0x47([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x47([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'B', 'A');
 }
-std::string opcode_str_0x48([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x48([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'C', 'B');
 }
-std::string opcode_str_0x49([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x49([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'C', 'C');
 }
-std::string opcode_str_0x4a([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x4a([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'C', 'D');
 }
-std::string opcode_str_0x4b([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x4b([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'C', 'E');
 }
-std::string opcode_str_0x4c([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x4c([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'C', 'H');
 }
-std::string opcode_str_0x4d([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x4d([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'C', 'L');
 }
-std::string opcode_str_0x4e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x4e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'C', "(HL)");
 }
-std::string opcode_str_0x4f([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x4f([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'C', 'A');
 }
-std::string opcode_str_0x50([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x50([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'D', 'B');
 }
-std::string opcode_str_0x51([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x51([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'D', 'C');
 }
-std::string opcode_str_0x52([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x52([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'D', 'D');
 }
-std::string opcode_str_0x53([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x53([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'D', 'E');
 }
-std::string opcode_str_0x54([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x54([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'D', 'H');
 }
-std::string opcode_str_0x55([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x55([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'D', 'L');
 }
-std::string opcode_str_0x56([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x56([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'D', "(HL)");
 }
-std::string opcode_str_0x57([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x57([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'D', 'A');
 }
-std::string opcode_str_0x58([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x58([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'E', 'B');
 }
-std::string opcode_str_0x59([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x59([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'E', 'C');
 }
-std::string opcode_str_0x5a([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x5a([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'E', 'D');
 }
-std::string opcode_str_0x5b([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x5b([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'E', 'E');
 }
-std::string opcode_str_0x5c([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x5c([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'E', 'H');
 }
-std::string opcode_str_0x5d([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x5d([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'E', 'L');
 }
-std::string opcode_str_0x5e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x5e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'E', "(HL)");
 }
-std::string opcode_str_0x5f([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x5f([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'E', 'A');
 }
-std::string opcode_str_0x60([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x60([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'H', 'B');
 }
-std::string opcode_str_0x61([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x61([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'H', 'C');
 }
-std::string opcode_str_0x62([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x62([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'H', 'D');
 }
-std::string opcode_str_0x63([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x63([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'H', 'E');
 }
-std::string opcode_str_0x64([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x64([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'H', 'H');
 }
-std::string opcode_str_0x65([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x65([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'H', 'L');
 }
-std::string opcode_str_0x66([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x66([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'H', "(HL)");
 }
-std::string opcode_str_0x67([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x67([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'H', 'A');
 }
-std::string opcode_str_0x68([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x68([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'L', 'B');
 }
-std::string opcode_str_0x69([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x69([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'L', 'C');
 }
-std::string opcode_str_0x6a([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x6a([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'L', 'D');
 }
-std::string opcode_str_0x6b([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x6b([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'L', 'E');
 }
-std::string opcode_str_0x6c([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x6c([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'L', 'H');
 }
-std::string opcode_str_0x6d([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x6d([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'L', 'L');
 }
-std::string opcode_str_0x6e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x6e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'L', "(HL)");
 }
-std::string opcode_str_0x6f([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x6f([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'L', 'A');
 }
-std::string opcode_str_0x70([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x70([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "(HL)", 'B');
 }
-std::string opcode_str_0x71([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x71([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "(HL)", 'C');
 }
-std::string opcode_str_0x72([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x72([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "(HL)", 'D');
 }
-std::string opcode_str_0x73([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x73([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "(HL)", 'E');
 }
-std::string opcode_str_0x74([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x74([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "(HL)", 'H');
 }
-std::string opcode_str_0x75([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x75([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "(HL)", 'L');
 }
-std::string opcode_str_0x76([[maybe_unused]] Context& ctx) { return std::string("HALT"); }
-std::string opcode_str_0x77([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x76([[maybe_unused]] core::Context& ctx) { return std::string("HALT"); }
+std::string opcode_str_0x77([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "(HL)", 'A');
 }
-std::string opcode_str_0x78([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x78([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'A', 'B');
 }
-std::string opcode_str_0x79([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x79([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'A', 'C');
 }
-std::string opcode_str_0x7a([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x7a([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'A', 'D');
 }
-std::string opcode_str_0x7b([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x7b([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'A', 'E');
 }
-std::string opcode_str_0x7c([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x7c([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'A', 'H');
 }
-std::string opcode_str_0x7d([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x7d([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'A', 'L');
 }
-std::string opcode_str_0x7e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x7e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'A', "(HL)");
 }
-std::string opcode_str_0x7f([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x7f([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'A', 'A');
 }
-std::string opcode_str_0x80([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x80([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADD {},{}", 'A', 'B');
 }
-std::string opcode_str_0x81([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x81([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADD {},{}", 'A', 'C');
 }
-std::string opcode_str_0x82([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x82([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADD {},{}", 'A', 'D');
 }
-std::string opcode_str_0x83([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x83([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADD {},{}", 'A', 'E');
 }
-std::string opcode_str_0x84([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x84([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADD {},{}", 'A', 'H');
 }
-std::string opcode_str_0x85([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x85([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADD {},{}", 'A', 'L');
 }
-std::string opcode_str_0x86([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x86([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADD {},{}", 'A', "(HL)");
 }
-std::string opcode_str_0x87([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x87([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADD {},{}", 'A', 'A');
 }
-std::string opcode_str_0x88([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x88([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADC {},{}", 'A', 'B');
 }
-std::string opcode_str_0x89([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x89([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADC {},{}", 'A', 'C');
 }
-std::string opcode_str_0x8a([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x8a([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADC {},{}", 'A', 'D');
 }
-std::string opcode_str_0x8b([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x8b([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADC {},{}", 'A', 'E');
 }
-std::string opcode_str_0x8c([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x8c([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADC {},{}", 'A', 'H');
 }
-std::string opcode_str_0x8d([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x8d([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADC {},{}", 'A', 'L');
 }
-std::string opcode_str_0x8e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x8e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADC {},{}", 'A', "(HL)");
 }
-std::string opcode_str_0x8f([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x8f([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADC {},{}", 'A', 'A');
 }
-std::string opcode_str_0x90([[maybe_unused]] Context& ctx) { return fmt::format("SUB {}", 'B'); }
-std::string opcode_str_0x91([[maybe_unused]] Context& ctx) { return fmt::format("SUB {}", 'C'); }
-std::string opcode_str_0x92([[maybe_unused]] Context& ctx) { return fmt::format("SUB {}", 'D'); }
-std::string opcode_str_0x93([[maybe_unused]] Context& ctx) { return fmt::format("SUB {}", 'E'); }
-std::string opcode_str_0x94([[maybe_unused]] Context& ctx) { return fmt::format("SUB {}", 'H'); }
-std::string opcode_str_0x95([[maybe_unused]] Context& ctx) { return fmt::format("SUB {}", 'L'); }
-std::string opcode_str_0x96([[maybe_unused]] Context& ctx) { return fmt::format("SUB {}", "(HL)"); }
-std::string opcode_str_0x97([[maybe_unused]] Context& ctx) { return fmt::format("SUB {}", 'A'); }
-std::string opcode_str_0x98([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x90([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SUB {}", 'B');
+}
+std::string opcode_str_0x91([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SUB {}", 'C');
+}
+std::string opcode_str_0x92([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SUB {}", 'D');
+}
+std::string opcode_str_0x93([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SUB {}", 'E');
+}
+std::string opcode_str_0x94([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SUB {}", 'H');
+}
+std::string opcode_str_0x95([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SUB {}", 'L');
+}
+std::string opcode_str_0x96([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SUB {}", "(HL)");
+}
+std::string opcode_str_0x97([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SUB {}", 'A');
+}
+std::string opcode_str_0x98([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SBC {},{}", 'A', 'B');
 }
-std::string opcode_str_0x99([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x99([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SBC {},{}", 'A', 'C');
 }
-std::string opcode_str_0x9a([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x9a([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SBC {},{}", 'A', 'D');
 }
-std::string opcode_str_0x9b([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x9b([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SBC {},{}", 'A', 'E');
 }
-std::string opcode_str_0x9c([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x9c([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SBC {},{}", 'A', 'H');
 }
-std::string opcode_str_0x9d([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x9d([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SBC {},{}", 'A', 'L');
 }
-std::string opcode_str_0x9e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x9e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SBC {},{}", 'A', "(HL)");
 }
-std::string opcode_str_0x9f([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0x9f([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SBC {},{}", 'A', 'A');
 }
-std::string opcode_str_0xa0([[maybe_unused]] Context& ctx) { return fmt::format("AND {}", 'B'); }
-std::string opcode_str_0xa1([[maybe_unused]] Context& ctx) { return fmt::format("AND {}", 'C'); }
-std::string opcode_str_0xa2([[maybe_unused]] Context& ctx) { return fmt::format("AND {}", 'D'); }
-std::string opcode_str_0xa3([[maybe_unused]] Context& ctx) { return fmt::format("AND {}", 'E'); }
-std::string opcode_str_0xa4([[maybe_unused]] Context& ctx) { return fmt::format("AND {}", 'H'); }
-std::string opcode_str_0xa5([[maybe_unused]] Context& ctx) { return fmt::format("AND {}", 'L'); }
-std::string opcode_str_0xa6([[maybe_unused]] Context& ctx) { return fmt::format("AND {}", "(HL)"); }
-std::string opcode_str_0xa7([[maybe_unused]] Context& ctx) { return fmt::format("AND {}", 'A'); }
-std::string opcode_str_0xa8([[maybe_unused]] Context& ctx) { return fmt::format("XOR {}", 'B'); }
-std::string opcode_str_0xa9([[maybe_unused]] Context& ctx) { return fmt::format("XOR {}", 'C'); }
-std::string opcode_str_0xaa([[maybe_unused]] Context& ctx) { return fmt::format("XOR {}", 'D'); }
-std::string opcode_str_0xab([[maybe_unused]] Context& ctx) { return fmt::format("XOR {}", 'E'); }
-std::string opcode_str_0xac([[maybe_unused]] Context& ctx) { return fmt::format("XOR {}", 'H'); }
-std::string opcode_str_0xad([[maybe_unused]] Context& ctx) { return fmt::format("XOR {}", 'L'); }
-std::string opcode_str_0xae([[maybe_unused]] Context& ctx) { return fmt::format("XOR {}", "(HL)"); }
-std::string opcode_str_0xaf([[maybe_unused]] Context& ctx) { return fmt::format("XOR {}", 'A'); }
-std::string opcode_str_0xb0([[maybe_unused]] Context& ctx) { return fmt::format("OR {}", 'B'); }
-std::string opcode_str_0xb1([[maybe_unused]] Context& ctx) { return fmt::format("OR {}", 'C'); }
-std::string opcode_str_0xb2([[maybe_unused]] Context& ctx) { return fmt::format("OR {}", 'D'); }
-std::string opcode_str_0xb3([[maybe_unused]] Context& ctx) { return fmt::format("OR {}", 'E'); }
-std::string opcode_str_0xb4([[maybe_unused]] Context& ctx) { return fmt::format("OR {}", 'H'); }
-std::string opcode_str_0xb5([[maybe_unused]] Context& ctx) { return fmt::format("OR {}", 'L'); }
-std::string opcode_str_0xb6([[maybe_unused]] Context& ctx) { return fmt::format("OR {}", "(HL)"); }
-std::string opcode_str_0xb7([[maybe_unused]] Context& ctx) { return fmt::format("OR {}", 'A'); }
-std::string opcode_str_0xb8([[maybe_unused]] Context& ctx) { return fmt::format("CP {}", 'B'); }
-std::string opcode_str_0xb9([[maybe_unused]] Context& ctx) { return fmt::format("CP {}", 'C'); }
-std::string opcode_str_0xba([[maybe_unused]] Context& ctx) { return fmt::format("CP {}", 'D'); }
-std::string opcode_str_0xbb([[maybe_unused]] Context& ctx) { return fmt::format("CP {}", 'E'); }
-std::string opcode_str_0xbc([[maybe_unused]] Context& ctx) { return fmt::format("CP {}", 'H'); }
-std::string opcode_str_0xbd([[maybe_unused]] Context& ctx) { return fmt::format("CP {}", 'L'); }
-std::string opcode_str_0xbe([[maybe_unused]] Context& ctx) { return fmt::format("CP {}", "(HL)"); }
-std::string opcode_str_0xbf([[maybe_unused]] Context& ctx) { return fmt::format("CP {}", 'A'); }
-std::string opcode_str_0xc0([[maybe_unused]] Context& ctx) { return fmt::format("RET {}", "NZ"); }
-std::string opcode_str_0xc1([[maybe_unused]] Context& ctx) { return fmt::format("POP {}", "BC"); }
-std::string opcode_str_0xc2([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xa0([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("AND {}", 'B');
+}
+std::string opcode_str_0xa1([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("AND {}", 'C');
+}
+std::string opcode_str_0xa2([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("AND {}", 'D');
+}
+std::string opcode_str_0xa3([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("AND {}", 'E');
+}
+std::string opcode_str_0xa4([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("AND {}", 'H');
+}
+std::string opcode_str_0xa5([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("AND {}", 'L');
+}
+std::string opcode_str_0xa6([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("AND {}", "(HL)");
+}
+std::string opcode_str_0xa7([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("AND {}", 'A');
+}
+std::string opcode_str_0xa8([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("XOR {}", 'B');
+}
+std::string opcode_str_0xa9([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("XOR {}", 'C');
+}
+std::string opcode_str_0xaa([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("XOR {}", 'D');
+}
+std::string opcode_str_0xab([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("XOR {}", 'E');
+}
+std::string opcode_str_0xac([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("XOR {}", 'H');
+}
+std::string opcode_str_0xad([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("XOR {}", 'L');
+}
+std::string opcode_str_0xae([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("XOR {}", "(HL)");
+}
+std::string opcode_str_0xaf([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("XOR {}", 'A');
+}
+std::string opcode_str_0xb0([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("OR {}", 'B');
+}
+std::string opcode_str_0xb1([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("OR {}", 'C');
+}
+std::string opcode_str_0xb2([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("OR {}", 'D');
+}
+std::string opcode_str_0xb3([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("OR {}", 'E');
+}
+std::string opcode_str_0xb4([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("OR {}", 'H');
+}
+std::string opcode_str_0xb5([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("OR {}", 'L');
+}
+std::string opcode_str_0xb6([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("OR {}", "(HL)");
+}
+std::string opcode_str_0xb7([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("OR {}", 'A');
+}
+std::string opcode_str_0xb8([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("CP {}", 'B');
+}
+std::string opcode_str_0xb9([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("CP {}", 'C');
+}
+std::string opcode_str_0xba([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("CP {}", 'D');
+}
+std::string opcode_str_0xbb([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("CP {}", 'E');
+}
+std::string opcode_str_0xbc([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("CP {}", 'H');
+}
+std::string opcode_str_0xbd([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("CP {}", 'L');
+}
+std::string opcode_str_0xbe([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("CP {}", "(HL)");
+}
+std::string opcode_str_0xbf([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("CP {}", 'A');
+}
+std::string opcode_str_0xc0([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RET {}", "NZ");
+}
+std::string opcode_str_0xc1([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("POP {}", "BC");
+}
+std::string opcode_str_0xc2([[maybe_unused]] core::Context& ctx) {
     return fmt::format("JP {},{}", "NZ", fmt::format("{:#06x}", ctx.peek16()));
 }
-std::string opcode_str_0xc3([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xc3([[maybe_unused]] core::Context& ctx) {
     return fmt::format("JP {}", fmt::format("{:#06x}", ctx.peek16()));
 }
-std::string opcode_str_0xc4([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xc4([[maybe_unused]] core::Context& ctx) {
     return fmt::format("CALL {},{}", "NZ", fmt::format("{:#06x}", ctx.peek16()));
 }
-std::string opcode_str_0xc5([[maybe_unused]] Context& ctx) { return fmt::format("PUSH {}", "BC"); }
-std::string opcode_str_0xc6([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xc5([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("PUSH {}", "BC");
+}
+std::string opcode_str_0xc6([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADD {},{}", 'A', fmt::format("{:#04x}", ctx.peek8()));
 }
-std::string opcode_str_0xc7([[maybe_unused]] Context& ctx) { return fmt::format("RST {}", "0x00"); }
-std::string opcode_str_0xc8([[maybe_unused]] Context& ctx) { return fmt::format("RET {}", 'Z'); }
-std::string opcode_str_0xc9([[maybe_unused]] Context& ctx) { return std::string("RET"); }
-std::string opcode_str_0xca([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xc7([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RST {}", "0x00");
+}
+std::string opcode_str_0xc8([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RET {}", 'Z');
+}
+std::string opcode_str_0xc9([[maybe_unused]] core::Context& ctx) { return std::string("RET"); }
+std::string opcode_str_0xca([[maybe_unused]] core::Context& ctx) {
     return fmt::format("JP {},{}", 'Z', fmt::format("{:#06x}", ctx.peek16()));
 }
-std::string opcode_str_0xcc([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcc([[maybe_unused]] core::Context& ctx) {
     return fmt::format("CALL {},{}", 'Z', fmt::format("{:#06x}", ctx.peek16()));
 }
-std::string opcode_str_0xcd([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcd([[maybe_unused]] core::Context& ctx) {
     return fmt::format("CALL {}", fmt::format("{:#06x}", ctx.peek16()));
 }
-std::string opcode_str_0xce([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xce([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADC {},{}", 'A', fmt::format("{:#04x}", ctx.peek8()));
 }
-std::string opcode_str_0xcf([[maybe_unused]] Context& ctx) { return fmt::format("RST {}", "0x08"); }
-std::string opcode_str_0xd0([[maybe_unused]] Context& ctx) { return fmt::format("RET {}", "NC"); }
-std::string opcode_str_0xd1([[maybe_unused]] Context& ctx) { return fmt::format("POP {}", "DE"); }
-std::string opcode_str_0xd2([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcf([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RST {}", "0x08");
+}
+std::string opcode_str_0xd0([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RET {}", "NC");
+}
+std::string opcode_str_0xd1([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("POP {}", "DE");
+}
+std::string opcode_str_0xd2([[maybe_unused]] core::Context& ctx) {
     return fmt::format("JP {},{}", "NC", fmt::format("{:#06x}", ctx.peek16()));
 }
-std::string opcode_str_0xd3([[maybe_unused]] Context& ctx) { return "UNKNOWN"; }
-std::string opcode_str_0xd4([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xd3([[maybe_unused]] core::Context& ctx) { return "UNKNOWN"; }
+std::string opcode_str_0xd4([[maybe_unused]] core::Context& ctx) {
     return fmt::format("CALL {},{}", "NC", fmt::format("{:#06x}", ctx.peek16()));
 }
-std::string opcode_str_0xd5([[maybe_unused]] Context& ctx) { return fmt::format("PUSH {}", "DE"); }
-std::string opcode_str_0xd6([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xd5([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("PUSH {}", "DE");
+}
+std::string opcode_str_0xd6([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SUB {}", fmt::format("{:#04x}", ctx.peek8()));
 }
-std::string opcode_str_0xd7([[maybe_unused]] Context& ctx) { return fmt::format("RST {}", "0x10"); }
-std::string opcode_str_0xd8([[maybe_unused]] Context& ctx) { return fmt::format("RET {}", 'C'); }
-std::string opcode_str_0xd9([[maybe_unused]] Context& ctx) { return std::string("RETI"); }
-std::string opcode_str_0xda([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xd7([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RST {}", "0x10");
+}
+std::string opcode_str_0xd8([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RET {}", 'C');
+}
+std::string opcode_str_0xd9([[maybe_unused]] core::Context& ctx) { return std::string("RETI"); }
+std::string opcode_str_0xda([[maybe_unused]] core::Context& ctx) {
     return fmt::format("JP {},{}", 'C', fmt::format("{:#06x}", ctx.peek16()));
 }
-std::string opcode_str_0xdb([[maybe_unused]] Context& ctx) { return "UNKNOWN"; }
-std::string opcode_str_0xdc([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xdb([[maybe_unused]] core::Context& ctx) { return "UNKNOWN"; }
+std::string opcode_str_0xdc([[maybe_unused]] core::Context& ctx) {
     return fmt::format("CALL {},{}", 'C', fmt::format("{:#06x}", ctx.peek16()));
 }
-std::string opcode_str_0xdd([[maybe_unused]] Context& ctx) { return "UNKNOWN"; }
-std::string opcode_str_0xde([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xdd([[maybe_unused]] core::Context& ctx) { return "UNKNOWN"; }
+std::string opcode_str_0xde([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SBC {},{}", 'A', fmt::format("{:#04x}", ctx.peek8()));
 }
-std::string opcode_str_0xdf([[maybe_unused]] Context& ctx) { return fmt::format("RST {}", "0x18"); }
-std::string opcode_str_0xe0([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xdf([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RST {}", "0x18");
+}
+std::string opcode_str_0xe0([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LDH {},{}", fmt::format("({:#04x})", ctx.peek8()), 'A');
 }
-std::string opcode_str_0xe1([[maybe_unused]] Context& ctx) { return fmt::format("POP {}", "HL"); }
-std::string opcode_str_0xe2([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xe1([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("POP {}", "HL");
+}
+std::string opcode_str_0xe2([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "(C)", 'A');
 }
-std::string opcode_str_0xe3([[maybe_unused]] Context& ctx) { return "UNKNOWN"; }
-std::string opcode_str_0xe4([[maybe_unused]] Context& ctx) { return "UNKNOWN"; }
-std::string opcode_str_0xe5([[maybe_unused]] Context& ctx) { return fmt::format("PUSH {}", "HL"); }
-std::string opcode_str_0xe6([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xe3([[maybe_unused]] core::Context& ctx) { return "UNKNOWN"; }
+std::string opcode_str_0xe4([[maybe_unused]] core::Context& ctx) { return "UNKNOWN"; }
+std::string opcode_str_0xe5([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("PUSH {}", "HL");
+}
+std::string opcode_str_0xe6([[maybe_unused]] core::Context& ctx) {
     return fmt::format("AND {}", fmt::format("{:#04x}", ctx.peek8()));
 }
-std::string opcode_str_0xe7([[maybe_unused]] Context& ctx) { return fmt::format("RST {}", "0x20"); }
-std::string opcode_str_0xe8([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xe7([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RST {}", "0x20");
+}
+std::string opcode_str_0xe8([[maybe_unused]] core::Context& ctx) {
     return fmt::format("ADD {},{}", "SP", ctx.peek8_signed());
 }
-std::string opcode_str_0xe9([[maybe_unused]] Context& ctx) { return fmt::format("JP {}", "(HL)"); }
-std::string opcode_str_0xea([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xe9([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("JP {}", "(HL)");
+}
+std::string opcode_str_0xea([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", fmt::format("({:#06x})", ctx.peek16()), 'A');
 }
-std::string opcode_str_0xeb([[maybe_unused]] Context& ctx) { return "UNKNOWN"; }
-std::string opcode_str_0xec([[maybe_unused]] Context& ctx) { return "UNKNOWN"; }
-std::string opcode_str_0xed([[maybe_unused]] Context& ctx) { return "UNKNOWN"; }
-std::string opcode_str_0xee([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xeb([[maybe_unused]] core::Context& ctx) { return "UNKNOWN"; }
+std::string opcode_str_0xec([[maybe_unused]] core::Context& ctx) { return "UNKNOWN"; }
+std::string opcode_str_0xed([[maybe_unused]] core::Context& ctx) { return "UNKNOWN"; }
+std::string opcode_str_0xee([[maybe_unused]] core::Context& ctx) {
     return fmt::format("XOR {}", fmt::format("{:#04x}", ctx.peek8()));
 }
-std::string opcode_str_0xef([[maybe_unused]] Context& ctx) { return fmt::format("RST {}", "0x28"); }
-std::string opcode_str_0xf0([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xef([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RST {}", "0x28");
+}
+std::string opcode_str_0xf0([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LDH {},{}", 'A', fmt::format("({:#04x})", ctx.peek8()));
 }
-std::string opcode_str_0xf1([[maybe_unused]] Context& ctx) { return fmt::format("POP {}", "AF"); }
-std::string opcode_str_0xf2([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xf1([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("POP {}", "AF");
+}
+std::string opcode_str_0xf2([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'A', "(C)");
 }
-std::string opcode_str_0xf3([[maybe_unused]] Context& ctx) { return std::string("DI"); }
-std::string opcode_str_0xf4([[maybe_unused]] Context& ctx) { return "UNKNOWN"; }
-std::string opcode_str_0xf5([[maybe_unused]] Context& ctx) { return fmt::format("PUSH {}", "AF"); }
-std::string opcode_str_0xf6([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xf3([[maybe_unused]] core::Context& ctx) { return std::string("DI"); }
+std::string opcode_str_0xf4([[maybe_unused]] core::Context& ctx) { return "UNKNOWN"; }
+std::string opcode_str_0xf5([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("PUSH {}", "AF");
+}
+std::string opcode_str_0xf6([[maybe_unused]] core::Context& ctx) {
     return fmt::format("OR {}", fmt::format("{:#04x}", ctx.peek8()));
 }
-std::string opcode_str_0xf7([[maybe_unused]] Context& ctx) { return fmt::format("RST {}", "0x30"); }
-std::string opcode_str_0xf8([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xf7([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RST {}", "0x30");
+}
+std::string opcode_str_0xf8([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "HL", fmt::format("SP+{:+}", ctx.peek8_signed()));
 }
-std::string opcode_str_0xf9([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xf9([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", "SP", "HL");
 }
-std::string opcode_str_0xfa([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xfa([[maybe_unused]] core::Context& ctx) {
     return fmt::format("LD {},{}", 'A', fmt::format("({:#06x})", ctx.peek16()));
 }
-std::string opcode_str_0xfb([[maybe_unused]] Context& ctx) { return std::string("EI"); }
-std::string opcode_str_0xfc([[maybe_unused]] Context& ctx) { return "UNKNOWN"; }
-std::string opcode_str_0xfd([[maybe_unused]] Context& ctx) { return "UNKNOWN"; }
-std::string opcode_str_0xfe([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xfb([[maybe_unused]] core::Context& ctx) { return std::string("EI"); }
+std::string opcode_str_0xfc([[maybe_unused]] core::Context& ctx) { return "UNKNOWN"; }
+std::string opcode_str_0xfd([[maybe_unused]] core::Context& ctx) { return "UNKNOWN"; }
+std::string opcode_str_0xfe([[maybe_unused]] core::Context& ctx) {
     return fmt::format("CP {}", fmt::format("{:#04x}", ctx.peek8()));
 }
-std::string opcode_str_0xff([[maybe_unused]] Context& ctx) { return fmt::format("RST {}", "0x38"); }
-std::string opcode_str_0xcb00([[maybe_unused]] Context& ctx) { return fmt::format("RLC {}", 'B'); }
-std::string opcode_str_0xcb01([[maybe_unused]] Context& ctx) { return fmt::format("RLC {}", 'C'); }
-std::string opcode_str_0xcb02([[maybe_unused]] Context& ctx) { return fmt::format("RLC {}", 'D'); }
-std::string opcode_str_0xcb03([[maybe_unused]] Context& ctx) { return fmt::format("RLC {}", 'E'); }
-std::string opcode_str_0xcb04([[maybe_unused]] Context& ctx) { return fmt::format("RLC {}", 'H'); }
-std::string opcode_str_0xcb05([[maybe_unused]] Context& ctx) { return fmt::format("RLC {}", 'L'); }
-std::string opcode_str_0xcb06([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xff([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RST {}", "0x38");
+}
+std::string opcode_str_0xcb00([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RLC {}", 'B');
+}
+std::string opcode_str_0xcb01([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RLC {}", 'C');
+}
+std::string opcode_str_0xcb02([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RLC {}", 'D');
+}
+std::string opcode_str_0xcb03([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RLC {}", 'E');
+}
+std::string opcode_str_0xcb04([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RLC {}", 'H');
+}
+std::string opcode_str_0xcb05([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RLC {}", 'L');
+}
+std::string opcode_str_0xcb06([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RLC {}", "(HL)");
 }
-std::string opcode_str_0xcb07([[maybe_unused]] Context& ctx) { return fmt::format("RLC {}", 'A'); }
-std::string opcode_str_0xcb08([[maybe_unused]] Context& ctx) { return fmt::format("RRC {}", 'B'); }
-std::string opcode_str_0xcb09([[maybe_unused]] Context& ctx) { return fmt::format("RRC {}", 'C'); }
-std::string opcode_str_0xcb0a([[maybe_unused]] Context& ctx) { return fmt::format("RRC {}", 'D'); }
-std::string opcode_str_0xcb0b([[maybe_unused]] Context& ctx) { return fmt::format("RRC {}", 'E'); }
-std::string opcode_str_0xcb0c([[maybe_unused]] Context& ctx) { return fmt::format("RRC {}", 'H'); }
-std::string opcode_str_0xcb0d([[maybe_unused]] Context& ctx) { return fmt::format("RRC {}", 'L'); }
-std::string opcode_str_0xcb0e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb07([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RLC {}", 'A');
+}
+std::string opcode_str_0xcb08([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RRC {}", 'B');
+}
+std::string opcode_str_0xcb09([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RRC {}", 'C');
+}
+std::string opcode_str_0xcb0a([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RRC {}", 'D');
+}
+std::string opcode_str_0xcb0b([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RRC {}", 'E');
+}
+std::string opcode_str_0xcb0c([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RRC {}", 'H');
+}
+std::string opcode_str_0xcb0d([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RRC {}", 'L');
+}
+std::string opcode_str_0xcb0e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RRC {}", "(HL)");
 }
-std::string opcode_str_0xcb0f([[maybe_unused]] Context& ctx) { return fmt::format("RRC {}", 'A'); }
-std::string opcode_str_0xcb10([[maybe_unused]] Context& ctx) { return fmt::format("RL {}", 'B'); }
-std::string opcode_str_0xcb11([[maybe_unused]] Context& ctx) { return fmt::format("RL {}", 'C'); }
-std::string opcode_str_0xcb12([[maybe_unused]] Context& ctx) { return fmt::format("RL {}", 'D'); }
-std::string opcode_str_0xcb13([[maybe_unused]] Context& ctx) { return fmt::format("RL {}", 'E'); }
-std::string opcode_str_0xcb14([[maybe_unused]] Context& ctx) { return fmt::format("RL {}", 'H'); }
-std::string opcode_str_0xcb15([[maybe_unused]] Context& ctx) { return fmt::format("RL {}", 'L'); }
-std::string opcode_str_0xcb16([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb0f([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RRC {}", 'A');
+}
+std::string opcode_str_0xcb10([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RL {}", 'B');
+}
+std::string opcode_str_0xcb11([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RL {}", 'C');
+}
+std::string opcode_str_0xcb12([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RL {}", 'D');
+}
+std::string opcode_str_0xcb13([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RL {}", 'E');
+}
+std::string opcode_str_0xcb14([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RL {}", 'H');
+}
+std::string opcode_str_0xcb15([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RL {}", 'L');
+}
+std::string opcode_str_0xcb16([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RL {}", "(HL)");
 }
-std::string opcode_str_0xcb17([[maybe_unused]] Context& ctx) { return fmt::format("RL {}", 'A'); }
-std::string opcode_str_0xcb18([[maybe_unused]] Context& ctx) { return fmt::format("RR {}", 'B'); }
-std::string opcode_str_0xcb19([[maybe_unused]] Context& ctx) { return fmt::format("RR {}", 'C'); }
-std::string opcode_str_0xcb1a([[maybe_unused]] Context& ctx) { return fmt::format("RR {}", 'D'); }
-std::string opcode_str_0xcb1b([[maybe_unused]] Context& ctx) { return fmt::format("RR {}", 'E'); }
-std::string opcode_str_0xcb1c([[maybe_unused]] Context& ctx) { return fmt::format("RR {}", 'H'); }
-std::string opcode_str_0xcb1d([[maybe_unused]] Context& ctx) { return fmt::format("RR {}", 'L'); }
-std::string opcode_str_0xcb1e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb17([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RL {}", 'A');
+}
+std::string opcode_str_0xcb18([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RR {}", 'B');
+}
+std::string opcode_str_0xcb19([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RR {}", 'C');
+}
+std::string opcode_str_0xcb1a([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RR {}", 'D');
+}
+std::string opcode_str_0xcb1b([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RR {}", 'E');
+}
+std::string opcode_str_0xcb1c([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RR {}", 'H');
+}
+std::string opcode_str_0xcb1d([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RR {}", 'L');
+}
+std::string opcode_str_0xcb1e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RR {}", "(HL)");
 }
-std::string opcode_str_0xcb1f([[maybe_unused]] Context& ctx) { return fmt::format("RR {}", 'A'); }
-std::string opcode_str_0xcb20([[maybe_unused]] Context& ctx) { return fmt::format("SLA {}", 'B'); }
-std::string opcode_str_0xcb21([[maybe_unused]] Context& ctx) { return fmt::format("SLA {}", 'C'); }
-std::string opcode_str_0xcb22([[maybe_unused]] Context& ctx) { return fmt::format("SLA {}", 'D'); }
-std::string opcode_str_0xcb23([[maybe_unused]] Context& ctx) { return fmt::format("SLA {}", 'E'); }
-std::string opcode_str_0xcb24([[maybe_unused]] Context& ctx) { return fmt::format("SLA {}", 'H'); }
-std::string opcode_str_0xcb25([[maybe_unused]] Context& ctx) { return fmt::format("SLA {}", 'L'); }
-std::string opcode_str_0xcb26([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb1f([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("RR {}", 'A');
+}
+std::string opcode_str_0xcb20([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SLA {}", 'B');
+}
+std::string opcode_str_0xcb21([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SLA {}", 'C');
+}
+std::string opcode_str_0xcb22([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SLA {}", 'D');
+}
+std::string opcode_str_0xcb23([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SLA {}", 'E');
+}
+std::string opcode_str_0xcb24([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SLA {}", 'H');
+}
+std::string opcode_str_0xcb25([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SLA {}", 'L');
+}
+std::string opcode_str_0xcb26([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SLA {}", "(HL)");
 }
-std::string opcode_str_0xcb27([[maybe_unused]] Context& ctx) { return fmt::format("SLA {}", 'A'); }
-std::string opcode_str_0xcb28([[maybe_unused]] Context& ctx) { return fmt::format("SRA {}", 'B'); }
-std::string opcode_str_0xcb29([[maybe_unused]] Context& ctx) { return fmt::format("SRA {}", 'C'); }
-std::string opcode_str_0xcb2a([[maybe_unused]] Context& ctx) { return fmt::format("SRA {}", 'D'); }
-std::string opcode_str_0xcb2b([[maybe_unused]] Context& ctx) { return fmt::format("SRA {}", 'E'); }
-std::string opcode_str_0xcb2c([[maybe_unused]] Context& ctx) { return fmt::format("SRA {}", 'H'); }
-std::string opcode_str_0xcb2d([[maybe_unused]] Context& ctx) { return fmt::format("SRA {}", 'L'); }
-std::string opcode_str_0xcb2e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb27([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SLA {}", 'A');
+}
+std::string opcode_str_0xcb28([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SRA {}", 'B');
+}
+std::string opcode_str_0xcb29([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SRA {}", 'C');
+}
+std::string opcode_str_0xcb2a([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SRA {}", 'D');
+}
+std::string opcode_str_0xcb2b([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SRA {}", 'E');
+}
+std::string opcode_str_0xcb2c([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SRA {}", 'H');
+}
+std::string opcode_str_0xcb2d([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SRA {}", 'L');
+}
+std::string opcode_str_0xcb2e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SRA {}", "(HL)");
 }
-std::string opcode_str_0xcb2f([[maybe_unused]] Context& ctx) { return fmt::format("SRA {}", 'A'); }
-std::string opcode_str_0xcb30([[maybe_unused]] Context& ctx) { return fmt::format("SWAP {}", 'B'); }
-std::string opcode_str_0xcb31([[maybe_unused]] Context& ctx) { return fmt::format("SWAP {}", 'C'); }
-std::string opcode_str_0xcb32([[maybe_unused]] Context& ctx) { return fmt::format("SWAP {}", 'D'); }
-std::string opcode_str_0xcb33([[maybe_unused]] Context& ctx) { return fmt::format("SWAP {}", 'E'); }
-std::string opcode_str_0xcb34([[maybe_unused]] Context& ctx) { return fmt::format("SWAP {}", 'H'); }
-std::string opcode_str_0xcb35([[maybe_unused]] Context& ctx) { return fmt::format("SWAP {}", 'L'); }
-std::string opcode_str_0xcb36([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb2f([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SRA {}", 'A');
+}
+std::string opcode_str_0xcb30([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SWAP {}", 'B');
+}
+std::string opcode_str_0xcb31([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SWAP {}", 'C');
+}
+std::string opcode_str_0xcb32([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SWAP {}", 'D');
+}
+std::string opcode_str_0xcb33([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SWAP {}", 'E');
+}
+std::string opcode_str_0xcb34([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SWAP {}", 'H');
+}
+std::string opcode_str_0xcb35([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SWAP {}", 'L');
+}
+std::string opcode_str_0xcb36([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SWAP {}", "(HL)");
 }
-std::string opcode_str_0xcb37([[maybe_unused]] Context& ctx) { return fmt::format("SWAP {}", 'A'); }
-std::string opcode_str_0xcb38([[maybe_unused]] Context& ctx) { return fmt::format("SRL {}", 'B'); }
-std::string opcode_str_0xcb39([[maybe_unused]] Context& ctx) { return fmt::format("SRL {}", 'C'); }
-std::string opcode_str_0xcb3a([[maybe_unused]] Context& ctx) { return fmt::format("SRL {}", 'D'); }
-std::string opcode_str_0xcb3b([[maybe_unused]] Context& ctx) { return fmt::format("SRL {}", 'E'); }
-std::string opcode_str_0xcb3c([[maybe_unused]] Context& ctx) { return fmt::format("SRL {}", 'H'); }
-std::string opcode_str_0xcb3d([[maybe_unused]] Context& ctx) { return fmt::format("SRL {}", 'L'); }
-std::string opcode_str_0xcb3e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb37([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SWAP {}", 'A');
+}
+std::string opcode_str_0xcb38([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SRL {}", 'B');
+}
+std::string opcode_str_0xcb39([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SRL {}", 'C');
+}
+std::string opcode_str_0xcb3a([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SRL {}", 'D');
+}
+std::string opcode_str_0xcb3b([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SRL {}", 'E');
+}
+std::string opcode_str_0xcb3c([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SRL {}", 'H');
+}
+std::string opcode_str_0xcb3d([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SRL {}", 'L');
+}
+std::string opcode_str_0xcb3e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SRL {}", "(HL)");
 }
-std::string opcode_str_0xcb3f([[maybe_unused]] Context& ctx) { return fmt::format("SRL {}", 'A'); }
-std::string opcode_str_0xcb40([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb3f([[maybe_unused]] core::Context& ctx) {
+    return fmt::format("SRL {}", 'A');
+}
+std::string opcode_str_0xcb40([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 0, 'B');
 }
-std::string opcode_str_0xcb41([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb41([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 0, 'C');
 }
-std::string opcode_str_0xcb42([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb42([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 0, 'D');
 }
-std::string opcode_str_0xcb43([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb43([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 0, 'E');
 }
-std::string opcode_str_0xcb44([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb44([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 0, 'H');
 }
-std::string opcode_str_0xcb45([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb45([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 0, 'L');
 }
-std::string opcode_str_0xcb46([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb46([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 0, "(HL)");
 }
-std::string opcode_str_0xcb47([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb47([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 0, 'A');
 }
-std::string opcode_str_0xcb48([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb48([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 1, 'B');
 }
-std::string opcode_str_0xcb49([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb49([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 1, 'C');
 }
-std::string opcode_str_0xcb4a([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb4a([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 1, 'D');
 }
-std::string opcode_str_0xcb4b([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb4b([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 1, 'E');
 }
-std::string opcode_str_0xcb4c([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb4c([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 1, 'H');
 }
-std::string opcode_str_0xcb4d([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb4d([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 1, 'L');
 }
-std::string opcode_str_0xcb4e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb4e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 1, "(HL)");
 }
-std::string opcode_str_0xcb4f([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb4f([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 1, 'A');
 }
-std::string opcode_str_0xcb50([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb50([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 2, 'B');
 }
-std::string opcode_str_0xcb51([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb51([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 2, 'C');
 }
-std::string opcode_str_0xcb52([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb52([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 2, 'D');
 }
-std::string opcode_str_0xcb53([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb53([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 2, 'E');
 }
-std::string opcode_str_0xcb54([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb54([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 2, 'H');
 }
-std::string opcode_str_0xcb55([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb55([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 2, 'L');
 }
-std::string opcode_str_0xcb56([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb56([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 2, "(HL)");
 }
-std::string opcode_str_0xcb57([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb57([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 2, 'A');
 }
-std::string opcode_str_0xcb58([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb58([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 3, 'B');
 }
-std::string opcode_str_0xcb59([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb59([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 3, 'C');
 }
-std::string opcode_str_0xcb5a([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb5a([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 3, 'D');
 }
-std::string opcode_str_0xcb5b([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb5b([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 3, 'E');
 }
-std::string opcode_str_0xcb5c([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb5c([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 3, 'H');
 }
-std::string opcode_str_0xcb5d([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb5d([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 3, 'L');
 }
-std::string opcode_str_0xcb5e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb5e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 3, "(HL)");
 }
-std::string opcode_str_0xcb5f([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb5f([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 3, 'A');
 }
-std::string opcode_str_0xcb60([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb60([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 4, 'B');
 }
-std::string opcode_str_0xcb61([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb61([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 4, 'C');
 }
-std::string opcode_str_0xcb62([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb62([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 4, 'D');
 }
-std::string opcode_str_0xcb63([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb63([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 4, 'E');
 }
-std::string opcode_str_0xcb64([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb64([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 4, 'H');
 }
-std::string opcode_str_0xcb65([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb65([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 4, 'L');
 }
-std::string opcode_str_0xcb66([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb66([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 4, "(HL)");
 }
-std::string opcode_str_0xcb67([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb67([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 4, 'A');
 }
-std::string opcode_str_0xcb68([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb68([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 5, 'B');
 }
-std::string opcode_str_0xcb69([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb69([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 5, 'C');
 }
-std::string opcode_str_0xcb6a([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb6a([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 5, 'D');
 }
-std::string opcode_str_0xcb6b([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb6b([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 5, 'E');
 }
-std::string opcode_str_0xcb6c([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb6c([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 5, 'H');
 }
-std::string opcode_str_0xcb6d([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb6d([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 5, 'L');
 }
-std::string opcode_str_0xcb6e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb6e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 5, "(HL)");
 }
-std::string opcode_str_0xcb6f([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb6f([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 5, 'A');
 }
-std::string opcode_str_0xcb70([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb70([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 6, 'B');
 }
-std::string opcode_str_0xcb71([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb71([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 6, 'C');
 }
-std::string opcode_str_0xcb72([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb72([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 6, 'D');
 }
-std::string opcode_str_0xcb73([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb73([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 6, 'E');
 }
-std::string opcode_str_0xcb74([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb74([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 6, 'H');
 }
-std::string opcode_str_0xcb75([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb75([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 6, 'L');
 }
-std::string opcode_str_0xcb76([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb76([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 6, "(HL)");
 }
-std::string opcode_str_0xcb77([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb77([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 6, 'A');
 }
-std::string opcode_str_0xcb78([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb78([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 7, 'B');
 }
-std::string opcode_str_0xcb79([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb79([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 7, 'C');
 }
-std::string opcode_str_0xcb7a([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb7a([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 7, 'D');
 }
-std::string opcode_str_0xcb7b([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb7b([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 7, 'E');
 }
-std::string opcode_str_0xcb7c([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb7c([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 7, 'H');
 }
-std::string opcode_str_0xcb7d([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb7d([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 7, 'L');
 }
-std::string opcode_str_0xcb7e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb7e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 7, "(HL)");
 }
-std::string opcode_str_0xcb7f([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb7f([[maybe_unused]] core::Context& ctx) {
     return fmt::format("BIT {},{}", 7, 'A');
 }
-std::string opcode_str_0xcb80([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb80([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 0, 'B');
 }
-std::string opcode_str_0xcb81([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb81([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 0, 'C');
 }
-std::string opcode_str_0xcb82([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb82([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 0, 'D');
 }
-std::string opcode_str_0xcb83([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb83([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 0, 'E');
 }
-std::string opcode_str_0xcb84([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb84([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 0, 'H');
 }
-std::string opcode_str_0xcb85([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb85([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 0, 'L');
 }
-std::string opcode_str_0xcb86([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb86([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 0, "(HL)");
 }
-std::string opcode_str_0xcb87([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb87([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 0, 'A');
 }
-std::string opcode_str_0xcb88([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb88([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 1, 'B');
 }
-std::string opcode_str_0xcb89([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb89([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 1, 'C');
 }
-std::string opcode_str_0xcb8a([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb8a([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 1, 'D');
 }
-std::string opcode_str_0xcb8b([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb8b([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 1, 'E');
 }
-std::string opcode_str_0xcb8c([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb8c([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 1, 'H');
 }
-std::string opcode_str_0xcb8d([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb8d([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 1, 'L');
 }
-std::string opcode_str_0xcb8e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb8e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 1, "(HL)");
 }
-std::string opcode_str_0xcb8f([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb8f([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 1, 'A');
 }
-std::string opcode_str_0xcb90([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb90([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 2, 'B');
 }
-std::string opcode_str_0xcb91([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb91([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 2, 'C');
 }
-std::string opcode_str_0xcb92([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb92([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 2, 'D');
 }
-std::string opcode_str_0xcb93([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb93([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 2, 'E');
 }
-std::string opcode_str_0xcb94([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb94([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 2, 'H');
 }
-std::string opcode_str_0xcb95([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb95([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 2, 'L');
 }
-std::string opcode_str_0xcb96([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb96([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 2, "(HL)");
 }
-std::string opcode_str_0xcb97([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb97([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 2, 'A');
 }
-std::string opcode_str_0xcb98([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb98([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 3, 'B');
 }
-std::string opcode_str_0xcb99([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb99([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 3, 'C');
 }
-std::string opcode_str_0xcb9a([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb9a([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 3, 'D');
 }
-std::string opcode_str_0xcb9b([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb9b([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 3, 'E');
 }
-std::string opcode_str_0xcb9c([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb9c([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 3, 'H');
 }
-std::string opcode_str_0xcb9d([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb9d([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 3, 'L');
 }
-std::string opcode_str_0xcb9e([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb9e([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 3, "(HL)");
 }
-std::string opcode_str_0xcb9f([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcb9f([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 3, 'A');
 }
-std::string opcode_str_0xcba0([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcba0([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 4, 'B');
 }
-std::string opcode_str_0xcba1([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcba1([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 4, 'C');
 }
-std::string opcode_str_0xcba2([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcba2([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 4, 'D');
 }
-std::string opcode_str_0xcba3([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcba3([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 4, 'E');
 }
-std::string opcode_str_0xcba4([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcba4([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 4, 'H');
 }
-std::string opcode_str_0xcba5([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcba5([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 4, 'L');
 }
-std::string opcode_str_0xcba6([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcba6([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 4, "(HL)");
 }
-std::string opcode_str_0xcba7([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcba7([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 4, 'A');
 }
-std::string opcode_str_0xcba8([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcba8([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 5, 'B');
 }
-std::string opcode_str_0xcba9([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcba9([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 5, 'C');
 }
-std::string opcode_str_0xcbaa([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbaa([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 5, 'D');
 }
-std::string opcode_str_0xcbab([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbab([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 5, 'E');
 }
-std::string opcode_str_0xcbac([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbac([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 5, 'H');
 }
-std::string opcode_str_0xcbad([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbad([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 5, 'L');
 }
-std::string opcode_str_0xcbae([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbae([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 5, "(HL)");
 }
-std::string opcode_str_0xcbaf([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbaf([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 5, 'A');
 }
-std::string opcode_str_0xcbb0([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbb0([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 6, 'B');
 }
-std::string opcode_str_0xcbb1([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbb1([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 6, 'C');
 }
-std::string opcode_str_0xcbb2([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbb2([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 6, 'D');
 }
-std::string opcode_str_0xcbb3([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbb3([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 6, 'E');
 }
-std::string opcode_str_0xcbb4([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbb4([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 6, 'H');
 }
-std::string opcode_str_0xcbb5([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbb5([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 6, 'L');
 }
-std::string opcode_str_0xcbb6([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbb6([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 6, "(HL)");
 }
-std::string opcode_str_0xcbb7([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbb7([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 6, 'A');
 }
-std::string opcode_str_0xcbb8([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbb8([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 7, 'B');
 }
-std::string opcode_str_0xcbb9([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbb9([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 7, 'C');
 }
-std::string opcode_str_0xcbba([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbba([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 7, 'D');
 }
-std::string opcode_str_0xcbbb([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbbb([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 7, 'E');
 }
-std::string opcode_str_0xcbbc([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbbc([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 7, 'H');
 }
-std::string opcode_str_0xcbbd([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbbd([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 7, 'L');
 }
-std::string opcode_str_0xcbbe([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbbe([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 7, "(HL)");
 }
-std::string opcode_str_0xcbbf([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbbf([[maybe_unused]] core::Context& ctx) {
     return fmt::format("RES {},{}", 7, 'A');
 }
-std::string opcode_str_0xcbc0([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbc0([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 0, 'B');
 }
-std::string opcode_str_0xcbc1([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbc1([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 0, 'C');
 }
-std::string opcode_str_0xcbc2([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbc2([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 0, 'D');
 }
-std::string opcode_str_0xcbc3([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbc3([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 0, 'E');
 }
-std::string opcode_str_0xcbc4([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbc4([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 0, 'H');
 }
-std::string opcode_str_0xcbc5([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbc5([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 0, 'L');
 }
-std::string opcode_str_0xcbc6([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbc6([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 0, "(HL)");
 }
-std::string opcode_str_0xcbc7([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbc7([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 0, 'A');
 }
-std::string opcode_str_0xcbc8([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbc8([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 1, 'B');
 }
-std::string opcode_str_0xcbc9([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbc9([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 1, 'C');
 }
-std::string opcode_str_0xcbca([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbca([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 1, 'D');
 }
-std::string opcode_str_0xcbcb([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbcb([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 1, 'E');
 }
-std::string opcode_str_0xcbcc([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbcc([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 1, 'H');
 }
-std::string opcode_str_0xcbcd([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbcd([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 1, 'L');
 }
-std::string opcode_str_0xcbce([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbce([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 1, "(HL)");
 }
-std::string opcode_str_0xcbcf([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbcf([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 1, 'A');
 }
-std::string opcode_str_0xcbd0([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbd0([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 2, 'B');
 }
-std::string opcode_str_0xcbd1([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbd1([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 2, 'C');
 }
-std::string opcode_str_0xcbd2([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbd2([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 2, 'D');
 }
-std::string opcode_str_0xcbd3([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbd3([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 2, 'E');
 }
-std::string opcode_str_0xcbd4([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbd4([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 2, 'H');
 }
-std::string opcode_str_0xcbd5([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbd5([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 2, 'L');
 }
-std::string opcode_str_0xcbd6([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbd6([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 2, "(HL)");
 }
-std::string opcode_str_0xcbd7([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbd7([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 2, 'A');
 }
-std::string opcode_str_0xcbd8([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbd8([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 3, 'B');
 }
-std::string opcode_str_0xcbd9([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbd9([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 3, 'C');
 }
-std::string opcode_str_0xcbda([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbda([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 3, 'D');
 }
-std::string opcode_str_0xcbdb([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbdb([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 3, 'E');
 }
-std::string opcode_str_0xcbdc([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbdc([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 3, 'H');
 }
-std::string opcode_str_0xcbdd([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbdd([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 3, 'L');
 }
-std::string opcode_str_0xcbde([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbde([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 3, "(HL)");
 }
-std::string opcode_str_0xcbdf([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbdf([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 3, 'A');
 }
-std::string opcode_str_0xcbe0([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbe0([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 4, 'B');
 }
-std::string opcode_str_0xcbe1([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbe1([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 4, 'C');
 }
-std::string opcode_str_0xcbe2([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbe2([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 4, 'D');
 }
-std::string opcode_str_0xcbe3([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbe3([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 4, 'E');
 }
-std::string opcode_str_0xcbe4([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbe4([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 4, 'H');
 }
-std::string opcode_str_0xcbe5([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbe5([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 4, 'L');
 }
-std::string opcode_str_0xcbe6([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbe6([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 4, "(HL)");
 }
-std::string opcode_str_0xcbe7([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbe7([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 4, 'A');
 }
-std::string opcode_str_0xcbe8([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbe8([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 5, 'B');
 }
-std::string opcode_str_0xcbe9([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbe9([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 5, 'C');
 }
-std::string opcode_str_0xcbea([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbea([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 5, 'D');
 }
-std::string opcode_str_0xcbeb([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbeb([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 5, 'E');
 }
-std::string opcode_str_0xcbec([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbec([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 5, 'H');
 }
-std::string opcode_str_0xcbed([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbed([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 5, 'L');
 }
-std::string opcode_str_0xcbee([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbee([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 5, "(HL)");
 }
-std::string opcode_str_0xcbef([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbef([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 5, 'A');
 }
-std::string opcode_str_0xcbf0([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbf0([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 6, 'B');
 }
-std::string opcode_str_0xcbf1([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbf1([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 6, 'C');
 }
-std::string opcode_str_0xcbf2([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbf2([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 6, 'D');
 }
-std::string opcode_str_0xcbf3([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbf3([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 6, 'E');
 }
-std::string opcode_str_0xcbf4([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbf4([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 6, 'H');
 }
-std::string opcode_str_0xcbf5([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbf5([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 6, 'L');
 }
-std::string opcode_str_0xcbf6([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbf6([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 6, "(HL)");
 }
-std::string opcode_str_0xcbf7([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbf7([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 6, 'A');
 }
-std::string opcode_str_0xcbf8([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbf8([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 7, 'B');
 }
-std::string opcode_str_0xcbf9([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbf9([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 7, 'C');
 }
-std::string opcode_str_0xcbfa([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbfa([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 7, 'D');
 }
-std::string opcode_str_0xcbfb([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbfb([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 7, 'E');
 }
-std::string opcode_str_0xcbfc([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbfc([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 7, 'H');
 }
-std::string opcode_str_0xcbfd([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbfd([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 7, 'L');
 }
-std::string opcode_str_0xcbfe([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbfe([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 7, "(HL)");
 }
-std::string opcode_str_0xcbff([[maybe_unused]] Context& ctx) {
+std::string opcode_str_0xcbff([[maybe_unused]] core::Context& ctx) {
     return fmt::format("SET {},{}", 7, 'A');
 }
 
-std::array<std::string (*)(Context&), 256> opcode_strings() {
-    std::array<std::string (*)(Context&), 256> ret;
+std::array<std::string (*)(core::Context&), 256> opcode_strings() {
+    std::array<std::string (*)(core::Context&), 256> ret;
     ret[0x00] = opcode_str_0x00;
     ret[0x01] = opcode_str_0x01;
     ret[0x02] = opcode_str_0x02;
@@ -1460,8 +1745,8 @@ std::array<std::string (*)(Context&), 256> opcode_strings() {
     ret[0xff] = opcode_str_0xff;
     return ret;
 }
-std::array<std::string (*)(Context&), 256> cb_opcode_strings() {
-    std::array<std::string (*)(Context&), 256> ret;
+std::array<std::string (*)(core::Context&), 256> cb_opcode_strings() {
+    std::array<std::string (*)(core::Context&), 256> ret;
     ret[0]   = opcode_str_0xcb00;
     ret[1]   = opcode_str_0xcb01;
     ret[2]   = opcode_str_0xcb02;
