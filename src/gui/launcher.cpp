@@ -6,8 +6,8 @@ namespace GUI {
     Launcher::Launcher(float fs, core::EmuWrapper& e) : GUIComponent(fs), emu(e) {}
 
     void Launcher::draw_window() {
-        static uint16_t entry_setting = 0x200;
-        static uint16_t base_address  = 0x200;
+        static uint16_t entry_setting = 0x100;
+        static uint16_t base_address  = 0x0;
 
         static bool launch_paused = false;
 

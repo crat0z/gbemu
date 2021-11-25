@@ -146,7 +146,7 @@ namespace GUI {
                                 }
                                 // follow to jump target in disassembly
                                 if (is_followable(ins1.operation)) {
-                                    uint16_t imm12 = swap_byte_order(ins1.opcode) & 0xFFF;
+                                    uint16_t imm12 = ins1.opcode & 0xFFF;
                                     if (ImGui::Selectable(
                                                 fmt::format("Follow to address 0x{0:03X}", imm12)
                                                         .c_str())) {

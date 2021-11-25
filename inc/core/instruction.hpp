@@ -3,8 +3,6 @@
 #include "core/opcodes.hpp"
 #include <fmt/format.h>
 
-#include "core/bytes.hpp"
-
 namespace core {
     struct Instruction {
         uint16_t    address;
@@ -29,7 +27,7 @@ namespace core {
         // length = 2 always at this point, change in future
         Instruction(uint16_t addr, uint16_t opc)
                 : address{ addr },
-                  opcode{ swap_byte_order(opc) },
+                  opcode{ /*swap_byte_order(opc)*/ },
                   operation{ decode(opc) },
                   length{ 2 },
                   mnemonic{ opcode_mnemonic(opc) } {}

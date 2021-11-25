@@ -1,5 +1,5 @@
 ---
-Checks:          '*,-fuchsia-*,-google-*,-zircon-*,-abseil-*,-modernize-use-trailing-return-type,-llvm*,-cppcoreguidelines-avoid-magic-numbers,-hicpp-signed-bitwise,-readability-magic-numbers'
+Checks:          '*,-fuchsia-*,-google-*,-zircon-*,-abseil-*,-modernize-use-trailing-return-type,-llvm*,-cppcoreguidelines-pro-type-union-access,-cppcoreguidelines-avoid-magic-numbers,-readability-magic-numbers'
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
 FormatStyle:     none

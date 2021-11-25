@@ -333,7 +333,7 @@ namespace GUI {
 
         auto gfx_thread = [&](std::future<void> exit) {
             while (exit.wait_for(std::chrono::nanoseconds(1)) == std::future_status::timeout) {
-                while (!emu.is_paused() && emu.is_ready()) {
+                while (emu.is_ready()) {
                     emu.cycle();
                 }
                 std::this_thread::sleep_for(100ms);

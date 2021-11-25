@@ -32,15 +32,15 @@ namespace core {
         std::this_thread::sleep_for(100ms);
 
         proc.reset_state();
-        proc.r.PC = entry;
-        // FIX
-        // read_file(filepath, addr, proc.ram.data());
+        proc.ctx.r.PC = entry;
+
+        read_file(filepath, addr, proc.ctx.m.memory.data());
 
         proc.is_ready = true;
     }
 
     // save current emu state
-    void EmuWrapper::save_emu_state() noexcept { prev_r = proc.r; }
+    void EmuWrapper::save_emu_state() noexcept { prev_r = proc.ctx.r; }
 
     // update changed registers etc
     void EmuWrapper::update_state() noexcept {}
@@ -62,7 +62,7 @@ namespace core {
 
     void EmuWrapper::get_next_instruction() noexcept {
         // we can safely decode next instruction
-        next_opcode = proc.fetch(proc.r.PC);
+        next_opcode = proc.fetch(proc.ctx.r.PC);
 
         // update our instruction info
         next_operation = decode(next_opcode);
@@ -100,7 +100,7 @@ namespace core {
     void EmuWrapper::single_step() noexcept {
         if (is_paused()) {
             debug_cycle(true);
-            set_destination(proc.r.PC);
+            set_destination(proc.ctx.r.PC);
         }
     }
 
@@ -110,7 +110,7 @@ namespace core {
             get_next_instruction();
 
             if (next_operation == op::CALL || next_operation == op::SYS) {
-                set_destination(proc.r.PC + 2);
+                set_destination(proc.ctx.r.PC + 2);
                 unpause();
             }
             else {
@@ -130,8 +130,8 @@ namespace core {
 
     void EmuWrapper::cycle() noexcept {
         // if we hit a breakpoint, we've reached a destination
-        if (breakpoints[proc.r.PC]) {
-            destination = proc.r.PC;
+        if (breakpoints[proc.ctx.r.PC]) {
+            destination = proc.ctx.r.PC;
             pause();
         }
         else if (reached_destination()) {
@@ -145,7 +145,7 @@ namespace core {
         }
     }
 
-    bool EmuWrapper::reached_destination() const noexcept { return proc.r.PC == destination; }
+    bool EmuWrapper::reached_destination() const noexcept { return proc.ctx.r.PC == destination; }
 
     void EmuWrapper::recv_destination() noexcept {
         destination = 0xffff;
@@ -172,8 +172,8 @@ namespace core {
     uint16_t EmuWrapper::fetch(uint16_t addr) noexcept { return proc.fetch(addr); }
     op       EmuWrapper::decode(uint16_t opc) noexcept { return proc.decode(opc); }
 
-    uint16_t& EmuWrapper::get_PC() noexcept { return proc.r.PC; }
-    void      EmuWrapper::set_PC(uint8_t val) noexcept { proc.r.PC = val; }
+    uint16_t& EmuWrapper::get_PC() noexcept { return proc.ctx.r.PC; }
+    void      EmuWrapper::set_PC(uint8_t val) noexcept { proc.ctx.r.PC = val; }
 
     uint16_t EmuWrapper::get_opcode() const noexcept { return next_opcode; }
 } // namespace core

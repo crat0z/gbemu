@@ -6,7 +6,7 @@ class CETimer {
     using clock = std::chrono::steady_clock;
 
 public:
-    CETimer() {}
+    CETimer() = default;
 
     bool update() {
 
