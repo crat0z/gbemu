@@ -241,26 +241,30 @@ namespace {
     }
     void OP_INLINE DAA(Context& c) {
         // the dumbest instruction i've ever seen
-        auto& A = c.r.A;
+        uint16_t result = c.r.A;
 
         if (c.r.SUB_FLAG) {
             if (c.r.CARRY_FLAG) {
-                A -= 0x60;
+                result -= 0x60;
             }
             if (c.r.HALFCARRY_FLAG) {
-                A -= 0x6;
+                result = (result - 0x06) & 0xFF;
             }
         }
         else {
-            if (c.r.CARRY_FLAG || A > 0x99) {
-                A += 0x60;
-                c.r.CARRY_FLAG = 0;
+            if (c.r.CARRY_FLAG || (result > 0x99)) {
+                result += 0x60;
+                c.r.CARRY_FLAG = 1;
             }
-            if (c.r.HALFCARRY_FLAG || ((A & 0xF) > 0x9)) {
-                A += 0x6;
+
+            if (c.r.HALFCARRY_FLAG || ((result & 0xf) > 0x9)) {
+                result += 0x6;
             }
         }
-        set_zero(c, A);
+
+        c.r.A = result & 0xFF;
+
+        set_zero(c, c.r.A);
     }
     void OP_INLINE SCF(Context& c) { c.r.CARRY_FLAG = 1; }
     void OP_INLINE CPL(Context& c) { c.r.A ^= 0xFF; }
