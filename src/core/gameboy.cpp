@@ -39,8 +39,7 @@ namespace core {
 
     void Gameboy::cycle() {
         static auto last_cycle = 0;
-
-        static auto result = 0;
+        static auto result     = 0;
 
         while (result) {
             // wait for it
@@ -54,27 +53,36 @@ namespace core {
         }
         ctx.TIMA_update(last_cycle);
 
-        //std::cout << ctx.print();
+        if (!ctx.halted) {
+            auto op = ctx.imm8();
 
-        auto op = ctx.imm8();
-
-        if (op == 0xCB) {
-            op = ctx.imm8();
-            //std::cout << op_cb_str_table[op](ctx);
-            result = cb_table[op](ctx);
+            if (op == 0xCB) {
+                op     = ctx.imm8();
+                result = cb_table[op](ctx);
+            }
+            else {
+                result = op_table[op](ctx);
+            }
+            last_cycle = result;
         }
-        else {
-            //std::cout << op_str_table[op](ctx);
-            result = op_table[op](ctx);
+
+        // if EI/DI set this cycle, we don't check for interrupts
+        if (ctx.interrupt_modified) {
+            ctx.interrupt_modified = false;
         }
-        last_cycle = result;
+        else if (ctx.interrupt_pending()) {
+            /*
+                If no interrupt is pending, halt executes as normal, and the 
+                CPU resumes regular execution as soon as an interrupt becomes pending. 
+                However, since IME=0, the interrupt is not handled.
+            */
+            ctx.halted = false;
+            // only handle if IME is enabled
+            if (ctx.r.IME) {
 
-        // handle interrupts
-
-        if (ctx.r.IME) {
-            if ((ctx.m.IERegister & ctx.m.IFRegister) != 0) {
-                // pandocs says ISR lasts 5 m-cycles
-                result = 5;
+                // pandocs says ISR setup lasts 5 m-cycles
+                result += 5;
+                last_cycle += 5;
 
                 ctx.r.IME = false;
 

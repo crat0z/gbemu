@@ -12,9 +12,13 @@ namespace core {
 
         Memory m = {};
 
-        uint16_t TIMA_count   = 0;
-        uint16_t TIMA_factor  = 0;
-        bool     TIMA_enabled = false;
+        uint16_t TIMA_count  = 0;
+        uint16_t TIMA_factor = 0;
+
+        bool halted             = false;
+        bool interrupt_modified = false;
+
+        bool interrupt_pending() const;
 
         uint8_t  read8(uint16_t address);
         uint16_t read16(uint16_t address);

@@ -311,8 +311,16 @@ namespace {
         return F;
     }
 
-    void OP_INLINE EI(core::Context& c) { c.r.IME = true; }
-    void OP_INLINE DI(core::Context& c) { c.r.IME = false; }
+    void OP_INLINE EI(core::Context& c) {
+        c.r.IME = true;
+
+        c.interrupt_modified = true;
+    }
+    void OP_INLINE DI(core::Context& c) {
+        c.r.IME = false;
+
+        c.interrupt_modified = true;
+    }
     void OP_INLINE RETI(core::Context& c) {
         RET(c);
         EI(c);
@@ -1976,6 +1984,7 @@ int opcode_0x76([[maybe_unused]] core::Context& ctx) {
 	*  cycles: 4
 	*  affects: - - - -
 	*/
+    ctx.halted = true;
     return 4;
 }
 int opcode_0x77(core::Context& ctx) {

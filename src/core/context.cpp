@@ -18,6 +18,8 @@ namespace core {
         }
     }
 
+    bool Context::interrupt_pending() const { return (m.IFRegister & m.IERegister) != 0; }
+
     void Context::write8(uint16_t address, uint8_t value) {
         // process serial like this cuz lazy
         if (address == 0xFF02 && value == 0x81) {
@@ -26,17 +28,16 @@ namespace core {
             return;
         }
         // Divider register
-        else if (address == 0xFF04) {
+        if (address == 0xFF04) {
             m.DIV = 0;
             return;
         }
-        else if (address == 0xFF07) {
+        // TAC
+        if (address == 0xFF07) {
             uint8_t select         = value & 0x3;
             uint8_t enable         = (value >> 2) & 0x1;
             m.TAC.InputClockSelect = select;
             m.TAC.TimerEnable      = enable;
-
-            TIMA_enabled = enable;
 
             switch (select) {
             case 0b00:
@@ -86,12 +87,14 @@ namespace core {
        TLDR: check timer before executing
     */
     void Context::TIMA_inc() {
-        if (m.TIMA == 0xFF) {
-            m.TIMA     = m.TMA;
-            m.IF.Timer = 1;
-        }
-        else {
-            m.TIMA += 1;
+        if (m.TAC.TimerEnable) {
+            if (m.TIMA == 0xFF) {
+                m.TIMA     = m.TMA;
+                m.IF.Timer = 1;
+            }
+            else {
+                m.TIMA += 1;
+            }
         }
     }
 
