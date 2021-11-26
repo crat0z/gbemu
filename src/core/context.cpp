@@ -31,7 +31,7 @@ namespace core {
             return;
         case 0xFF02:
             if (value == 0x81) {
-                std::cout << static_cast<char>(m[0xFF01]);
+                std::cout << static_cast<char>(read8(0xFF01));
                 m.memory[0xFF02] = 0x01;
             }
             return;

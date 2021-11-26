@@ -28,9 +28,9 @@ namespace core {
 
     uint16_t Gameboy::fetch(uint16_t addr) {
 
-        auto code = *reinterpret_cast<uint16_t*>(&ctx.m[addr]);
+        //auto code = *reinterpret_cast<uint16_t*>(&ctx.m[addr]);
 
-        return code;
+        return addr;
     }
 
     op Gameboy::decode([[maybe_unused]] uint16_t opc) { return op::UNKNOWN; }
