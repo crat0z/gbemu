@@ -16,6 +16,20 @@ namespace core {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnested-anon-types"
 #endif
+
+    struct Interrupts {
+        uint8_t VBlank   : 1;
+        uint8_t LCD_STAT : 1;
+        uint8_t Timer    : 1;
+        uint8_t Serial   : 1;
+        uint8_t Joypad   : 1;
+    };
+
+    struct TAC {
+        uint8_t InputClockSelect : 2;
+        uint8_t TimerEnable      : 1;
+    };
+
     struct Memory {
         union {
             struct {
@@ -28,9 +42,31 @@ namespace core {
                 std::array<uint8_t, 0x1E00> ECHORAM;
                 std::array<uint8_t, 0xA0>   SpriteAttributeTable;
                 std::array<uint8_t, 0x60>   NotUsable;
-                std::array<uint8_t, 0x80>   IORegisters;
-                std::array<uint8_t, 0x7F>   HighRAM;
-                uint8_t                     IERegister;
+
+                union {
+                    struct {
+                        std::array<uint8_t, 0x4> IO_NOTDONE1;
+
+                        uint8_t DIV;
+                        uint8_t TIMA;
+                        uint8_t TMA;
+                        TAC     TAC;
+
+                        std::array<uint8_t, 0x7> IO_NOTDONE3;
+                        union {
+                            Interrupts IF;
+                            uint8_t    IFRegister;
+                        };
+                        std::array<uint8_t, 0x70> IO_NOTDONE2;
+                    };
+                    std::array<uint8_t, 0x80> IORegisters;
+                };
+
+                std::array<uint8_t, 0x7F> HighRAM;
+                union {
+                    Interrupts IE;
+                    uint8_t    IERegister;
+                };
             };
             std::array<uint8_t, 65536> memory;
         };

@@ -10,16 +10,62 @@ namespace core {
         return *reinterpret_cast<uint16_t*>(&m.memory[address]);
     }
 
+    void Context::TIMA_update(int last_cycle) {
+        TIMA_count += last_cycle;
+        if (TIMA_count >= TIMA_factor) {
+            TIMA_count -= TIMA_factor;
+            TIMA_inc();
+        }
+    }
+
     void Context::write8(uint16_t address, uint8_t value) {
+        // process serial like this cuz lazy
         if (address == 0xFF02 && value == 0x81) {
             std::cout << static_cast<char>(m[0xFF01]);
             m.memory[0xFF02] = 0x01;
+            return;
         }
+        // Divider register
+        else if (address == 0xFF04) {
+            m.DIV = 0;
+            return;
+        }
+        else if (address == 0xFF07) {
+            uint8_t select         = value & 0x3;
+            uint8_t enable         = (value >> 2) & 0x1;
+            m.TAC.InputClockSelect = select;
+            m.TAC.TimerEnable      = enable;
+
+            TIMA_enabled = enable;
+
+            switch (select) {
+            case 0b00:
+                TIMA_factor = 1024;
+                break;
+            case 0b01:
+                TIMA_factor = 16;
+                break;
+            case 0b10:
+                TIMA_factor = 64;
+                break;
+            case 0b11:
+                TIMA_factor = 256;
+                break;
+            default:
+                break;
+            }
+            TIMA_count = 0;
+            return;
+        }
+
         m.memory[address] = value;
     }
 
     void Context::write16(uint16_t address, uint16_t value) {
         *reinterpret_cast<uint16_t*>(&m.memory[address]) = value;
+        if (address == 0xFF03 || address == 0xFF04) {
+            m.DIV = 0;
+        }
     }
 
     uint8_t  Context::imm8() { return read8(r.PC++); }
@@ -34,6 +80,22 @@ namespace core {
     int8_t   Context::peek8_signed() { return static_cast<int8_t>(m.get8(r.PC)); }
 
     int8_t Context::imm8_signed() { return static_cast<int8_t>(read8(r.PC++)); }
+
+    /* If a TMA write is executed on the same cycle as the content
+       of TMA is transferred to TIMA due to a timer overflow, the old value is transferred to TIMA.
+       TLDR: check timer before executing
+    */
+    void Context::TIMA_inc() {
+        if (m.TIMA == 0xFF) {
+            m.TIMA     = m.TMA;
+            m.IF.Timer = 1;
+        }
+        else {
+            m.TIMA += 1;
+        }
+    }
+
+    void Context::DIV_inc() { m.DIV += 1; }
 
     std::string Context::print() {
         std::string ret;

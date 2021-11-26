@@ -311,9 +311,9 @@ namespace {
         return F;
     }
 
-    void OP_INLINE EI([[maybe_unused]] core::Context& c) {}
-    void OP_INLINE DI([[maybe_unused]] core::Context& c) {}
-    void OP_INLINE RETI([[maybe_unused]] core::Context& c) {
+    void OP_INLINE EI(core::Context& c) { c.r.IME = true; }
+    void OP_INLINE DI(core::Context& c) { c.r.IME = false; }
+    void OP_INLINE RETI(core::Context& c) {
         RET(c);
         EI(c);
     }

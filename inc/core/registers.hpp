@@ -52,6 +52,7 @@ namespace core {
         };
         uint16_t SP = 0xFFFE;
         uint16_t PC;
+        bool     IME;
     } __attribute__((aligned(16)));
 
 #ifdef GBEMU_CLANG

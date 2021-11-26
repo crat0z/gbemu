@@ -38,22 +38,73 @@ namespace core {
     void Gameboy::execute() {}
 
     void Gameboy::cycle() {
+        static auto last_cycle = 0;
+
         static auto result = 0;
 
         while (result) {
             // wait for it
-            while (!timer.update()) {}
+            while (!CPUTimer.update()) {}
             result--;
         }
+
+        // check timers
+        if (DIVTimer.update()) {
+            ctx.DIV_inc();
+        }
+        ctx.TIMA_update(last_cycle);
+
+        //std::cout << ctx.print();
 
         auto op = ctx.imm8();
 
         if (op == 0xCB) {
-            op     = ctx.imm8();
+            op = ctx.imm8();
+            //std::cout << op_cb_str_table[op](ctx);
             result = cb_table[op](ctx);
         }
         else {
+            //std::cout << op_str_table[op](ctx);
             result = op_table[op](ctx);
+        }
+        last_cycle = result;
+
+        // handle interrupts
+
+        if (ctx.r.IME) {
+            if ((ctx.m.IERegister & ctx.m.IFRegister) != 0) {
+                // pandocs says ISR lasts 5 m-cycles
+                result = 5;
+
+                ctx.r.IME = false;
+
+                auto jump_to_int = [&](uint8_t val) {
+                    ctx.r.SP -= 2;
+                    ctx.m.set16(ctx.r.SP, ctx.r.PC);
+                    ctx.r.PC = val;
+                };
+                // priority is VBlank > ... > Joypad
+                if (ctx.m.IF.VBlank) {
+                    ctx.m.IF.VBlank = 0;
+                    jump_to_int(0x40);
+                }
+                else if (ctx.m.IF.LCD_STAT) {
+                    ctx.m.IF.VBlank = 0;
+                    jump_to_int(0x48);
+                }
+                else if (ctx.m.IF.Timer) {
+                    ctx.m.IF.Timer = 0;
+                    jump_to_int(0x50);
+                }
+                else if (ctx.m.IF.Serial) {
+                    ctx.m.IF.Serial = 0;
+                    jump_to_int(0x58);
+                }
+                else if (ctx.m.IF.Joypad) {
+                    ctx.m.IF.Joypad = 0;
+                    jump_to_int(0x60);
+                }
+            }
         }
     }
 } // namespace core

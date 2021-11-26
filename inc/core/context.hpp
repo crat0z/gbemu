@@ -8,16 +8,18 @@ namespace core {
 
     struct Context {
 
-        core::Registers r = {};
+        Registers r = {};
 
-        core::Memory m = {};
+        Memory m = {};
 
-        uint8_t read8(uint16_t address);
+        uint16_t TIMA_count   = 0;
+        uint16_t TIMA_factor  = 0;
+        bool     TIMA_enabled = false;
 
+        uint8_t  read8(uint16_t address);
         uint16_t read16(uint16_t address);
 
         void write8(uint16_t address, uint8_t value);
-
         void write16(uint16_t address, uint16_t value);
 
         uint8_t  imm8();
@@ -28,6 +30,11 @@ namespace core {
         int8_t   peek8_signed();
 
         int8_t imm8_signed();
+
+        void DIV_inc();
+        void TIMA_inc();
+
+        void TIMA_update(int last_cycle);
 
         std::string print();
     };
