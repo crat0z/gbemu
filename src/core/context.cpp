@@ -7,7 +7,10 @@ namespace core {
     uint8_t Context::read8(uint16_t address) { return m.memory[address]; }
 
     uint16_t Context::read16(uint16_t address) {
-        return *reinterpret_cast<uint16_t*>(&m.memory[address]);
+        uint16_t first  = read8(address);
+        auto     second = read8(address + 1);
+
+        return (second << 8) | first;
     }
 
     void Context::TIMA_update(int last_cycle) {
@@ -21,19 +24,21 @@ namespace core {
     bool Context::interrupt_pending() const { return (m.IFRegister & m.IERegister) != 0; }
 
     void Context::write8(uint16_t address, uint8_t value) {
-        // process serial like this cuz lazy
-        if (address == 0xFF02 && value == 0x81) {
-            std::cout << static_cast<char>(m[0xFF01]);
-            m.memory[0xFF02] = 0x01;
+
+        switch (address) {
+        default:
+            m.memory[address] = value;
             return;
-        }
-        // Divider register
-        if (address == 0xFF04) {
+        case 0xFF02:
+            if (value == 0x81) {
+                std::cout << static_cast<char>(m[0xFF01]);
+                m.memory[0xFF02] = 0x01;
+            }
+            return;
+        case 0xFF04:
             m.DIV = 0;
             return;
-        }
-        // TAC
-        if (address == 0xFF07) {
+        case 0xFF07:
             uint8_t select         = value & 0x3;
             uint8_t enable         = (value >> 2) & 0x1;
             m.TAC.InputClockSelect = select;
@@ -58,15 +63,14 @@ namespace core {
             TIMA_count = 0;
             return;
         }
-
-        m.memory[address] = value;
     }
 
     void Context::write16(uint16_t address, uint16_t value) {
-        *reinterpret_cast<uint16_t*>(&m.memory[address]) = value;
-        if (address == 0xFF03 || address == 0xFF04) {
-            m.DIV = 0;
-        }
+        uint8_t first  = value & 0xFF;
+        uint8_t second = value >> 8;
+
+        write8(address, first);
+        write8(address + 1, second);
     }
 
     uint8_t  Context::imm8() { return read8(r.PC++); }
