@@ -3,6 +3,18 @@
 #include <cstdint>
 
 namespace core {
+#ifdef GBEMU_GCC
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+
+#ifdef GBEMU_CLANG
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-anonymous-struct"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnested-anon-types"
+#endif
+
     struct Registers {
         union {
             uint16_t AF;
@@ -41,5 +53,14 @@ namespace core {
         uint16_t SP = 0xFFFE;
         uint16_t PC;
     } __attribute__((aligned(16)));
+
+#ifdef GBEMU_CLANG
+#pragma clang diagnostic pop
+#pragma clang diagnostic pop
+#endif
+
+#ifdef GBEMU_GCC
+#pragma GCC diagnostic pop
+#endif
 } // namespace core
 #endif

@@ -33,7 +33,7 @@ namespace core {
         return code;
     }
 
-    op Gameboy::decode(uint16_t opc) {}
+    op Gameboy::decode([[maybe_unused]] uint16_t opc) { return op::UNKNOWN; }
 
     void Gameboy::execute() {}
 

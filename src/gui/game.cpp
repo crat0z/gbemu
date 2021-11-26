@@ -7,6 +7,7 @@ namespace GUI {
     Game::Game(core::EmuWrapper& e) : GUIComponent(0, true), emu(e) {}
 
     void Game::draw_window() {
+
         /* ImU32 white = ImColor(global::white_vec());
         ImU32 black = ImColor(global::black_vec());
 

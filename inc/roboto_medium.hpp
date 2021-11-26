@@ -1,8 +1,10 @@
 // File: 'RobotoMono-Medium.ttf' (86820 bytes)
 // Exported using binary_to_compressed_c.cpp
+
+#ifdef GBEMU_CLANG
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Woverlength-strings"
-
+#endif
 static const char roboto_medium_compressed_data_base85[83425 + 1] =
         "7])#######Fa?].'/###SL?>#1LJM'Ql#v#t5*e=Y4(i`%=E>#Vx$##q?ve=8Dlm+Z7B>##(e'/V2^+>^<l`)rZ?>#<67b3DNV=BX9BBgVh98.kc68%k`(*H^eF?-kIwA-Z@Rm/#-0%J"
         "Rj`WmmLPH2xpOJ(+/d<BZ?E4ULjDA+9KVX-TT$=(Xw4Q#OaDE-DsEn/<_[FHGZlJrl3S>-doN7134JuBE#jV5Nxkf(mm*R/0iR/GiGVY5DUr%cZLXm/+>00F2K+&RPPMM0$@uu#A&S+H"
@@ -601,4 +603,6 @@ static const char roboto_medium_compressed_data_base85[83425 + 1] =
         ")YEfUVY;A4.;,M^re_._.st(<ZJIoeFo&Pf_,[iB-hV(jn8O%k(x1AFXttIq?3Q+rZb:Z>GF8=#J<w0#%MY##_a1?#xM#N#Une%#8/=A#IfrO#/aQ(#fw)D#oKLR#Q.^*#/E5F#A^<T#"
         "p_P+#L&2G#N,tT#*@M,#(6*h#)Zpq#&/[0#-oRfL$L>gL<6$##F-pG2ld08Ii#cJ#7.LcDg3oI#GE4v-eq0hL4O%:.)KrFr$iB#$4[-_#5V###$,>>##m8At/4*&_";
 
+#ifdef GBEMU_CLANG
 #pragma clang diagnostic pop
+#endif

@@ -295,7 +295,7 @@ namespace GUI {
             // check to see if each event is one of our keys
             ImGui_ImplSDL2_ProcessEvent(&event);
 
-            auto& io = ImGui::GetIO();
+            //auto& io = ImGui::GetIO();
 
             if (event.type == SDL_QUIT) {
                 exit(0);

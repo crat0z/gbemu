@@ -13,12 +13,12 @@ namespace GUI {
 
         static uint16_t jump = 0;
 
-        auto byte_to_printable = [&](char s) {
+        /* auto byte_to_printable = [&](char s) {
             if (s >= 0x20 && s <= 0x7E) {
                 return s;
             }
             return '.';
-        };
+        }; */
 
         ImGui::SetNextWindowSize({ 430, 500 }, ImGuiCond_FirstUseEver);
 
@@ -92,7 +92,7 @@ namespace GUI {
 
                         ImGui::Text("%03X", base);
 
-                        auto context_menu = [&](uint16_t addr, uint8_t v) {
+                        /* auto context_menu = [&](uint16_t addr, uint8_t v) {
                             ImGui::PushID(addr);
                             ImGui::Selectable(fmt::format("{0:02X}", v).c_str());
 
@@ -109,9 +109,9 @@ namespace GUI {
                             }
 
                             ImGui::PopID();
-                        };
+                        }; */
 
-                        auto real_index = 0;
+                        //auto real_index = 0;
                         for (auto i = begin; i < end; ++i) {
                             ImGui::TableNextColumn();
                             if (i == brk) {

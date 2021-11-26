@@ -4,6 +4,18 @@
 #include <cstdint>
 
 namespace core {
+
+#ifdef GBEMU_GCC
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+
+#ifdef GBEMU_CLANG
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-anonymous-struct"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnested-anon-types"
+#endif
     struct Memory {
         union {
             struct {
@@ -22,6 +34,16 @@ namespace core {
             };
             std::array<uint8_t, 65536> memory;
         };
+
+#ifdef GBEMU_CLANG
+#pragma clang diagnostic pop
+#pragma clang diagnostic pop
+#endif
+
+#ifdef GBEMU_GCC
+#pragma GCC diagnostic pop
+#endif
+
         uint8_t  imm8(uint16_t& PC);
         uint16_t imm16(uint16_t& PC);
 
@@ -32,5 +54,6 @@ namespace core {
 
         uint8_t& operator[](uint16_t index);
     } __attribute__((aligned(65536)));
+
 } // namespace core
 #endif

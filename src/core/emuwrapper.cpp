@@ -52,7 +52,7 @@ namespace core {
 
     // a debug cycle just wraps around normal cycle and updates debugger's state. reset_timer
     // will reset the timer on emu, meaning this cycle will happen instantly
-    void EmuWrapper::debug_cycle(bool reset_timer) noexcept {
+    void EmuWrapper::debug_cycle([[maybe_unused]] bool reset_timer) noexcept {
         save_emu_state();
 
         proc.cycle();

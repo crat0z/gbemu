@@ -8,10 +8,13 @@ project(gbemu CXX)
 
 if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(USE_CLANG TRUE)
+    add_compile_definitions(GBEMU_CLANG)
 elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
     set(USE_GCC TRUE)
+    add_compile_definitions(GBEMU_GCC)
 elseif(MSVC)
     set(USE_MSVC TRUE)
+    add_compile_definitions(GBEMU_MSVC)
 endif()
 
 if($<CONFIG:Debug> OR CMAKE_BUILD_TYPE STREQUAL "Debug")

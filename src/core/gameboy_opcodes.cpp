@@ -275,7 +275,7 @@ namespace {
         c.r.HALFCARRY_FLAG = (c.r.A & 0xF) < (first & 0xF);
     }
 
-    void OP_INLINE STOP(core::Context& c) {}
+    void OP_INLINE STOP([[maybe_unused]] core::Context& c) {}
     void OP_INLINE RET(core::Context& c) { POP(c, c.r.PC); }
     int OP_INLINE  RET(core::Context& c, auto bit, auto T, auto F) {
         if (bit) {
@@ -311,9 +311,9 @@ namespace {
         return F;
     }
 
-    void OP_INLINE EI(core::Context& c) {}
-    void OP_INLINE DI(core::Context& c) {}
-    void OP_INLINE RETI(core::Context& c) {
+    void OP_INLINE EI([[maybe_unused]] core::Context& c) {}
+    void OP_INLINE DI([[maybe_unused]] core::Context& c) {}
+    void OP_INLINE RETI([[maybe_unused]] core::Context& c) {
         RET(c);
         EI(c);
     }
@@ -843,7 +843,7 @@ std::array<int (*)(core::Context&), 256> create_cb_table() {
     return ret;
 }
 
-int opcode_0x00(core::Context& ctx) {
+int opcode_0x00([[maybe_unused]] core::Context& ctx) {
     /*  mnemonic: NOP
 	*  length: 1
 	*  cycles: 4
@@ -1970,7 +1970,7 @@ int opcode_0x75(core::Context& ctx) {
     ctx.write8(ctx.r.HL, temp);
     return 8;
 }
-int opcode_0x76(core::Context& ctx) {
+int opcode_0x76([[maybe_unused]] core::Context& ctx) {
     /*  mnemonic: HALT
 	*  length: 1
 	*  cycles: 4
@@ -2913,7 +2913,9 @@ int opcode_0xd2(core::Context& ctx) {
 	*/
     return JP(ctx, !ctx.r.CARRY_FLAG, ctx.imm16(), 16, 12);
 }
-int opcode_0xd3(core::Context& ctx) { throw std::runtime_error("invalid instruction"); }
+int opcode_0xd3([[maybe_unused]] core::Context& ctx) {
+    throw std::runtime_error("invalid instruction");
+}
 int opcode_0xd4(core::Context& ctx) {
     /*  mnemonic: CALL NC,a16
 	*  length: 3
@@ -2975,7 +2977,9 @@ int opcode_0xda(core::Context& ctx) {
 	*/
     return JP(ctx, ctx.r.CARRY_FLAG, ctx.imm16(), 16, 12);
 }
-int opcode_0xdb(core::Context& ctx) { throw std::runtime_error("invalid instruction"); }
+int opcode_0xdb([[maybe_unused]] core::Context& ctx) {
+    throw std::runtime_error("invalid instruction");
+}
 int opcode_0xdc(core::Context& ctx) {
     /*  mnemonic: CALL C,a16
 	*  length: 3
@@ -2984,7 +2988,9 @@ int opcode_0xdc(core::Context& ctx) {
 	*/
     return CALL(ctx, ctx.r.CARRY_FLAG, ctx.imm16(), 24, 12);
 }
-int opcode_0xdd(core::Context& ctx) { throw std::runtime_error("invalid instruction"); }
+int opcode_0xdd([[maybe_unused]] core::Context& ctx) {
+    throw std::runtime_error("invalid instruction");
+}
 int opcode_0xde(core::Context& ctx) {
     /*  mnemonic: SBC A,d8
 	*  length: 2
@@ -3035,8 +3041,12 @@ int opcode_0xe2(core::Context& ctx) {
     ctx.write8(0xFF00 + ctx.r.C, temp);
     return 8;
 }
-int opcode_0xe3(core::Context& ctx) { throw std::runtime_error("invalid instruction"); }
-int opcode_0xe4(core::Context& ctx) { throw std::runtime_error("invalid instruction"); }
+int opcode_0xe3([[maybe_unused]] core::Context& ctx) {
+    throw std::runtime_error("invalid instruction");
+}
+int opcode_0xe4([[maybe_unused]] core::Context& ctx) {
+    throw std::runtime_error("invalid instruction");
+}
 int opcode_0xe5(core::Context& ctx) {
     /*  mnemonic: PUSH HL
 	*  length: 1
@@ -3099,9 +3109,15 @@ int opcode_0xea(core::Context& ctx) {
     ctx.write8(ctx.imm16(), temp);
     return 16;
 }
-int opcode_0xeb(core::Context& ctx) { throw std::runtime_error("invalid instruction"); }
-int opcode_0xec(core::Context& ctx) { throw std::runtime_error("invalid instruction"); }
-int opcode_0xed(core::Context& ctx) { throw std::runtime_error("invalid instruction"); }
+int opcode_0xeb([[maybe_unused]] core::Context& ctx) {
+    throw std::runtime_error("invalid instruction");
+}
+int opcode_0xec([[maybe_unused]] core::Context& ctx) {
+    throw std::runtime_error("invalid instruction");
+}
+int opcode_0xed([[maybe_unused]] core::Context& ctx) {
+    throw std::runtime_error("invalid instruction");
+}
 int opcode_0xee(core::Context& ctx) {
     /*  mnemonic: XOR d8
 	*  length: 2
@@ -3160,7 +3176,9 @@ int opcode_0xf3(core::Context& ctx) {
     DI(ctx);
     return 4;
 }
-int opcode_0xf4(core::Context& ctx) { throw std::runtime_error("invalid instruction"); }
+int opcode_0xf4([[maybe_unused]] core::Context& ctx) {
+    throw std::runtime_error("invalid instruction");
+}
 int opcode_0xf5(core::Context& ctx) {
     /*  mnemonic: PUSH AF
 	*  length: 1
@@ -3245,8 +3263,12 @@ int opcode_0xfb(core::Context& ctx) {
     EI(ctx);
     return 4;
 }
-int opcode_0xfc(core::Context& ctx) { throw std::runtime_error("invalid instruction"); }
-int opcode_0xfd(core::Context& ctx) { throw std::runtime_error("invalid instruction"); }
+int opcode_0xfc([[maybe_unused]] core::Context& ctx) {
+    throw std::runtime_error("invalid instruction");
+}
+int opcode_0xfd([[maybe_unused]] core::Context& ctx) {
+    throw std::runtime_error("invalid instruction");
+}
 int opcode_0xfe(core::Context& ctx) {
     /*  mnemonic: CP d8
 	*  length: 2
