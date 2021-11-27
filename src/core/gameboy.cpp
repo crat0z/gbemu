@@ -55,16 +55,17 @@ namespace core {
 
         if (!ctx.halted) {
             auto op = ctx.imm8();
-            std::cout << ctx.print();
+            //std::cout << ctx.print();
+
             if (op == 0xCB) {
                 op = ctx.imm8();
-                std::cout << op_cb_str_table[op](ctx);
-                std::cout << '\n';
+                //std::cout << op_cb_str_table[op](ctx);
+                //std::cout << '\n';
                 result = cb_table[op](ctx);
             }
             else {
-                std::cout << op_str_table[op](ctx);
-                std::cout << '\n';
+                //std::cout << op_str_table[op](ctx);
+                //std::cout << '\n';
                 result = op_table[op](ctx);
             }
             last_cycle = result;

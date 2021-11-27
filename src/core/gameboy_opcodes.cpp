@@ -8,15 +8,6 @@
 
 namespace {
 
-    void set_zero(core::Context& c, auto val) {
-        if (val == 0) {
-            c.r.ZERO_FLAG = 1;
-        }
-        else {
-            c.r.ZERO_FLAG = 0;
-        }
-    }
-
     void OP_INLINE PUSH(core::Context& c, auto value) {
         c.r.SP -= 2;
         c.m.set16(c.r.SP, value);
@@ -32,31 +23,26 @@ namespace {
     void OP_INLINE ADD(core::Context& c, auto& first, auto second) {
         // 8 bit case
         if (sizeof(first) == 1) {
-            c.r.HALFCARRY_FLAG = (first & 0xF) + (second & 0xF) > 0x0F;
-            c.r.CARRY_FLAG     = (unsigned)first + (unsigned)second > 0xFF;
+            c.r.set_halfcarry((first & 0xF) + (second & 0xF) > 0x0F);
+            c.r.set_carry((unsigned)first + (unsigned)second > 0xFF);
 
             first += second;
-            set_zero(c, first);
+            c.r.set_zero(first == 0);
         }
         // 16 bit first operand, two cases
         else {
             // ADD SP, r8
             if (sizeof(second) == 1) {
-                c.r.HALFCARRY_FLAG = (first & 0xF) + (second & 0xF) > 0xF;
-                c.r.CARRY_FLAG     = ((unsigned)first & 0xFF) + ((unsigned)second & 0xFF) > 0xFF;
+                c.r.set_halfcarry((first & 0xF) + (second & 0xF) > 0xF);
+                c.r.set_carry(((unsigned)first & 0xFF) + ((unsigned)second & 0xFF) > 0xFF);
 
                 first += second;
             }
             // 16 bit second operand
             else {
                 uint16_t test = (first & 0xFFF) + (second & 0xFFF);
-                if (test & 0x1000) {
-                    c.r.HALFCARRY_FLAG = 1;
-                }
-                else {
-                    c.r.HALFCARRY_FLAG = 0;
-                }
-                c.r.CARRY_FLAG = ((unsigned)first + (unsigned)second) > 0xFFFF;
+                c.r.set_halfcarry(test & 0x1000);
+                c.r.set_carry(((unsigned)first + (unsigned)second) > 0xFFFF);
 
                 first += second;
             }
@@ -66,44 +52,44 @@ namespace {
         // always 8 bit operand
         auto& A = c.r.A;
 
-        c.r.HALFCARRY_FLAG = (A & 0xF) < (first & 0xF);
-        c.r.CARRY_FLAG     = A < first;
+        c.r.set_halfcarry((A & 0xF) < (first & 0xF));
+        c.r.set_carry(A < first);
 
         A -= first;
-        set_zero(c, A);
+        c.r.set_zero(A == 0);
     }
     void OP_INLINE ADC(core::Context& c, auto& first, auto second) {
 
         auto orig = first;
-        first += second + c.r.CARRY_FLAG;
+        first += second + c.r.get_carry();
 
-        set_zero(c, first);
-        c.r.HALFCARRY_FLAG = ((orig & 0xF) + (second & 0xF) + c.r.CARRY_FLAG) > 0xF;
-        c.r.CARRY_FLAG     = ((unsigned)orig + (unsigned)second + c.r.CARRY_FLAG) > 0xFF;
+        c.r.set_zero(first == 0);
+        c.r.set_halfcarry(((orig & 0xF) + (second & 0xF) + c.r.get_carry()) > 0xF);
+        c.r.set_carry(((unsigned)orig + (unsigned)second + c.r.get_carry()) > 0xFF);
     }
     void OP_INLINE SBC(core::Context& c, auto& first, auto second) {
         // always 8bit
 
         auto orig = first;
-        first -= (second + c.r.CARRY_FLAG);
+        first -= (second + c.r.get_carry());
 
-        set_zero(c, first);
-        c.r.HALFCARRY_FLAG = (orig & 0xF) < (second & 0xF) + c.r.CARRY_FLAG;
-        c.r.CARRY_FLAG     = ((unsigned)orig) - ((unsigned)second) - c.r.CARRY_FLAG > 0xFF;
+        c.r.set_zero(first == 0);
+        c.r.set_halfcarry((orig & 0xF) < (second & 0xF) + c.r.get_carry());
+        c.r.set_carry(((unsigned)orig) - ((unsigned)second) - c.r.get_carry() > 0xFF);
     }
     void OP_INLINE XOR(core::Context& c, auto first) {
         c.r.A ^= first;
-        set_zero(c, c.r.A);
+        c.r.set_zero(c.r.A == 0);
     }
 
     void OP_INLINE AND(core::Context& c, auto first) {
         c.r.A &= first;
-        set_zero(c, c.r.A);
+        c.r.set_zero(c.r.A == 0);
     }
 
     void OP_INLINE OR(core::Context& c, auto first) {
         c.r.A |= first;
-        set_zero(c, c.r.A);
+        c.r.set_zero(c.r.A == 0);
     }
     void OP_INLINE INC(core::Context& c, auto& first) {
         // 16 bit case, no flags are set
@@ -113,9 +99,9 @@ namespace {
         // 8 bit case
         else {
             // affects Z 0 H -
-            c.r.HALFCARRY_FLAG = (first & 0xF) + 1 > 0xF;
+            c.r.set_halfcarry((first & 0xF) + 1 > 0xF);
             first += 1;
-            set_zero(c, first);
+            c.r.set_zero(first == 0);
         }
     }
     void OP_INLINE DEC(core::Context& c, auto& first) {
@@ -127,72 +113,72 @@ namespace {
         else {
             // affects Z 1 H -
             first -= 1;
-            c.r.HALFCARRY_FLAG = (first & 0xF) == 0xF;
-            set_zero(c, first);
+            c.r.set_halfcarry((first & 0xF) == 0xF);
+            c.r.set_zero(first == 0);
         }
     }
     void OP_INLINE RLC(core::Context& c, auto& first) {
-        c.r.CARRY_FLAG = (first & 0x80) >> 7;
+        c.r.set_carry((first & 0x80) >> 7);
 
         first = std::rotl(first, 1);
 
-        set_zero(c, first);
+        c.r.set_zero(first == 0);
     }
     void OP_INLINE RRC(core::Context& c, auto& first) {
-        c.r.CARRY_FLAG = first & 0x01;
+        c.r.set_carry(first & 0x01);
 
         first = std::rotr(first, 1);
 
-        set_zero(c, first);
+        c.r.set_zero(first == 0);
     }
     void OP_INLINE RL(core::Context& c, auto& first) {
-        auto flag      = c.r.CARRY_FLAG;
-        c.r.CARRY_FLAG = (first & 0x80) >> 7;
+        auto flag = c.r.get_carry();
+        c.r.set_carry((first & 0x80) >> 7);
         first <<= 1;
         first |= flag;
 
-        set_zero(c, first);
+        c.r.set_zero(first == 0);
     }
     void OP_INLINE RR(core::Context& c, auto& first) {
-        auto flag      = c.r.CARRY_FLAG << 7;
-        c.r.CARRY_FLAG = first & 0x01;
+        auto flag = c.r.get_carry() << 7;
+        c.r.set_carry(first & 0x01);
         first >>= 1;
         first |= flag;
 
-        set_zero(c, first);
+        c.r.set_zero(first == 0);
     }
     void OP_INLINE SLA(core::Context& c, auto& first) {
-        c.r.CARRY_FLAG = (first & 0x80) >> 7;
+        c.r.set_carry((first & 0x80) >> 7);
         first <<= 1;
         // confirm bit 0 is 0
 
-        set_zero(c, first);
+        c.r.set_zero(first == 0);
     }
     void OP_INLINE SRA(core::Context& c, auto& first) {
-        c.r.CARRY_FLAG = first & 0x01;
-        auto msb       = first & 0x80;
+        c.r.set_carry(first & 0x01);
+        auto msb = first & 0x80;
         first >>= 1;
         first |= msb;
 
-        set_zero(c, first);
+        c.r.set_zero(first == 0);
     }
     void OP_INLINE SWAP(core::Context& c, auto& first) {
         auto high = (first & 0xF0) >> 4;
         auto low  = (first & 0x0F) << 4;
         first     = high | low;
 
-        set_zero(c, first);
+        c.r.set_zero(first == 0);
     }
     void OP_INLINE SRL(core::Context& c, auto& first) {
-        c.r.CARRY_FLAG = first & 0x01;
+        c.r.set_carry(first & 0x01);
         first >>= 1;
 
-        set_zero(c, first);
+        c.r.set_zero(first == 0);
     }
     void OP_INLINE BIT(core::Context& c, auto first, auto second) {
         auto val = second & (0x1 << first);
 
-        set_zero(c, val);
+        c.r.set_zero(val == 0);
     }
     void OP_INLINE RES(auto first, auto& second) {
         auto mask = ~(0x1 << first);
@@ -209,30 +195,29 @@ namespace {
     void OP_INLINE RLCA(core::Context& c) {
         auto& A = c.r.A;
 
-        c.r.CARRY_FLAG = (A & 0x80) >> 7;
+        c.r.set_carry((A & 0x80) >> 7);
 
         A = std::rotl(A, 1);
     }
     void OP_INLINE RRCA(core::Context& c) {
         auto& A = c.r.A;
 
-        c.r.CARRY_FLAG = (A & 0x1);
+        c.r.set_carry(A & 0x1);
 
         A = std::rotr(A, 1);
     }
     void OP_INLINE RLA(core::Context& c) {
         auto& A    = c.r.A;
-        auto  flag = c.r.CARRY_FLAG;
+        auto  flag = c.r.get_carry();
 
-        c.r.CARRY_FLAG = (A & 0x80) >> 7;
+        c.r.set_carry((A & 0x80) >> 7);
         A <<= 1;
         A |= flag;
     }
     void OP_INLINE RRA(core::Context& c) {
         auto& A    = c.r.A;
-        auto  flag = c.r.CARRY_FLAG << 7;
-
-        c.r.CARRY_FLAG = A & 0x1;
+        auto  flag = c.r.get_carry() << 7;
+        c.r.set_carry(A & 0x1);
         A >>= 1;
         A |= flag;
     }
@@ -240,39 +225,39 @@ namespace {
         // the dumbest instruction i've ever seen
         uint16_t result = c.r.A;
 
-        if (c.r.SUB_FLAG) {
-            if (c.r.CARRY_FLAG) {
+        if (c.r.get_sub()) {
+            if (c.r.get_carry()) {
                 result -= 0x60;
             }
-            if (c.r.HALFCARRY_FLAG) {
+            if (c.r.get_halfcarry()) {
                 result = (result - 0x06) & 0xFF;
             }
         }
         else {
-            if (c.r.CARRY_FLAG || (result > 0x99)) {
+            if (c.r.get_carry() || (result > 0x99)) {
                 result += 0x60;
-                c.r.CARRY_FLAG = 1;
+                c.r.set_carry();
             }
 
-            if (c.r.HALFCARRY_FLAG || ((result & 0xf) > 0x9)) {
+            if (c.r.get_halfcarry() || ((result & 0xf) > 0x9)) {
                 result += 0x6;
             }
         }
 
         c.r.A = result & 0xFF;
 
-        set_zero(c, c.r.A);
+        c.r.set_zero(c.r.A == 0);
     }
-    void OP_INLINE SCF(core::Context& c) { c.r.CARRY_FLAG = 1; }
+    void OP_INLINE SCF(core::Context& c) { c.r.set_carry(); }
     void OP_INLINE CPL(core::Context& c) { c.r.A ^= 0xFF; }
-    void OP_INLINE CCF(core::Context& c) { c.r.CARRY_FLAG ^= 1; }
+    void OP_INLINE CCF(core::Context& c) { c.r.xor_carry(); }
 
     void OP_INLINE CP(core::Context& c, auto first) {
 
         uint8_t result = c.r.A - first;
-        set_zero(c, result);
-        c.r.CARRY_FLAG     = c.r.A < first;
-        c.r.HALFCARRY_FLAG = (c.r.A & 0xF) < (first & 0xF);
+        c.r.set_zero(result == 0);
+        c.r.set_carry(c.r.A < first);
+        c.r.set_halfcarry((c.r.A & 0xF) < (first & 0xF));
     }
 
     void OP_INLINE STOP([[maybe_unused]] core::Context& c) {}
@@ -895,7 +880,7 @@ int opcode_0x04(core::Context& ctx) {
 	*  affects: Z 0 H -
 	*/
     INC(ctx, ctx.r.B);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x05(core::Context& ctx) {
@@ -905,7 +890,7 @@ int opcode_0x05(core::Context& ctx) {
 	*  affects: Z 1 H -
 	*/
     DEC(ctx, ctx.r.B);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x06(core::Context& ctx) {
@@ -924,9 +909,9 @@ int opcode_0x07(core::Context& ctx) {
 	*  affects: 0 0 0 C
 	*/
     RLCA(ctx);
-    ctx.r.ZERO_FLAG      = 0;
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_zero();
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 4;
 }
 int opcode_0x08(core::Context& ctx) {
@@ -947,7 +932,7 @@ int opcode_0x09(core::Context& ctx) {
 	*  affects: - 0 H C
 	*/
     ADD(ctx, ctx.r.HL, ctx.r.BC);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 8;
 }
 int opcode_0x0a(core::Context& ctx) {
@@ -975,7 +960,7 @@ int opcode_0x0c(core::Context& ctx) {
 	*  affects: Z 0 H -
 	*/
     INC(ctx, ctx.r.C);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x0d(core::Context& ctx) {
@@ -985,7 +970,7 @@ int opcode_0x0d(core::Context& ctx) {
 	*  affects: Z 1 H -
 	*/
     DEC(ctx, ctx.r.C);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x0e(core::Context& ctx) {
@@ -1004,9 +989,9 @@ int opcode_0x0f(core::Context& ctx) {
 	*  affects: 0 0 0 C
 	*/
     RRCA(ctx);
-    ctx.r.ZERO_FLAG      = 0;
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_zero();
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 4;
 }
 int opcode_0x10(core::Context& ctx) {
@@ -1054,7 +1039,7 @@ int opcode_0x14(core::Context& ctx) {
 	*  affects: Z 0 H -
 	*/
     INC(ctx, ctx.r.D);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x15(core::Context& ctx) {
@@ -1064,7 +1049,7 @@ int opcode_0x15(core::Context& ctx) {
 	*  affects: Z 1 H -
 	*/
     DEC(ctx, ctx.r.D);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x16(core::Context& ctx) {
@@ -1083,9 +1068,9 @@ int opcode_0x17(core::Context& ctx) {
 	*  affects: 0 0 0 C
 	*/
     RLA(ctx);
-    ctx.r.ZERO_FLAG      = 0;
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_zero();
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 4;
 }
 int opcode_0x18(core::Context& ctx) {
@@ -1104,7 +1089,7 @@ int opcode_0x19(core::Context& ctx) {
 	*  affects: - 0 H C
 	*/
     ADD(ctx, ctx.r.HL, ctx.r.DE);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 8;
 }
 int opcode_0x1a(core::Context& ctx) {
@@ -1132,7 +1117,7 @@ int opcode_0x1c(core::Context& ctx) {
 	*  affects: Z 0 H -
 	*/
     INC(ctx, ctx.r.E);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x1d(core::Context& ctx) {
@@ -1142,7 +1127,7 @@ int opcode_0x1d(core::Context& ctx) {
 	*  affects: Z 1 H -
 	*/
     DEC(ctx, ctx.r.E);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x1e(core::Context& ctx) {
@@ -1161,9 +1146,9 @@ int opcode_0x1f(core::Context& ctx) {
 	*  affects: 0 0 0 C
 	*/
     RRA(ctx);
-    ctx.r.ZERO_FLAG      = 0;
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_zero();
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 4;
 }
 int opcode_0x20(core::Context& ctx) {
@@ -1172,7 +1157,7 @@ int opcode_0x20(core::Context& ctx) {
 	*  cycles: 12/8
 	*  affects: - - - -
 	*/
-    return JR(ctx, !ctx.r.ZERO_FLAG, ctx.imm8_signed(), 12, 8);
+    return JR(ctx, !ctx.r.get_zero(), ctx.imm8_signed(), 12, 8);
 }
 int opcode_0x21(core::Context& ctx) {
     /*  mnemonic: LD HL,d16
@@ -1210,7 +1195,7 @@ int opcode_0x24(core::Context& ctx) {
 	*  affects: Z 0 H -
 	*/
     INC(ctx, ctx.r.H);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x25(core::Context& ctx) {
@@ -1220,7 +1205,7 @@ int opcode_0x25(core::Context& ctx) {
 	*  affects: Z 1 H -
 	*/
     DEC(ctx, ctx.r.H);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x26(core::Context& ctx) {
@@ -1239,7 +1224,7 @@ int opcode_0x27(core::Context& ctx) {
 	*  affects: Z - 0 C
 	*/
     DAA(ctx);
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_halfcarry();
     return 4;
 }
 int opcode_0x28(core::Context& ctx) {
@@ -1248,7 +1233,7 @@ int opcode_0x28(core::Context& ctx) {
 	*  cycles: 12/8
 	*  affects: - - - -
 	*/
-    return JR(ctx, ctx.r.ZERO_FLAG, ctx.imm8_signed(), 12, 8);
+    return JR(ctx, ctx.r.get_zero(), ctx.imm8_signed(), 12, 8);
 }
 int opcode_0x29(core::Context& ctx) {
     /*  mnemonic: ADD HL,HL
@@ -1257,7 +1242,7 @@ int opcode_0x29(core::Context& ctx) {
 	*  affects: - 0 H C
 	*/
     ADD(ctx, ctx.r.HL, ctx.r.HL);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 8;
 }
 int opcode_0x2a(core::Context& ctx) {
@@ -1285,7 +1270,7 @@ int opcode_0x2c(core::Context& ctx) {
 	*  affects: Z 0 H -
 	*/
     INC(ctx, ctx.r.L);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x2d(core::Context& ctx) {
@@ -1295,7 +1280,7 @@ int opcode_0x2d(core::Context& ctx) {
 	*  affects: Z 1 H -
 	*/
     DEC(ctx, ctx.r.L);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x2e(core::Context& ctx) {
@@ -1314,8 +1299,8 @@ int opcode_0x2f(core::Context& ctx) {
 	*  affects: - 1 1 -
 	*/
     CPL(ctx);
-    ctx.r.SUB_FLAG       = 1;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.set_sub();
+    ctx.r.set_halfcarry();
     return 4;
 }
 int opcode_0x30(core::Context& ctx) {
@@ -1324,7 +1309,7 @@ int opcode_0x30(core::Context& ctx) {
 	*  cycles: 12/8
 	*  affects: - - - -
 	*/
-    return JR(ctx, !ctx.r.CARRY_FLAG, ctx.imm8_signed(), 12, 8);
+    return JR(ctx, !ctx.r.get_carry(), ctx.imm8_signed(), 12, 8);
 }
 int opcode_0x31(core::Context& ctx) {
     /*  mnemonic: LD SP,d16
@@ -1365,7 +1350,7 @@ int opcode_0x34(core::Context& ctx) {
     INC(ctx, temp);
     ctx.write8(ctx.r.HL, temp);
 
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 12;
 }
 int opcode_0x35(core::Context& ctx) {
@@ -1378,7 +1363,7 @@ int opcode_0x35(core::Context& ctx) {
     DEC(ctx, temp);
     ctx.write8(ctx.r.HL, temp);
 
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 12;
 }
 int opcode_0x36(core::Context& ctx) {
@@ -1399,9 +1384,9 @@ int opcode_0x37(core::Context& ctx) {
 	*  affects: - 0 0 1
 	*/
     SCF(ctx);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 1;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.set_carry();
     return 4;
 }
 int opcode_0x38(core::Context& ctx) {
@@ -1410,7 +1395,7 @@ int opcode_0x38(core::Context& ctx) {
 	*  cycles: 12/8
 	*  affects: - - - -
 	*/
-    return JR(ctx, ctx.r.CARRY_FLAG, ctx.imm8_signed(), 12, 8);
+    return JR(ctx, ctx.r.get_carry(), ctx.imm8_signed(), 12, 8);
 }
 int opcode_0x39(core::Context& ctx) {
     /*  mnemonic: ADD HL,SP
@@ -1419,7 +1404,7 @@ int opcode_0x39(core::Context& ctx) {
 	*  affects: - 0 H C
 	*/
     ADD(ctx, ctx.r.HL, ctx.r.SP);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 8;
 }
 int opcode_0x3a(core::Context& ctx) {
@@ -1447,7 +1432,7 @@ int opcode_0x3c(core::Context& ctx) {
 	*  affects: Z 0 H -
 	*/
     INC(ctx, ctx.r.A);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x3d(core::Context& ctx) {
@@ -1457,7 +1442,7 @@ int opcode_0x3d(core::Context& ctx) {
 	*  affects: Z 1 H -
 	*/
     DEC(ctx, ctx.r.A);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x3e(core::Context& ctx) {
@@ -1476,8 +1461,8 @@ int opcode_0x3f(core::Context& ctx) {
 	*  affects: - 0 0 C
 	*/
     CCF(ctx);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 4;
 }
 int opcode_0x40(core::Context& ctx) {
@@ -2077,7 +2062,7 @@ int opcode_0x80(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADD(ctx, ctx.r.A, ctx.r.B);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x81(core::Context& ctx) {
@@ -2087,7 +2072,7 @@ int opcode_0x81(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADD(ctx, ctx.r.A, ctx.r.C);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x82(core::Context& ctx) {
@@ -2097,7 +2082,7 @@ int opcode_0x82(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADD(ctx, ctx.r.A, ctx.r.D);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x83(core::Context& ctx) {
@@ -2107,7 +2092,7 @@ int opcode_0x83(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADD(ctx, ctx.r.A, ctx.r.E);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x84(core::Context& ctx) {
@@ -2117,7 +2102,7 @@ int opcode_0x84(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADD(ctx, ctx.r.A, ctx.r.H);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x85(core::Context& ctx) {
@@ -2127,7 +2112,7 @@ int opcode_0x85(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADD(ctx, ctx.r.A, ctx.r.L);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x86(core::Context& ctx) {
@@ -2137,7 +2122,7 @@ int opcode_0x86(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADD(ctx, ctx.r.A, ctx.read8(ctx.r.HL));
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 8;
 }
 int opcode_0x87(core::Context& ctx) {
@@ -2147,7 +2132,7 @@ int opcode_0x87(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADD(ctx, ctx.r.A, ctx.r.A);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x88(core::Context& ctx) {
@@ -2157,7 +2142,7 @@ int opcode_0x88(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADC(ctx, ctx.r.A, ctx.r.B);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x89(core::Context& ctx) {
@@ -2167,7 +2152,7 @@ int opcode_0x89(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADC(ctx, ctx.r.A, ctx.r.C);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x8a(core::Context& ctx) {
@@ -2177,7 +2162,7 @@ int opcode_0x8a(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADC(ctx, ctx.r.A, ctx.r.D);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x8b(core::Context& ctx) {
@@ -2187,7 +2172,7 @@ int opcode_0x8b(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADC(ctx, ctx.r.A, ctx.r.E);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x8c(core::Context& ctx) {
@@ -2197,7 +2182,7 @@ int opcode_0x8c(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADC(ctx, ctx.r.A, ctx.r.H);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x8d(core::Context& ctx) {
@@ -2207,7 +2192,7 @@ int opcode_0x8d(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADC(ctx, ctx.r.A, ctx.r.L);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x8e(core::Context& ctx) {
@@ -2217,7 +2202,7 @@ int opcode_0x8e(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADC(ctx, ctx.r.A, ctx.read8(ctx.r.HL));
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 8;
 }
 int opcode_0x8f(core::Context& ctx) {
@@ -2227,7 +2212,7 @@ int opcode_0x8f(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADC(ctx, ctx.r.A, ctx.r.A);
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 4;
 }
 int opcode_0x90(core::Context& ctx) {
@@ -2237,7 +2222,7 @@ int opcode_0x90(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SUB(ctx, ctx.r.B);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x91(core::Context& ctx) {
@@ -2247,7 +2232,7 @@ int opcode_0x91(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SUB(ctx, ctx.r.C);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x92(core::Context& ctx) {
@@ -2257,7 +2242,7 @@ int opcode_0x92(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SUB(ctx, ctx.r.D);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x93(core::Context& ctx) {
@@ -2267,7 +2252,7 @@ int opcode_0x93(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SUB(ctx, ctx.r.E);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x94(core::Context& ctx) {
@@ -2277,7 +2262,7 @@ int opcode_0x94(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SUB(ctx, ctx.r.H);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x95(core::Context& ctx) {
@@ -2287,7 +2272,7 @@ int opcode_0x95(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SUB(ctx, ctx.r.L);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x96(core::Context& ctx) {
@@ -2297,7 +2282,7 @@ int opcode_0x96(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SUB(ctx, ctx.read8(ctx.r.HL));
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 8;
 }
 int opcode_0x97(core::Context& ctx) {
@@ -2307,7 +2292,7 @@ int opcode_0x97(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SUB(ctx, ctx.r.A);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x98(core::Context& ctx) {
@@ -2317,7 +2302,7 @@ int opcode_0x98(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SBC(ctx, ctx.r.A, ctx.r.B);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x99(core::Context& ctx) {
@@ -2327,7 +2312,7 @@ int opcode_0x99(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SBC(ctx, ctx.r.A, ctx.r.C);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x9a(core::Context& ctx) {
@@ -2337,7 +2322,7 @@ int opcode_0x9a(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SBC(ctx, ctx.r.A, ctx.r.D);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x9b(core::Context& ctx) {
@@ -2347,7 +2332,7 @@ int opcode_0x9b(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SBC(ctx, ctx.r.A, ctx.r.E);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x9c(core::Context& ctx) {
@@ -2357,7 +2342,7 @@ int opcode_0x9c(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SBC(ctx, ctx.r.A, ctx.r.H);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x9d(core::Context& ctx) {
@@ -2367,7 +2352,7 @@ int opcode_0x9d(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SBC(ctx, ctx.r.A, ctx.r.L);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0x9e(core::Context& ctx) {
@@ -2377,7 +2362,7 @@ int opcode_0x9e(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SBC(ctx, ctx.r.A, ctx.read8(ctx.r.HL));
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 8;
 }
 int opcode_0x9f(core::Context& ctx) {
@@ -2387,7 +2372,7 @@ int opcode_0x9f(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SBC(ctx, ctx.r.A, ctx.r.A);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0xa0(core::Context& ctx) {
@@ -2399,9 +2384,9 @@ int opcode_0xa0(core::Context& ctx) {
 
     AND(ctx, ctx.r.B);
 
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xa1(core::Context& ctx) {
@@ -2412,9 +2397,9 @@ int opcode_0xa1(core::Context& ctx) {
 	*/
     AND(ctx, ctx.r.C);
 
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xa2(core::Context& ctx) {
@@ -2425,9 +2410,9 @@ int opcode_0xa2(core::Context& ctx) {
 	*/
     AND(ctx, ctx.r.D);
 
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xa3(core::Context& ctx) {
@@ -2438,9 +2423,9 @@ int opcode_0xa3(core::Context& ctx) {
 	*/
     AND(ctx, ctx.r.E);
 
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xa4(core::Context& ctx) {
@@ -2451,9 +2436,9 @@ int opcode_0xa4(core::Context& ctx) {
 	*/
     AND(ctx, ctx.r.H);
 
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xa5(core::Context& ctx) {
@@ -2464,9 +2449,9 @@ int opcode_0xa5(core::Context& ctx) {
 	*/
     AND(ctx, ctx.r.L);
 
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xa6(core::Context& ctx) {
@@ -2477,9 +2462,9 @@ int opcode_0xa6(core::Context& ctx) {
 	*/
     AND(ctx, ctx.read8(ctx.r.HL));
 
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
+    ctx.r.reset_carry();
     return 8;
 }
 int opcode_0xa7(core::Context& ctx) {
@@ -2489,9 +2474,9 @@ int opcode_0xa7(core::Context& ctx) {
 	*  affects: Z 0 1 0
 	*/
     AND(ctx, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xa8(core::Context& ctx) {
@@ -2501,9 +2486,9 @@ int opcode_0xa8(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     XOR(ctx, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xa9(core::Context& ctx) {
@@ -2513,9 +2498,9 @@ int opcode_0xa9(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     XOR(ctx, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xaa(core::Context& ctx) {
@@ -2525,9 +2510,9 @@ int opcode_0xaa(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     XOR(ctx, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xab(core::Context& ctx) {
@@ -2537,9 +2522,9 @@ int opcode_0xab(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     XOR(ctx, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xac(core::Context& ctx) {
@@ -2549,9 +2534,9 @@ int opcode_0xac(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     XOR(ctx, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xad(core::Context& ctx) {
@@ -2561,9 +2546,9 @@ int opcode_0xad(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     XOR(ctx, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xae(core::Context& ctx) {
@@ -2573,9 +2558,9 @@ int opcode_0xae(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     XOR(ctx, ctx.read8(ctx.r.HL));
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 8;
 }
 int opcode_0xaf(core::Context& ctx) {
@@ -2585,9 +2570,9 @@ int opcode_0xaf(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     XOR(ctx, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xb0(core::Context& ctx) {
@@ -2597,9 +2582,9 @@ int opcode_0xb0(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     OR(ctx, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xb1(core::Context& ctx) {
@@ -2609,9 +2594,9 @@ int opcode_0xb1(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     OR(ctx, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xb2(core::Context& ctx) {
@@ -2621,9 +2606,9 @@ int opcode_0xb2(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     OR(ctx, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xb3(core::Context& ctx) {
@@ -2633,9 +2618,9 @@ int opcode_0xb3(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     OR(ctx, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xb4(core::Context& ctx) {
@@ -2645,9 +2630,9 @@ int opcode_0xb4(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     OR(ctx, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xb5(core::Context& ctx) {
@@ -2657,9 +2642,9 @@ int opcode_0xb5(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     OR(ctx, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xb6(core::Context& ctx) {
@@ -2669,9 +2654,9 @@ int opcode_0xb6(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     OR(ctx, ctx.read8(ctx.r.HL));
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 8;
 }
 int opcode_0xb7(core::Context& ctx) {
@@ -2681,9 +2666,9 @@ int opcode_0xb7(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     OR(ctx, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 4;
 }
 int opcode_0xb8(core::Context& ctx) {
@@ -2693,7 +2678,7 @@ int opcode_0xb8(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     CP(ctx, ctx.r.B);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0xb9(core::Context& ctx) {
@@ -2703,7 +2688,7 @@ int opcode_0xb9(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     CP(ctx, ctx.r.C);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0xba(core::Context& ctx) {
@@ -2713,7 +2698,7 @@ int opcode_0xba(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     CP(ctx, ctx.r.D);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0xbb(core::Context& ctx) {
@@ -2723,7 +2708,7 @@ int opcode_0xbb(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     CP(ctx, ctx.r.E);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0xbc(core::Context& ctx) {
@@ -2733,7 +2718,7 @@ int opcode_0xbc(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     CP(ctx, ctx.r.H);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0xbd(core::Context& ctx) {
@@ -2743,7 +2728,7 @@ int opcode_0xbd(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     CP(ctx, ctx.r.L);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0xbe(core::Context& ctx) {
@@ -2753,7 +2738,7 @@ int opcode_0xbe(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     CP(ctx, ctx.read8(ctx.r.HL));
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 8;
 }
 int opcode_0xbf(core::Context& ctx) {
@@ -2763,7 +2748,7 @@ int opcode_0xbf(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     CP(ctx, ctx.r.A);
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 4;
 }
 int opcode_0xc0(core::Context& ctx) {
@@ -2772,7 +2757,7 @@ int opcode_0xc0(core::Context& ctx) {
 	*  cycles: 20/8
 	*  affects: - - - -
 	*/
-    return RET(ctx, !ctx.r.ZERO_FLAG, 20, 8);
+    return RET(ctx, !ctx.r.get_zero(), 20, 8);
 }
 int opcode_0xc1(core::Context& ctx) {
     /*  mnemonic: POP BC
@@ -2789,7 +2774,7 @@ int opcode_0xc2(core::Context& ctx) {
 	*  cycles: 16/12
 	*  affects: - - - -
 	*/
-    return JP(ctx, !ctx.r.ZERO_FLAG, ctx.imm16(), 16, 12);
+    return JP(ctx, !ctx.r.get_zero(), ctx.imm16(), 16, 12);
 }
 int opcode_0xc3(core::Context& ctx) {
     /*  mnemonic: JP a16
@@ -2806,7 +2791,7 @@ int opcode_0xc4(core::Context& ctx) {
 	*  cycles: 24/12
 	*  affects: - - - -
 	*/
-    return CALL(ctx, !ctx.r.ZERO_FLAG, ctx.imm16(), 24, 12);
+    return CALL(ctx, !ctx.r.get_zero(), ctx.imm16(), 24, 12);
 }
 int opcode_0xc5(core::Context& ctx) {
     /*  mnemonic: PUSH BC
@@ -2824,7 +2809,7 @@ int opcode_0xc6(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADD(ctx, ctx.r.A, ctx.imm8());
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 8;
 }
 int opcode_0xc7(core::Context& ctx) {
@@ -2842,7 +2827,7 @@ int opcode_0xc8(core::Context& ctx) {
 	*  cycles: 20/8
 	*  affects: - - - -
 	*/
-    return RET(ctx, ctx.r.ZERO_FLAG, 20, 8);
+    return RET(ctx, ctx.r.get_zero(), 20, 8);
 }
 int opcode_0xc9(core::Context& ctx) {
     /*  mnemonic: RET
@@ -2859,7 +2844,7 @@ int opcode_0xca(core::Context& ctx) {
 	*  cycles: 16/12
 	*  affects: - - - -
 	*/
-    return JP(ctx, ctx.r.ZERO_FLAG, ctx.imm16(), 16, 12);
+    return JP(ctx, ctx.r.get_zero(), ctx.imm16(), 16, 12);
 }
 int opcode_0xcc(core::Context& ctx) {
     /*  mnemonic: CALL Z,a16
@@ -2867,7 +2852,7 @@ int opcode_0xcc(core::Context& ctx) {
 	*  cycles: 24/12
 	*  affects: - - - -
 	*/
-    return CALL(ctx, ctx.r.ZERO_FLAG, ctx.imm16(), 24, 12);
+    return CALL(ctx, ctx.r.get_zero(), ctx.imm16(), 24, 12);
 }
 int opcode_0xcd(core::Context& ctx) {
     /*  mnemonic: CALL a16
@@ -2885,7 +2870,7 @@ int opcode_0xce(core::Context& ctx) {
 	*  affects: Z 0 H C
 	*/
     ADC(ctx, ctx.r.A, ctx.imm8());
-    ctx.r.SUB_FLAG = 0;
+    ctx.r.reset_sub();
     return 8;
 }
 int opcode_0xcf(core::Context& ctx) {
@@ -2903,7 +2888,7 @@ int opcode_0xd0(core::Context& ctx) {
 	*  cycles: 20/8
 	*  affects: - - - -
 	*/
-    return RET(ctx, !ctx.r.CARRY_FLAG, 20, 8);
+    return RET(ctx, !ctx.r.get_carry(), 20, 8);
 }
 int opcode_0xd1(core::Context& ctx) {
     /*  mnemonic: POP DE
@@ -2920,7 +2905,7 @@ int opcode_0xd2(core::Context& ctx) {
 	*  cycles: 16/12
 	*  affects: - - - -
 	*/
-    return JP(ctx, !ctx.r.CARRY_FLAG, ctx.imm16(), 16, 12);
+    return JP(ctx, !ctx.r.get_carry(), ctx.imm16(), 16, 12);
 }
 int opcode_0xd3([[maybe_unused]] core::Context& ctx) {
     throw std::runtime_error("invalid instruction");
@@ -2931,7 +2916,7 @@ int opcode_0xd4(core::Context& ctx) {
 	*  cycles: 24/12
 	*  affects: - - - -
 	*/
-    return CALL(ctx, !ctx.r.CARRY_FLAG, ctx.imm16(), 24, 12);
+    return CALL(ctx, !ctx.r.get_carry(), ctx.imm16(), 24, 12);
 }
 int opcode_0xd5(core::Context& ctx) {
     /*  mnemonic: PUSH DE
@@ -2949,7 +2934,7 @@ int opcode_0xd6(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SUB(ctx, ctx.imm8());
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 8;
 }
 int opcode_0xd7(core::Context& ctx) {
@@ -2967,7 +2952,7 @@ int opcode_0xd8(core::Context& ctx) {
 	*  cycles: 20/8
 	*  affects: - - - -
 	*/
-    return RET(ctx, ctx.r.CARRY_FLAG, 20, 8);
+    return RET(ctx, ctx.r.get_carry(), 20, 8);
 }
 int opcode_0xd9(core::Context& ctx) {
     /*  mnemonic: RETI
@@ -2984,7 +2969,7 @@ int opcode_0xda(core::Context& ctx) {
 	*  cycles: 16/12
 	*  affects: - - - -
 	*/
-    return JP(ctx, ctx.r.CARRY_FLAG, ctx.imm16(), 16, 12);
+    return JP(ctx, ctx.r.get_carry(), ctx.imm16(), 16, 12);
 }
 int opcode_0xdb([[maybe_unused]] core::Context& ctx) {
     throw std::runtime_error("invalid instruction");
@@ -2995,7 +2980,7 @@ int opcode_0xdc(core::Context& ctx) {
 	*  cycles: 24/12
 	*  affects: - - - -
 	*/
-    return CALL(ctx, ctx.r.CARRY_FLAG, ctx.imm16(), 24, 12);
+    return CALL(ctx, ctx.r.get_carry(), ctx.imm16(), 24, 12);
 }
 int opcode_0xdd([[maybe_unused]] core::Context& ctx) {
     throw std::runtime_error("invalid instruction");
@@ -3007,7 +2992,7 @@ int opcode_0xde(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     SBC(ctx, ctx.r.A, ctx.imm8());
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 8;
 }
 int opcode_0xdf(core::Context& ctx) {
@@ -3072,9 +3057,9 @@ int opcode_0xe6(core::Context& ctx) {
 	*  affects: Z 0 1 0
 	*/
     AND(ctx, ctx.imm8());
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
+    ctx.r.reset_carry();
     return 8;
 }
 int opcode_0xe7(core::Context& ctx) {
@@ -3093,8 +3078,8 @@ int opcode_0xe8(core::Context& ctx) {
 	*  affects: 0 0 H C
 	*/
     ADD(ctx, ctx.r.SP, ctx.imm8_signed());
-    ctx.r.ZERO_FLAG = 0;
-    ctx.r.SUB_FLAG  = 0;
+    ctx.r.reset_zero();
+    ctx.r.reset_sub();
     return 16;
 }
 int opcode_0xe9(core::Context& ctx) {
@@ -3134,9 +3119,9 @@ int opcode_0xee(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     XOR(ctx, ctx.imm8());
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 8;
 }
 int opcode_0xef(core::Context& ctx) {
@@ -3204,9 +3189,9 @@ int opcode_0xf6(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     OR(ctx, ctx.imm8());
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 8;
 }
 int opcode_0xf7(core::Context& ctx) {
@@ -3227,22 +3212,22 @@ int opcode_0xf8(core::Context& ctx) {
     auto offset = ctx.imm8_signed();
 
     if (((ctx.r.SP & 0xF) + (offset & 0xF)) > 0xF) {
-        ctx.r.HALFCARRY_FLAG = 1;
+        ctx.r.set_halfcarry();
     }
     else {
-        ctx.r.HALFCARRY_FLAG = 0;
+        ctx.r.reset_halfcarry();
     }
 
     if (((ctx.r.SP & 0xFF) + (offset & 0xFF)) > 0xFF) {
-        ctx.r.CARRY_FLAG = 1;
+        ctx.r.set_carry();
     }
     else {
-        ctx.r.CARRY_FLAG = 0;
+        ctx.r.reset_carry();
     }
 
     LD(ctx.r.HL, ctx.r.SP + offset);
-    ctx.r.ZERO_FLAG = 0;
-    ctx.r.SUB_FLAG  = 0;
+    ctx.r.reset_zero();
+    ctx.r.reset_sub();
     return 12;
 }
 int opcode_0xf9(core::Context& ctx) {
@@ -3285,7 +3270,7 @@ int opcode_0xfe(core::Context& ctx) {
 	*  affects: Z 1 H C
 	*/
     CP(ctx, ctx.imm8());
-    ctx.r.SUB_FLAG = 1;
+    ctx.r.set_sub();
     return 8;
 }
 int opcode_0xff(core::Context& ctx) {
@@ -3304,8 +3289,8 @@ int opcode_0xcb00(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RLC(ctx, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb01(core::Context& ctx) {
@@ -3315,8 +3300,8 @@ int opcode_0xcb01(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RLC(ctx, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb02(core::Context& ctx) {
@@ -3326,8 +3311,8 @@ int opcode_0xcb02(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RLC(ctx, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb03(core::Context& ctx) {
@@ -3337,8 +3322,8 @@ int opcode_0xcb03(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RLC(ctx, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb04(core::Context& ctx) {
@@ -3348,8 +3333,8 @@ int opcode_0xcb04(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RLC(ctx, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb05(core::Context& ctx) {
@@ -3359,8 +3344,8 @@ int opcode_0xcb05(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RLC(ctx, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb06(core::Context& ctx) {
@@ -3373,8 +3358,8 @@ int opcode_0xcb06(core::Context& ctx) {
     RLC(ctx, temp);
     ctx.write8(ctx.r.HL, temp);
 
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 16;
 }
 int opcode_0xcb07(core::Context& ctx) {
@@ -3384,8 +3369,8 @@ int opcode_0xcb07(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RLC(ctx, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb08(core::Context& ctx) {
@@ -3395,8 +3380,8 @@ int opcode_0xcb08(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RRC(ctx, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb09(core::Context& ctx) {
@@ -3406,8 +3391,8 @@ int opcode_0xcb09(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RRC(ctx, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb0a(core::Context& ctx) {
@@ -3417,8 +3402,8 @@ int opcode_0xcb0a(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RRC(ctx, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb0b(core::Context& ctx) {
@@ -3428,8 +3413,8 @@ int opcode_0xcb0b(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RRC(ctx, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb0c(core::Context& ctx) {
@@ -3439,8 +3424,8 @@ int opcode_0xcb0c(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RRC(ctx, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb0d(core::Context& ctx) {
@@ -3450,8 +3435,8 @@ int opcode_0xcb0d(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RRC(ctx, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb0e(core::Context& ctx) {
@@ -3466,8 +3451,8 @@ int opcode_0xcb0e(core::Context& ctx) {
 
     ctx.write8(ctx.r.HL, temp);
 
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 16;
 }
 int opcode_0xcb0f(core::Context& ctx) {
@@ -3477,8 +3462,8 @@ int opcode_0xcb0f(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RRC(ctx, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb10(core::Context& ctx) {
@@ -3488,8 +3473,8 @@ int opcode_0xcb10(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RL(ctx, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb11(core::Context& ctx) {
@@ -3499,8 +3484,8 @@ int opcode_0xcb11(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RL(ctx, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb12(core::Context& ctx) {
@@ -3510,8 +3495,8 @@ int opcode_0xcb12(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RL(ctx, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb13(core::Context& ctx) {
@@ -3521,8 +3506,8 @@ int opcode_0xcb13(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RL(ctx, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb14(core::Context& ctx) {
@@ -3532,8 +3517,8 @@ int opcode_0xcb14(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RL(ctx, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb15(core::Context& ctx) {
@@ -3543,8 +3528,8 @@ int opcode_0xcb15(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RL(ctx, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb16(core::Context& ctx) {
@@ -3557,8 +3542,8 @@ int opcode_0xcb16(core::Context& ctx) {
     RL(ctx, temp);
     ctx.write8(ctx.r.HL, temp);
 
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 16;
 }
 int opcode_0xcb17(core::Context& ctx) {
@@ -3568,8 +3553,8 @@ int opcode_0xcb17(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RL(ctx, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb18(core::Context& ctx) {
@@ -3579,8 +3564,8 @@ int opcode_0xcb18(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RR(ctx, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb19(core::Context& ctx) {
@@ -3590,8 +3575,8 @@ int opcode_0xcb19(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RR(ctx, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb1a(core::Context& ctx) {
@@ -3601,8 +3586,8 @@ int opcode_0xcb1a(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RR(ctx, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb1b(core::Context& ctx) {
@@ -3612,8 +3597,8 @@ int opcode_0xcb1b(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RR(ctx, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb1c(core::Context& ctx) {
@@ -3623,8 +3608,8 @@ int opcode_0xcb1c(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RR(ctx, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb1d(core::Context& ctx) {
@@ -3634,8 +3619,8 @@ int opcode_0xcb1d(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RR(ctx, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb1e(core::Context& ctx) {
@@ -3648,8 +3633,8 @@ int opcode_0xcb1e(core::Context& ctx) {
     RR(ctx, temp);
     ctx.write8(ctx.r.HL, temp);
 
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 16;
 }
 int opcode_0xcb1f(core::Context& ctx) {
@@ -3659,8 +3644,8 @@ int opcode_0xcb1f(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     RR(ctx, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb20(core::Context& ctx) {
@@ -3670,8 +3655,8 @@ int opcode_0xcb20(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     SLA(ctx, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb21(core::Context& ctx) {
@@ -3681,8 +3666,8 @@ int opcode_0xcb21(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     SLA(ctx, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb22(core::Context& ctx) {
@@ -3692,8 +3677,8 @@ int opcode_0xcb22(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     SLA(ctx, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb23(core::Context& ctx) {
@@ -3703,8 +3688,8 @@ int opcode_0xcb23(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     SLA(ctx, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb24(core::Context& ctx) {
@@ -3714,8 +3699,8 @@ int opcode_0xcb24(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     SLA(ctx, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb25(core::Context& ctx) {
@@ -3725,8 +3710,8 @@ int opcode_0xcb25(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     SLA(ctx, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb26(core::Context& ctx) {
@@ -3739,8 +3724,8 @@ int opcode_0xcb26(core::Context& ctx) {
     SLA(ctx, temp);
     ctx.write8(ctx.r.HL, temp);
 
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 16;
 }
 int opcode_0xcb27(core::Context& ctx) {
@@ -3750,8 +3735,8 @@ int opcode_0xcb27(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     SLA(ctx, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb28(core::Context& ctx) {
@@ -3761,8 +3746,8 @@ int opcode_0xcb28(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     SRA(ctx, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb29(core::Context& ctx) {
@@ -3772,8 +3757,8 @@ int opcode_0xcb29(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     SRA(ctx, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb2a(core::Context& ctx) {
@@ -3783,8 +3768,8 @@ int opcode_0xcb2a(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     SRA(ctx, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb2b(core::Context& ctx) {
@@ -3794,8 +3779,8 @@ int opcode_0xcb2b(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     SRA(ctx, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb2c(core::Context& ctx) {
@@ -3805,8 +3790,8 @@ int opcode_0xcb2c(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     SRA(ctx, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb2d(core::Context& ctx) {
@@ -3816,8 +3801,8 @@ int opcode_0xcb2d(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     SRA(ctx, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb2e(core::Context& ctx) {
@@ -3830,8 +3815,8 @@ int opcode_0xcb2e(core::Context& ctx) {
     SRA(ctx, temp);
     ctx.write8(ctx.r.HL, temp);
 
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 16;
 }
 int opcode_0xcb2f(core::Context& ctx) {
@@ -3841,8 +3826,8 @@ int opcode_0xcb2f(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     SRA(ctx, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb30(core::Context& ctx) {
@@ -3852,9 +3837,9 @@ int opcode_0xcb30(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     SWAP(ctx, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 8;
 }
 int opcode_0xcb31(core::Context& ctx) {
@@ -3864,9 +3849,9 @@ int opcode_0xcb31(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     SWAP(ctx, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 8;
 }
 int opcode_0xcb32(core::Context& ctx) {
@@ -3876,9 +3861,9 @@ int opcode_0xcb32(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     SWAP(ctx, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 8;
 }
 int opcode_0xcb33(core::Context& ctx) {
@@ -3888,9 +3873,9 @@ int opcode_0xcb33(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     SWAP(ctx, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 8;
 }
 int opcode_0xcb34(core::Context& ctx) {
@@ -3900,9 +3885,9 @@ int opcode_0xcb34(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     SWAP(ctx, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 8;
 }
 int opcode_0xcb35(core::Context& ctx) {
@@ -3912,9 +3897,9 @@ int opcode_0xcb35(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     SWAP(ctx, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 8;
 }
 int opcode_0xcb36(core::Context& ctx) {
@@ -3927,9 +3912,9 @@ int opcode_0xcb36(core::Context& ctx) {
     SWAP(ctx, temp);
     ctx.write8(ctx.r.HL, temp);
 
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 16;
 }
 int opcode_0xcb37(core::Context& ctx) {
@@ -3939,9 +3924,9 @@ int opcode_0xcb37(core::Context& ctx) {
 	*  affects: Z 0 0 0
 	*/
     SWAP(ctx, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
-    ctx.r.CARRY_FLAG     = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
+    ctx.r.reset_carry();
     return 8;
 }
 int opcode_0xcb38(core::Context& ctx) {
@@ -3951,8 +3936,8 @@ int opcode_0xcb38(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     SRL(ctx, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb39(core::Context& ctx) {
@@ -3962,8 +3947,8 @@ int opcode_0xcb39(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     SRL(ctx, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb3a(core::Context& ctx) {
@@ -3973,8 +3958,8 @@ int opcode_0xcb3a(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     SRL(ctx, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb3b(core::Context& ctx) {
@@ -3984,8 +3969,8 @@ int opcode_0xcb3b(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     SRL(ctx, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb3c(core::Context& ctx) {
@@ -3995,8 +3980,8 @@ int opcode_0xcb3c(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     SRL(ctx, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb3d(core::Context& ctx) {
@@ -4006,8 +3991,8 @@ int opcode_0xcb3d(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     SRL(ctx, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb3e(core::Context& ctx) {
@@ -4020,8 +4005,8 @@ int opcode_0xcb3e(core::Context& ctx) {
     SRL(ctx, temp);
     ctx.write8(ctx.r.HL, temp);
 
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 16;
 }
 int opcode_0xcb3f(core::Context& ctx) {
@@ -4031,8 +4016,8 @@ int opcode_0xcb3f(core::Context& ctx) {
 	*  affects: Z 0 0 C
 	*/
     SRL(ctx, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 0;
+    ctx.r.reset_sub();
+    ctx.r.reset_halfcarry();
     return 8;
 }
 int opcode_0xcb40(core::Context& ctx) {
@@ -4042,8 +4027,8 @@ int opcode_0xcb40(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 0, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb41(core::Context& ctx) {
@@ -4053,8 +4038,8 @@ int opcode_0xcb41(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 0, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb42(core::Context& ctx) {
@@ -4064,8 +4049,8 @@ int opcode_0xcb42(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 0, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb43(core::Context& ctx) {
@@ -4075,8 +4060,8 @@ int opcode_0xcb43(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 0, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb44(core::Context& ctx) {
@@ -4086,8 +4071,8 @@ int opcode_0xcb44(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 0, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb45(core::Context& ctx) {
@@ -4097,8 +4082,8 @@ int opcode_0xcb45(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 0, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb46(core::Context& ctx) {
@@ -4108,8 +4093,8 @@ int opcode_0xcb46(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 0, ctx.read8(ctx.r.HL));
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 16;
 }
 int opcode_0xcb47(core::Context& ctx) {
@@ -4119,8 +4104,8 @@ int opcode_0xcb47(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 0, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb48(core::Context& ctx) {
@@ -4130,8 +4115,8 @@ int opcode_0xcb48(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 1, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb49(core::Context& ctx) {
@@ -4141,8 +4126,8 @@ int opcode_0xcb49(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 1, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb4a(core::Context& ctx) {
@@ -4152,8 +4137,8 @@ int opcode_0xcb4a(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 1, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb4b(core::Context& ctx) {
@@ -4163,8 +4148,8 @@ int opcode_0xcb4b(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 1, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb4c(core::Context& ctx) {
@@ -4174,8 +4159,8 @@ int opcode_0xcb4c(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 1, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb4d(core::Context& ctx) {
@@ -4185,8 +4170,8 @@ int opcode_0xcb4d(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 1, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb4e(core::Context& ctx) {
@@ -4196,8 +4181,8 @@ int opcode_0xcb4e(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 1, ctx.read8(ctx.r.HL));
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 16;
 }
 int opcode_0xcb4f(core::Context& ctx) {
@@ -4207,8 +4192,8 @@ int opcode_0xcb4f(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 1, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb50(core::Context& ctx) {
@@ -4218,8 +4203,8 @@ int opcode_0xcb50(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 2, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb51(core::Context& ctx) {
@@ -4229,8 +4214,8 @@ int opcode_0xcb51(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 2, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb52(core::Context& ctx) {
@@ -4240,8 +4225,8 @@ int opcode_0xcb52(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 2, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb53(core::Context& ctx) {
@@ -4251,8 +4236,8 @@ int opcode_0xcb53(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 2, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb54(core::Context& ctx) {
@@ -4262,8 +4247,8 @@ int opcode_0xcb54(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 2, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb55(core::Context& ctx) {
@@ -4273,8 +4258,8 @@ int opcode_0xcb55(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 2, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb56(core::Context& ctx) {
@@ -4284,8 +4269,8 @@ int opcode_0xcb56(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 2, ctx.read8(ctx.r.HL));
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 16;
 }
 int opcode_0xcb57(core::Context& ctx) {
@@ -4295,8 +4280,8 @@ int opcode_0xcb57(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 2, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb58(core::Context& ctx) {
@@ -4306,8 +4291,8 @@ int opcode_0xcb58(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 3, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb59(core::Context& ctx) {
@@ -4317,8 +4302,8 @@ int opcode_0xcb59(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 3, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb5a(core::Context& ctx) {
@@ -4328,8 +4313,8 @@ int opcode_0xcb5a(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 3, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb5b(core::Context& ctx) {
@@ -4339,8 +4324,8 @@ int opcode_0xcb5b(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 3, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb5c(core::Context& ctx) {
@@ -4350,8 +4335,8 @@ int opcode_0xcb5c(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 3, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb5d(core::Context& ctx) {
@@ -4361,8 +4346,8 @@ int opcode_0xcb5d(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 3, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb5e(core::Context& ctx) {
@@ -4372,8 +4357,8 @@ int opcode_0xcb5e(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 3, ctx.read8(ctx.r.HL));
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 16;
 }
 int opcode_0xcb5f(core::Context& ctx) {
@@ -4383,8 +4368,8 @@ int opcode_0xcb5f(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 3, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb60(core::Context& ctx) {
@@ -4394,8 +4379,8 @@ int opcode_0xcb60(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 4, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb61(core::Context& ctx) {
@@ -4405,8 +4390,8 @@ int opcode_0xcb61(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 4, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb62(core::Context& ctx) {
@@ -4416,8 +4401,8 @@ int opcode_0xcb62(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 4, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb63(core::Context& ctx) {
@@ -4427,8 +4412,8 @@ int opcode_0xcb63(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 4, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb64(core::Context& ctx) {
@@ -4438,8 +4423,8 @@ int opcode_0xcb64(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 4, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb65(core::Context& ctx) {
@@ -4449,8 +4434,8 @@ int opcode_0xcb65(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 4, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb66(core::Context& ctx) {
@@ -4460,8 +4445,8 @@ int opcode_0xcb66(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 4, ctx.read8(ctx.r.HL));
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 16;
 }
 int opcode_0xcb67(core::Context& ctx) {
@@ -4471,8 +4456,8 @@ int opcode_0xcb67(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 4, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb68(core::Context& ctx) {
@@ -4482,8 +4467,8 @@ int opcode_0xcb68(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 5, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb69(core::Context& ctx) {
@@ -4493,8 +4478,8 @@ int opcode_0xcb69(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 5, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb6a(core::Context& ctx) {
@@ -4504,8 +4489,8 @@ int opcode_0xcb6a(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 5, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb6b(core::Context& ctx) {
@@ -4515,8 +4500,8 @@ int opcode_0xcb6b(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 5, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb6c(core::Context& ctx) {
@@ -4526,8 +4511,8 @@ int opcode_0xcb6c(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 5, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb6d(core::Context& ctx) {
@@ -4537,8 +4522,8 @@ int opcode_0xcb6d(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 5, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb6e(core::Context& ctx) {
@@ -4548,8 +4533,8 @@ int opcode_0xcb6e(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 5, ctx.read8(ctx.r.HL));
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 16;
 }
 int opcode_0xcb6f(core::Context& ctx) {
@@ -4559,8 +4544,8 @@ int opcode_0xcb6f(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 5, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb70(core::Context& ctx) {
@@ -4570,8 +4555,8 @@ int opcode_0xcb70(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 6, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb71(core::Context& ctx) {
@@ -4581,8 +4566,8 @@ int opcode_0xcb71(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 6, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb72(core::Context& ctx) {
@@ -4592,8 +4577,8 @@ int opcode_0xcb72(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 6, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb73(core::Context& ctx) {
@@ -4603,8 +4588,8 @@ int opcode_0xcb73(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 6, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb74(core::Context& ctx) {
@@ -4614,8 +4599,8 @@ int opcode_0xcb74(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 6, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb75(core::Context& ctx) {
@@ -4625,8 +4610,8 @@ int opcode_0xcb75(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 6, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb76(core::Context& ctx) {
@@ -4636,8 +4621,8 @@ int opcode_0xcb76(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 6, ctx.read8(ctx.r.HL));
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 16;
 }
 int opcode_0xcb77(core::Context& ctx) {
@@ -4647,8 +4632,8 @@ int opcode_0xcb77(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 6, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb78(core::Context& ctx) {
@@ -4658,8 +4643,8 @@ int opcode_0xcb78(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 7, ctx.r.B);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb79(core::Context& ctx) {
@@ -4669,8 +4654,8 @@ int opcode_0xcb79(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 7, ctx.r.C);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb7a(core::Context& ctx) {
@@ -4680,8 +4665,8 @@ int opcode_0xcb7a(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 7, ctx.r.D);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb7b(core::Context& ctx) {
@@ -4691,8 +4676,8 @@ int opcode_0xcb7b(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 7, ctx.r.E);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb7c(core::Context& ctx) {
@@ -4702,8 +4687,8 @@ int opcode_0xcb7c(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 7, ctx.r.H);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb7d(core::Context& ctx) {
@@ -4713,8 +4698,8 @@ int opcode_0xcb7d(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 7, ctx.r.L);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb7e(core::Context& ctx) {
@@ -4724,8 +4709,8 @@ int opcode_0xcb7e(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 7, ctx.read8(ctx.r.HL));
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 16;
 }
 int opcode_0xcb7f(core::Context& ctx) {
@@ -4735,8 +4720,8 @@ int opcode_0xcb7f(core::Context& ctx) {
 	*  affects: Z 0 1 -
 	*/
     BIT(ctx, 7, ctx.r.A);
-    ctx.r.SUB_FLAG       = 0;
-    ctx.r.HALFCARRY_FLAG = 1;
+    ctx.r.reset_sub();
+    ctx.r.set_halfcarry();
     return 8;
 }
 int opcode_0xcb80(core::Context& ctx) {

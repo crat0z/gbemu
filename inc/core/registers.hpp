@@ -19,13 +19,7 @@ namespace core {
         union {
             uint16_t AF;
             struct {
-                uint8_t NOTHING        : 4;
-
-                uint8_t CARRY_FLAG     : 1;
-                uint8_t HALFCARRY_FLAG : 1;
-                uint8_t SUB_FLAG       : 1;
-                uint8_t ZERO_FLAG      : 1;
-
+                uint8_t F;
                 uint8_t A;
             };
         };
@@ -53,6 +47,25 @@ namespace core {
         uint16_t SP = 0xFFFE;
         uint16_t PC;
         bool     IME;
+
+        void xor_carry();
+        void set_carry(bool cond = true);
+        void reset_carry();
+
+        void set_halfcarry(bool cond = true);
+        void reset_halfcarry();
+
+        void set_sub(bool cond = true);
+        void reset_sub();
+
+        void set_zero(bool cond = true);
+        void reset_zero();
+
+        bool get_carry() const;
+        bool get_halfcarry() const;
+        bool get_sub() const;
+        bool get_zero() const;
+
     } __attribute__((aligned(16)));
 
 #ifdef GBEMU_CLANG

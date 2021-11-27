@@ -108,8 +108,8 @@ namespace core {
         std::string ret;
         ret.reserve(200);
         ret += "#########################\n";
-        ret += fmt::format("Z:{}, N:{}, H:{}, C:{}\n", (uint8_t)r.ZERO_FLAG, (uint8_t)r.SUB_FLAG,
-                           (uint8_t)r.HALFCARRY_FLAG, (uint8_t)r.CARRY_FLAG);
+        ret += fmt::format("Z:{}, N:{}, H:{}, C:{}\n", (uint8_t)r.get_zero(), (uint8_t)r.get_sub(),
+                           (uint8_t)r.get_halfcarry(), (uint8_t)r.get_carry());
         ret += fmt::format("A:{:#04x}\t\tAF:{:#06x}\n", r.A, r.AF);
         ret += fmt::format("B:{:#04x}\tC:{:#04x}\tBC:{:#06x}\n", r.B, r.C, r.BC);
         ret += fmt::format("D:{:#04x}\tE:{:#04x}\tDE:{:#06x}\n", r.D, r.E, r.DE);
