@@ -1,3 +1,4 @@
+#include <chrono>
 #include <iostream>
 #include <bitset>
 #include <fstream>
@@ -22,7 +23,8 @@ namespace core {
         is_ready = false;
 
         ctx = {};
-
+        CPUTimer.reset();
+        DIVTimer.reset();
         cycle_count = 0;
     }
 
@@ -55,17 +57,12 @@ namespace core {
 
         if (!ctx.halted) {
             auto op = ctx.imm8();
-            //std::cout << ctx.print();
 
             if (op == 0xCB) {
-                op = ctx.imm8();
-                //std::cout << op_cb_str_table[op](ctx);
-                //std::cout << '\n';
+                op     = ctx.imm8();
                 result = cb_table[op](ctx);
             }
             else {
-                //std::cout << op_str_table[op](ctx);
-                //std::cout << '\n';
                 result = op_table[op](ctx);
             }
             last_cycle = result;
@@ -119,5 +116,6 @@ namespace core {
                 }
             }
         }
+        cycle_count += result;
     }
 } // namespace core
