@@ -115,7 +115,6 @@ namespace core {
         ret += fmt::format("D:{:#04x}\tE:{:#04x}\tDE:{:#06x}\n", r.D, r.E, r.DE);
         ret += fmt::format("H:{:#04x}\tL:{:#04x}\tHL:{:#06x}\n", r.H, r.L, r.HL);
         ret += fmt::format("PC:{:#06x}\tSP:{:#06x}\n\n", r.PC, r.SP);
-        ret += fmt::format("opcode:{:#04x}\n", peek8());
 
         return ret;
     }
