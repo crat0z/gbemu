@@ -40,32 +40,35 @@ namespace core {
     void Gameboy::execute() {}
 
     void Gameboy::cycle() {
-        static auto last_cycle = 0;
-        static auto result     = 0;
+        static auto last_operation_cycles = 0;
+        static auto wait_cycles           = 0;
 
-        while (result) {
+        static auto now = std::chrono::steady_clock::now();
+
+        while (wait_cycles) {
             // wait for it
-            while (!CPUTimer.update()) {}
-            result--;
+            while (!CPUTimer.update(now)) {
+                now = std::chrono::steady_clock::now();
+            }
+            wait_cycles--;
         }
 
         // check timers
-        if (DIVTimer.update()) {
+        if (DIVTimer.update(now)) {
             ctx.DIV_inc();
         }
-        ctx.TIMA_update(last_cycle);
+        ctx.TIMA_update(last_operation_cycles);
 
         if (!ctx.halted) {
             auto op = ctx.imm8();
 
             if (op == 0xCB) {
-                op     = ctx.imm8();
-                result = cb_table[op](ctx);
+                op          = ctx.imm8();
+                wait_cycles = cb_table[op](ctx);
             }
             else {
-                result = op_table[op](ctx);
+                wait_cycles = op_table[op](ctx);
             }
-            last_cycle = result;
         }
 
         // if EI/DI set this cycle, we don't check for interrupts
@@ -74,23 +77,21 @@ namespace core {
         }
         else if (ctx.interrupt_pending()) {
             /*
-                If no interrupt is pending, halt executes as normal, and the 
                 CPU resumes regular execution as soon as an interrupt becomes pending. 
                 However, since IME=0, the interrupt is not handled.
             */
             ctx.halted = false;
-            // only handle if IME is enabled
+
             if (ctx.r.IME) {
 
                 // pandocs says ISR setup lasts 5 m-cycles
-                result += 5;
-                last_cycle += 5;
+                wait_cycles += 5;
 
                 ctx.r.IME = false;
 
                 auto jump_to_int = [&](uint8_t val) {
                     ctx.r.SP -= 2;
-                    ctx.m.set16(ctx.r.SP, ctx.r.PC);
+                    ctx.write16(ctx.r.SP, ctx.r.PC);
                     ctx.r.PC = val;
                 };
                 // priority is VBlank > ... > Joypad
@@ -99,7 +100,7 @@ namespace core {
                     jump_to_int(0x40);
                 }
                 else if (ctx.m.IF.LCD_STAT) {
-                    ctx.m.IF.VBlank = 0;
+                    ctx.m.IF.LCD_STAT = 0;
                     jump_to_int(0x48);
                 }
                 else if (ctx.m.IF.Timer) {
@@ -116,6 +117,9 @@ namespace core {
                 }
             }
         }
-        cycle_count += result;
+
+        last_operation_cycles = wait_cycles;
+
+        cycle_count += wait_cycles;
     }
 } // namespace core

@@ -3,12 +3,30 @@
 // constexpr timer
 template<int64_t f>
 class CETimer {
-    using clock = std::chrono::steady_clock;
+    using clock      = std::chrono::steady_clock;
+    using time_point = clock::time_point;
+    using duration   = std::chrono::duration<int64_t, std::ratio<1, f>>;
+
+    /* time_point start;
+    time_point last_tick;
+
+    duration tick{ 1 }; */
 
 public:
     CETimer() = default;
 
-    bool update() {
+    bool update(auto& tp) {
+        /* static bool once = true;
+        if (once) {
+            start     = clock::now();
+            last_tick = start + tp;
+        }
+
+        if (tp > last_tick) {
+            last_tick += tick;
+            return true;
+        }
+        return false; */
 
         static auto start = clock::now();
 
@@ -16,7 +34,7 @@ public:
 
         static auto next_tick = start + duration;
 
-        if (clock::now() > next_tick) {
+        if (tp > next_tick) {
             next_tick += duration;
             return true;
         }
@@ -25,12 +43,14 @@ public:
 
     // just run the timer until it stops returning true, for now
     void reset() {
-        while (update())
+        //last_tick = std::chrono::steady_clock::now();
+        auto now = std::chrono::steady_clock::now();
+        while (update(now))
             ;
     }
 };
 
-class Timer {
+/* class Timer {
     using clock = std::chrono::steady_clock;
 
     clock::time_point start;
@@ -52,4 +72,4 @@ public:
         }
         return false;
     }
-};
+}; */

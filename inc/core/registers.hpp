@@ -65,8 +65,7 @@ namespace core {
         bool get_halfcarry() const;
         bool get_sub() const;
         bool get_zero() const;
-
-    } __attribute__((aligned(16)));
+    };
 
 #ifdef GBEMU_CLANG
 #pragma clang diagnostic pop
