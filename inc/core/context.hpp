@@ -8,9 +8,9 @@ namespace core {
 
     struct Context {
 
-        Registers r = {};
-
         Memory m = {};
+
+        Registers r = {};
 
         uint16_t TIMA_count  = 0;
         uint16_t TIMA_factor = 0;
@@ -41,7 +41,7 @@ namespace core {
         void TIMA_update(int last_cycle);
 
         std::string print();
-    };
+    } __attribute__((aligned(128)));
 
 } // namespace core
 #endif

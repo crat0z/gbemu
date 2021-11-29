@@ -24,7 +24,6 @@ namespace core {
     bool Context::interrupt_pending() const { return (m.IFRegister & m.IERegister) != 0; }
 
     void Context::write8(uint16_t address, uint8_t value) {
-
         switch (address) {
         default:
             m.memory[address] = value;
@@ -39,10 +38,10 @@ namespace core {
             m.DIV = 0;
             return;
         case 0xFF07:
-            uint8_t select         = value & 0x3;
-            uint8_t enable         = (value >> 2) & 0x1;
-            m.TAC.InputClockSelect = select;
-            m.TAC.TimerEnable      = enable;
+            uint8_t select = value & 0x3;
+            uint8_t enable = (value >> 2) & 0x1;
+
+            m.TAC = value & 0x7;
 
             switch (select) {
             case 0b00:
@@ -91,10 +90,10 @@ namespace core {
        TLDR: check timer before executing
     */
     void Context::TIMA_inc() {
-        if (m.TAC.TimerEnable) {
+        if (m.get_TAC_enabled()) {
             if (m.TIMA == 0xFF) {
-                m.TIMA     = m.TMA;
-                m.IF.Timer = 1;
+                m.TIMA = m.TMA;
+                m.set_IF_Timer();
             }
             else {
                 m.TIMA += 1;

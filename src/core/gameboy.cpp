@@ -90,28 +90,28 @@ namespace core {
 
                 auto jump_to_int = [&](uint8_t val) {
                     ctx.r.SP -= 2;
-                    ctx.m.set16(ctx.r.SP, ctx.r.PC);
+                    ctx.write16(ctx.r.SP, ctx.r.PC);
                     ctx.r.PC = val;
                 };
                 // priority is VBlank > ... > Joypad
-                if (ctx.m.IF.VBlank) {
-                    ctx.m.IF.VBlank = 0;
+                if (ctx.m.get_IF_VBlank()) {
+                    ctx.m.reset_IF_VBlank();
                     jump_to_int(0x40);
                 }
-                else if (ctx.m.IF.LCD_STAT) {
-                    ctx.m.IF.VBlank = 0;
+                else if (ctx.m.get_IF_STAT()) {
+                    ctx.m.reset_IF_STAT();
                     jump_to_int(0x48);
                 }
-                else if (ctx.m.IF.Timer) {
-                    ctx.m.IF.Timer = 0;
+                else if (ctx.m.get_IF_Timer()) {
+                    ctx.m.reset_IF_Timer();
                     jump_to_int(0x50);
                 }
-                else if (ctx.m.IF.Serial) {
-                    ctx.m.IF.Serial = 0;
+                else if (ctx.m.get_IF_Serial()) {
+                    ctx.m.reset_IF_Serial();
                     jump_to_int(0x58);
                 }
-                else if (ctx.m.IF.Joypad) {
-                    ctx.m.IF.Joypad = 0;
+                else if (ctx.m.get_IF_Joypad()) {
+                    ctx.m.reset_IF_Joypad();
                     jump_to_int(0x60);
                 }
             }

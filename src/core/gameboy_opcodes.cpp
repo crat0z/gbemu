@@ -10,7 +10,7 @@ namespace {
 
     void OP_INLINE PUSH(core::Context& c, auto value) {
         c.r.SP -= 2;
-        c.m.set16(c.r.SP, value);
+        c.write16(c.r.SP, value);
     }
     void OP_INLINE POP(core::Context& c, auto& out) {
         out = c.read16(c.r.SP);
