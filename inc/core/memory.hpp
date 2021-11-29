@@ -80,11 +80,16 @@ namespace core {
 #pragma GCC diagnostic pop
 #endif
 
+        uint8_t  imm8(uint16_t& PC);
+        uint16_t imm16(uint16_t& PC);
+
         uint8_t  get8(uint16_t addr);
         uint16_t get16(uint16_t addr);
 
         void set16(uint16_t addr, uint16_t val);
-    };
+
+        uint8_t& operator[](uint16_t index);
+    } __attribute__((aligned(65536)));
 
 } // namespace core
 #endif

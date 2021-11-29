@@ -41,7 +41,7 @@ namespace core {
         void TIMA_update(int last_cycle);
 
         std::string print();
-    } __attribute__((aligned(128)));
+    };
 
 } // namespace core
 #endif
