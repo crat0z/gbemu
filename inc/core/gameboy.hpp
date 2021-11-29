@@ -6,7 +6,6 @@
 #include <vector>
 #include <string>
 #include "core/timer.hpp"
-#include "core/opcodes.hpp"
 #include "core/stack.hpp"
 #include <fmt/format.h>
 #include "core/context.hpp"
@@ -31,10 +30,6 @@ namespace core {
 
         size_t cycle_count;
         bool   is_ready;
-
-        uint16_t fetch(uint16_t addr);
-        op       decode(uint16_t opc);
-        void     execute();
 
         void cycle();
 

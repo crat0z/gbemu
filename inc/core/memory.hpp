@@ -78,14 +78,14 @@ namespace core {
                         uint8_t WRAM_Bank_Select;
                         // FF71
                         std::array<uint8_t, 0x15> IO_NOTHING5;
-                    } __attribute__((aligned(128)));
+                    };
                     std::array<uint8_t, 0x80> IORegisters;
                 };
                 // FF80
                 std::array<uint8_t, 0x7F> HighRAM;
                 // FFFF
                 uint8_t IERegister;
-            } __attribute__((aligned(65536)));
+            };
             std::array<uint8_t, 65536> memory;
         };
 
@@ -133,7 +133,7 @@ namespace core {
         bool get_TAC_enabled();
 
         uint8_t& operator[](uint16_t index);
-    } __attribute__((aligned(65536)));
+    };
 
 } // namespace core
 #endif

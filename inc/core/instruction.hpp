@@ -1,13 +1,12 @@
 #ifndef INSTRUCTION_HPP
 #define INSTRUCTION_HPP
-#include "core/opcodes.hpp"
 #include <fmt/format.h>
 
 namespace core {
     struct Instruction {
-        uint16_t    address;
-        uint16_t    opcode;
-        op          operation;
+        uint16_t address;
+        uint16_t opcode;
+        //op          operation;
         uint8_t     length;
         std::string mnemonic;
 
@@ -21,16 +20,11 @@ namespace core {
 
         ~Instruction() = default;
 
-        Instruction(uint16_t addr)
-                : address{ addr }, opcode{ 0 }, operation{ op::UNKNOWN }, length{ 1 }, mnemonic{} {}
+        Instruction(uint16_t addr) : address{ addr }, opcode{ 0 }, length{ 1 }, mnemonic{} {}
 
         // length = 2 always at this point, change in future
         Instruction(uint16_t addr, uint16_t opc)
-                : address{ addr },
-                  opcode{ /*swap_byte_order(opc)*/ },
-                  operation{ decode(opc) },
-                  length{ 2 },
-                  mnemonic{ opcode_mnemonic(opc) } {}
+                : address{ addr }, opcode{ /*swap_byte_order(opc)*/ }, length{ 2 }, mnemonic{ "" } {}
 
         std::string opcode_string() const noexcept {
             // every instruction is at least one byte long

@@ -10,17 +10,7 @@ namespace {
     std::unordered_map<uint16_t, std::shared_ptr<core::basic_block>> done;
 
     // check if `val` is an opcode that breaks a basic block
-    bool is_jump_or_ret(op val) {
-        static std::array<op, 11> jumps = { op::JP,    op::JP_V0, op::SE_I, op::SE_R, op::SNE_I,
-                                            op::SNE_R, op::SKP,   op::SKNP, op::RET,  op::UNKNOWN };
-
-        for (auto j : jumps) {
-            if (j == val) {
-                return true;
-            }
-        }
-        return false;
-    }
+    bool is_jump_or_ret() { return false; }
 } // namespace
 
 namespace GUI {
@@ -115,7 +105,7 @@ namespace GUI {
 
                         // show instruction
                         ImGui::TableNextColumn();
-                        if (ins1.operation != op::UNKNOWN) {
+                        if (true) {
 
                             ImGui::PushID(ins1.address);
 
@@ -145,7 +135,7 @@ namespace GUI {
                                     }
                                 }
                                 // follow to jump target in disassembly
-                                if (is_followable(ins1.operation)) {
+                                if (true) {
                                     uint16_t imm12 = ins1.opcode & 0xFFF;
                                     if (ImGui::Selectable(
                                                 fmt::format("Follow to address 0x{0:03X}", imm12)
@@ -274,10 +264,10 @@ namespace GUI {
             }
             // start adding instructions to this basic block
             auto current_address = start_address;
-            auto current_opcode  = emu.fetch(current_address);
-
+            //auto current_opcode  = emu.fetch(current_address);
+            auto current_opcode = 0x0;
             // current instruction isnt a jump, add it to list for this block
-            while (!is_jump_or_ret(decode(current_opcode))) {
+            while (true) {
 
                 // make sure we arent overrunning into a previous block
                 auto check = done.try_emplace(current_address, curr);
@@ -291,7 +281,7 @@ namespace GUI {
                     done[current_address] = curr;
 
                     // check to see if it is a call (no branch), process it
-                    if (decode(current_opcode) == op::CALL || decode(current_opcode) == op::SYS) {
+                    if (false) {
 
                         auto call_address = current_opcode & 0xFFF;
                         rec_cfg(call_address, current_address);
@@ -300,7 +290,7 @@ namespace GUI {
                     // go to next instruction
                     current_address += ins.length;
                     curr->append(std::move(ins));
-                    current_opcode = emu.fetch(current_address);
+                    //current_opcode = emu.fetch(current_address);
                 }
                 else {
                     // we add a reference and end our block
@@ -324,7 +314,7 @@ namespace GUI {
             // this is the end for this block
             curr->end_address = current_address;
 
-            switch (decode(current_opcode)) {
+            /* switch (0) {
             // for unconditional jump, we just process location
             case op::JP: {
                 auto jump_address = current_opcode & 0xFFF;
@@ -361,7 +351,7 @@ namespace GUI {
             default: {
                 return done[current_address];
             }
-            }
+            } */
         }
         // otherwise, we're jumping into a basic block already processed
         else {

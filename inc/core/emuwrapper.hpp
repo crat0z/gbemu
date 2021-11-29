@@ -10,14 +10,13 @@
 namespace core {
 
     class EmuWrapper {
+        Gameboy proc;
+
         std::array<bool, 8192> breakpoints = {};
 
         std::array<uint8_t, 8192> prev_memory = {};
         Registers                 prev_r;
 
-        Gameboy proc;
-
-        op       next_operation;
         uint16_t next_opcode;
 
         bool emu_paused;
@@ -98,8 +97,6 @@ namespace core {
         bool is_breakpoint_set(uint16_t address) const noexcept;
 
         // delegates to Gameboy in case of changes in future
-        uint16_t fetch(uint16_t addr) noexcept;
-        op       decode(uint16_t opc) noexcept;
     };
 } // namespace core
 

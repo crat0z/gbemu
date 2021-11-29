@@ -1,5 +1,4 @@
 #include "core/emuwrapper.hpp"
-#include "core/opcodes.hpp"
 #include <unordered_map>
 #include <iostream>
 #include <fmt/ranges.h>
@@ -60,14 +59,6 @@ namespace core {
         update_state();
     }
 
-    void EmuWrapper::get_next_instruction() noexcept {
-        // we can safely decode next instruction
-        next_opcode = proc.fetch(proc.ctx.r.PC);
-
-        // update our instruction info
-        next_operation = decode(next_opcode);
-    }
-
     void EmuWrapper::reset() noexcept {
         for (auto i = 0; i < 16; ++i) {
             reg_changes[i] = false;
@@ -89,7 +80,7 @@ namespace core {
 
         reset();
 
-        get_next_instruction();
+        //get_next_instruction();
     };
 
     void EmuWrapper::unpause() noexcept {
@@ -107,9 +98,9 @@ namespace core {
     void EmuWrapper::step_over() noexcept {
         // step over is a single step if it isn't a call
         if (is_paused()) {
-            get_next_instruction();
+            //get_next_instruction();
 
-            if (next_operation == op::CALL || next_operation == op::SYS) {
+            if (false) {
                 set_destination(proc.ctx.r.PC + 2);
                 unpause();
             }
@@ -130,19 +121,8 @@ namespace core {
 
     void EmuWrapper::cycle() noexcept {
         // if we hit a breakpoint, we've reached a destination
-        if (breakpoints[proc.ctx.r.PC]) {
-            destination = proc.ctx.r.PC;
-            pause();
-        }
-        else if (reached_destination()) {
-            pause();
-        }
-        else if (being_debugged()) {
-            debug_cycle();
-        }
-        else {
-            proc.cycle();
-        }
+
+        proc.cycle();
     }
 
     bool EmuWrapper::reached_destination() const noexcept { return proc.ctx.r.PC == destination; }
@@ -168,9 +148,6 @@ namespace core {
     bool EmuWrapper::is_paused() const noexcept { return emu_paused; }
     // only read values from this class if we are both paused and not being run by debugger
     bool EmuWrapper::is_readable() const noexcept { return is_paused() && !being_debugged(); }
-
-    uint16_t EmuWrapper::fetch(uint16_t addr) noexcept { return proc.fetch(addr); }
-    op       EmuWrapper::decode(uint16_t opc) noexcept { return proc.decode(opc); }
 
     uint16_t& EmuWrapper::get_PC() noexcept { return proc.ctx.r.PC; }
     void      EmuWrapper::set_PC(uint8_t val) noexcept { proc.ctx.r.PC = val; }

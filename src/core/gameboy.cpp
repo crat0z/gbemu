@@ -28,17 +28,6 @@ namespace core {
         cycle_count = 0;
     }
 
-    uint16_t Gameboy::fetch(uint16_t addr) {
-
-        //auto code = *reinterpret_cast<uint16_t*>(&ctx.m[addr]);
-
-        return addr;
-    }
-
-    op Gameboy::decode([[maybe_unused]] uint16_t opc) { return op::UNKNOWN; }
-
-    void Gameboy::execute() {}
-
     void Gameboy::cycle() {
         static auto last_cycle = 0;
         static auto result     = 0;
@@ -55,14 +44,20 @@ namespace core {
         }
         ctx.TIMA_update(last_cycle);
 
+        //std::cout << ctx.print();
+
         if (!ctx.halted) {
             auto op = ctx.imm8();
 
             if (op == 0xCB) {
-                op     = ctx.imm8();
+                op = ctx.imm8();
+                //std::cout << op_cb_str_table[op](ctx);
+                //std::cout << '\n';
                 result = cb_table[op](ctx);
             }
             else {
+                //std::cout << op_str_table[op](ctx);
+                //std::cout << '\n';
                 result = op_table[op](ctx);
             }
             last_cycle = result;
