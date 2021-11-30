@@ -20,34 +20,30 @@ namespace {
     void OP_INLINE JP(core::Context& c, auto target) { c.r.PC = target; }
 
     void OP_INLINE LD(auto& first, auto second) { first = second; }
-    void OP_INLINE ADD(core::Context& c, auto& first, auto second) {
-        // 8 bit case
-        if (sizeof(first) == 1) {
-            c.r.set_halfcarry((first & 0xF) + (second & 0xF) > 0x0F);
-            c.r.set_carry((unsigned)first + (unsigned)second > 0xFF);
 
-            first += second;
-            c.r.set_zero(first == 0);
-        }
-        // 16 bit first operand, two cases
-        else {
-            // ADD SP, r8
-            if (sizeof(second) == 1) {
-                c.r.set_halfcarry((first & 0xF) + (second & 0xF) > 0xF);
-                c.r.set_carry(((unsigned)first & 0xFF) + ((unsigned)second & 0xFF) > 0xFF);
+    void OP_INLINE ADD(core::Context& c, uint8_t& first, uint8_t second) {
+        c.r.set_halfcarry((first & 0xF) + (second & 0xF) > 0x0F);
+        c.r.set_carry((unsigned)first + (unsigned)second > 0xFF);
 
-                first += second;
-            }
-            // 16 bit second operand
-            else {
-                uint16_t test = (first & 0xFFF) + (second & 0xFFF);
-                c.r.set_halfcarry(test & 0x1000);
-                c.r.set_carry(((unsigned)first + (unsigned)second) > 0xFFFF);
-
-                first += second;
-            }
-        }
+        first += second;
+        c.r.set_zero(first == 0);
     }
+
+    void OP_INLINE ADD(core::Context& c, uint16_t& first, int8_t second) {
+        c.r.set_halfcarry((first & 0xF) + (second & 0xF) > 0xF);
+        c.r.set_carry(((unsigned)first & 0xFF) + ((unsigned)second & 0xFF) > 0xFF);
+
+        first += second;
+    }
+
+    void OP_INLINE ADD(core::Context& c, uint16_t& first, uint16_t second) {
+        uint16_t test = (first & 0xFFF) + (second & 0xFFF);
+        c.r.set_halfcarry(test & 0x1000);
+        c.r.set_carry(((unsigned)first + (unsigned)second) > 0xFFFF);
+
+        first += second;
+    }
+
     void OP_INLINE SUB(core::Context& c, auto first) {
         // always 8 bit operand
         auto& A = c.r.A;
@@ -310,6 +306,5082 @@ namespace {
         RET(c);
         EI(c);
     }
+
+    namespace {
+
+        int opcode_0x00([[maybe_unused]] core::Context& ctx) {
+            /*  mnemonic: NOP
+	        *  length: 1
+	        *  cycles: 4
+	        *  affects: - - - -
+	        */
+            return 4;
+        }
+        int opcode_0x01(core::Context& ctx) {
+            /*  mnemonic: LD BC,d16
+			*  length: 3
+			*  cycles: 12
+			*  affects: - - - -
+			*/
+            LD(ctx.r.BC, ctx.imm16());
+            return 12;
+        }
+        int opcode_0x02(core::Context& ctx) {
+            /*  mnemonic: LD (BC),A
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            uint16_t temp;
+            LD(temp, ctx.r.A);
+            ctx.write8(ctx.r.BC, temp);
+            return 8;
+        }
+        int opcode_0x03(core::Context& ctx) {
+            /*  mnemonic: INC BC
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            INC(ctx, ctx.r.BC);
+            return 8;
+        }
+        int opcode_0x04(core::Context& ctx) {
+            /*  mnemonic: INC B
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H -
+			*/
+            INC(ctx, ctx.r.B);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x05(core::Context& ctx) {
+            /*  mnemonic: DEC B
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H -
+			*/
+            DEC(ctx, ctx.r.B);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x06(core::Context& ctx) {
+            /*  mnemonic: LD B,d8
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.B, ctx.imm8());
+            return 8;
+        }
+        int opcode_0x07(core::Context& ctx) {
+            /*  mnemonic: RLCA
+			*  length: 1
+			*  cycles: 4
+			*  affects: 0 0 0 C
+			*/
+            RLCA(ctx);
+            ctx.r.reset_zero();
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 4;
+        }
+        int opcode_0x08(core::Context& ctx) {
+            /*  mnemonic: LD (a16),SP
+			*  length: 3
+			*  cycles: 20
+			*  affects: - - - -
+			*/
+            uint16_t temp;
+            LD(temp, ctx.r.SP);
+            ctx.write16(ctx.imm16(), temp);
+            return 20;
+        }
+        int opcode_0x09(core::Context& ctx) {
+            /*  mnemonic: ADD HL,BC
+			*  length: 1
+			*  cycles: 8
+			*  affects: - 0 H C
+			*/
+            ADD(ctx, ctx.r.HL, ctx.r.BC);
+            ctx.r.reset_sub();
+            return 8;
+        }
+        int opcode_0x0a(core::Context& ctx) {
+            /*  mnemonic: LD A,(BC)
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.A, ctx.read8(ctx.r.BC));
+            return 8;
+        }
+        int opcode_0x0b(core::Context& ctx) {
+            /*  mnemonic: DEC BC
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            DEC(ctx, ctx.r.BC);
+            return 8;
+        }
+        int opcode_0x0c(core::Context& ctx) {
+            /*  mnemonic: INC C
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H -
+			*/
+            INC(ctx, ctx.r.C);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x0d(core::Context& ctx) {
+            /*  mnemonic: DEC C
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H -
+			*/
+            DEC(ctx, ctx.r.C);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x0e(core::Context& ctx) {
+            /*  mnemonic: LD C,d8
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.C, ctx.imm8());
+            return 8;
+        }
+        int opcode_0x0f(core::Context& ctx) {
+            /*  mnemonic: RRCA
+			*  length: 1
+			*  cycles: 4
+			*  affects: 0 0 0 C
+			*/
+            RRCA(ctx);
+            ctx.r.reset_zero();
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 4;
+        }
+        int opcode_0x10(core::Context& ctx) {
+            /*  mnemonic: STOP 0
+			*  length: 2
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            STOP(ctx);
+            return 4;
+        }
+        int opcode_0x11(core::Context& ctx) {
+            /*  mnemonic: LD DE,d16
+			*  length: 3
+			*  cycles: 12
+			*  affects: - - - -
+			*/
+            LD(ctx.r.DE, ctx.imm16());
+            return 12;
+        }
+        int opcode_0x12(core::Context& ctx) {
+            /*  mnemonic: LD (DE),A
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            uint8_t temp;
+            LD(temp, ctx.r.A);
+            ctx.write8(ctx.r.DE, temp);
+            return 8;
+        }
+        int opcode_0x13(core::Context& ctx) {
+            /*  mnemonic: INC DE
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            INC(ctx, ctx.r.DE);
+            return 8;
+        }
+        int opcode_0x14(core::Context& ctx) {
+            /*  mnemonic: INC D
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H -
+			*/
+            INC(ctx, ctx.r.D);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x15(core::Context& ctx) {
+            /*  mnemonic: DEC D
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H -
+			*/
+            DEC(ctx, ctx.r.D);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x16(core::Context& ctx) {
+            /*  mnemonic: LD D,d8
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.D, ctx.imm8());
+            return 8;
+        }
+        int opcode_0x17(core::Context& ctx) {
+            /*  mnemonic: RLA
+			*  length: 1
+			*  cycles: 4
+			*  affects: 0 0 0 C
+			*/
+            RLA(ctx);
+            ctx.r.reset_zero();
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 4;
+        }
+        int opcode_0x18(core::Context& ctx) {
+            /*  mnemonic: JR r8
+			*  length: 2
+			*  cycles: 12
+			*  affects: - - - -
+			*/
+            JR(ctx, ctx.imm8_signed());
+            return 12;
+        }
+        int opcode_0x19(core::Context& ctx) {
+            /*  mnemonic: ADD HL,DE
+			*  length: 1
+			*  cycles: 8
+			*  affects: - 0 H C
+			*/
+            ADD(ctx, ctx.r.HL, ctx.r.DE);
+            ctx.r.reset_sub();
+            return 8;
+        }
+        int opcode_0x1a(core::Context& ctx) {
+            /*  mnemonic: LD A,(DE)
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.A, ctx.read8(ctx.r.DE));
+            return 8;
+        }
+        int opcode_0x1b(core::Context& ctx) {
+            /*  mnemonic: DEC DE
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            DEC(ctx, ctx.r.DE);
+            return 8;
+        }
+        int opcode_0x1c(core::Context& ctx) {
+            /*  mnemonic: INC E
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H -
+			*/
+            INC(ctx, ctx.r.E);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x1d(core::Context& ctx) {
+            /*  mnemonic: DEC E
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H -
+			*/
+            DEC(ctx, ctx.r.E);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x1e(core::Context& ctx) {
+            /*  mnemonic: LD E,d8
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.E, ctx.imm8());
+            return 8;
+        }
+        int opcode_0x1f(core::Context& ctx) {
+            /*  mnemonic: RRA
+			*  length: 1
+			*  cycles: 4
+			*  affects: 0 0 0 C
+			*/
+            RRA(ctx);
+            ctx.r.reset_zero();
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 4;
+        }
+        int opcode_0x20(core::Context& ctx) {
+            /*  mnemonic: JR NZ,r8
+			*  length: 2
+			*  cycles: 12/8
+			*  affects: - - - -
+			*/
+            return JR(ctx, !ctx.r.get_zero(), ctx.imm8_signed(), 12, 8);
+        }
+        int opcode_0x21(core::Context& ctx) {
+            /*  mnemonic: LD HL,d16
+			*  length: 3
+			*  cycles: 12
+			*  affects: - - - -
+			*/
+            LD(ctx.r.HL, ctx.imm16());
+            return 12;
+        }
+        int opcode_0x22(core::Context& ctx) {
+            /*  mnemonic: LD (HL+),A
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            uint8_t temp;
+            LD(temp, ctx.r.A);
+            ctx.write8(ctx.r.HL++, temp);
+            return 8;
+        }
+        int opcode_0x23(core::Context& ctx) {
+            /*  mnemonic: INC HL
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            INC(ctx, ctx.r.HL);
+            return 8;
+        }
+        int opcode_0x24(core::Context& ctx) {
+            /*  mnemonic: INC H
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H -
+			*/
+            INC(ctx, ctx.r.H);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x25(core::Context& ctx) {
+            /*  mnemonic: DEC H
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H -
+			*/
+            DEC(ctx, ctx.r.H);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x26(core::Context& ctx) {
+            /*  mnemonic: LD H,d8
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.H, ctx.imm8());
+            return 8;
+        }
+        int opcode_0x27(core::Context& ctx) {
+            /*  mnemonic: DAA
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z - 0 C
+			*/
+            DAA(ctx);
+            ctx.r.reset_halfcarry();
+            return 4;
+        }
+        int opcode_0x28(core::Context& ctx) {
+            /*  mnemonic: JR Z,r8
+			*  length: 2
+			*  cycles: 12/8
+			*  affects: - - - -
+			*/
+            return JR(ctx, ctx.r.get_zero(), ctx.imm8_signed(), 12, 8);
+        }
+        int opcode_0x29(core::Context& ctx) {
+            /*  mnemonic: ADD HL,HL
+			*  length: 1
+			*  cycles: 8
+			*  affects: - 0 H C
+			*/
+            ADD(ctx, ctx.r.HL, ctx.r.HL);
+            ctx.r.reset_sub();
+            return 8;
+        }
+        int opcode_0x2a(core::Context& ctx) {
+            /*  mnemonic: LD A,(HL+)
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.A, ctx.read16(ctx.r.HL++));
+            return 8;
+        }
+        int opcode_0x2b(core::Context& ctx) {
+            /*  mnemonic: DEC HL
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            DEC(ctx, ctx.r.HL);
+            return 8;
+        }
+        int opcode_0x2c(core::Context& ctx) {
+            /*  mnemonic: INC L
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H -
+			*/
+            INC(ctx, ctx.r.L);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x2d(core::Context& ctx) {
+            /*  mnemonic: DEC L
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H -
+			*/
+            DEC(ctx, ctx.r.L);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x2e(core::Context& ctx) {
+            /*  mnemonic: LD L,d8
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.L, ctx.imm8());
+            return 8;
+        }
+        int opcode_0x2f(core::Context& ctx) {
+            /*  mnemonic: CPL
+			*  length: 1
+			*  cycles: 4
+			*  affects: - 1 1 -
+			*/
+            CPL(ctx);
+            ctx.r.set_sub();
+            ctx.r.set_halfcarry();
+            return 4;
+        }
+        int opcode_0x30(core::Context& ctx) {
+            /*  mnemonic: JR NC,r8
+			*  length: 2
+			*  cycles: 12/8
+			*  affects: - - - -
+			*/
+            return JR(ctx, !ctx.r.get_carry(), ctx.imm8_signed(), 12, 8);
+        }
+        int opcode_0x31(core::Context& ctx) {
+            /*  mnemonic: LD SP,d16
+			*  length: 3
+			*  cycles: 12
+			*  affects: - - - -
+			*/
+            LD(ctx.r.SP, ctx.imm16());
+            return 12;
+        }
+        int opcode_0x32(core::Context& ctx) {
+            /*  mnemonic: LD (HL-),A
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            uint8_t temp;
+            LD(temp, ctx.r.A);
+            ctx.write8(ctx.r.HL--, temp);
+            return 8;
+        }
+        int opcode_0x33(core::Context& ctx) {
+            /*  mnemonic: INC SP
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            INC(ctx, ctx.r.SP);
+            return 8;
+        }
+        int opcode_0x34(core::Context& ctx) {
+            /*  mnemonic: INC (HL)
+			*  length: 1
+			*  cycles: 12
+			*  affects: Z 0 H -
+			*/
+            uint8_t temp = ctx.read8(ctx.r.HL);
+            INC(ctx, temp);
+            ctx.write8(ctx.r.HL, temp);
+
+            ctx.r.reset_sub();
+            return 12;
+        }
+        int opcode_0x35(core::Context& ctx) {
+            /*  mnemonic: DEC (HL)
+			*  length: 1
+			*  cycles: 12
+			*  affects: Z 1 H -
+			*/
+            uint8_t temp = ctx.read8(ctx.r.HL);
+            DEC(ctx, temp);
+            ctx.write8(ctx.r.HL, temp);
+
+            ctx.r.set_sub();
+            return 12;
+        }
+        int opcode_0x36(core::Context& ctx) {
+            /*  mnemonic: LD (HL),d8
+			*  length: 2
+			*  cycles: 12
+			*  affects: - - - -
+			*/
+            uint8_t temp;
+            LD(temp, ctx.imm8());
+            ctx.write8(ctx.r.HL, temp);
+            return 12;
+        }
+        int opcode_0x37(core::Context& ctx) {
+            /*  mnemonic: SCF
+			*  length: 1
+			*  cycles: 4
+			*  affects: - 0 0 1
+			*/
+            SCF(ctx);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.set_carry();
+            return 4;
+        }
+        int opcode_0x38(core::Context& ctx) {
+            /*  mnemonic: JR C,r8
+			*  length: 2
+			*  cycles: 12/8
+			*  affects: - - - -
+			*/
+            return JR(ctx, ctx.r.get_carry(), ctx.imm8_signed(), 12, 8);
+        }
+        int opcode_0x39(core::Context& ctx) {
+            /*  mnemonic: ADD HL,SP
+			*  length: 1
+			*  cycles: 8
+			*  affects: - 0 H C
+			*/
+            ADD(ctx, ctx.r.HL, ctx.r.SP);
+            ctx.r.reset_sub();
+            return 8;
+        }
+        int opcode_0x3a(core::Context& ctx) {
+            /*  mnemonic: LD A,(HL-)
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.A, ctx.read16(ctx.r.HL--));
+            return 8;
+        }
+        int opcode_0x3b(core::Context& ctx) {
+            /*  mnemonic: DEC SP
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            DEC(ctx, ctx.r.SP);
+            return 8;
+        }
+        int opcode_0x3c(core::Context& ctx) {
+            /*  mnemonic: INC A
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H -
+			*/
+            INC(ctx, ctx.r.A);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x3d(core::Context& ctx) {
+            /*  mnemonic: DEC A
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H -
+			*/
+            DEC(ctx, ctx.r.A);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x3e(core::Context& ctx) {
+            /*  mnemonic: LD A,d8
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.A, ctx.imm8());
+            return 8;
+        }
+        int opcode_0x3f(core::Context& ctx) {
+            /*  mnemonic: CCF
+			*  length: 1
+			*  cycles: 4
+			*  affects: - 0 0 C
+			*/
+            CCF(ctx);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 4;
+        }
+        int opcode_0x40(core::Context& ctx) {
+            /*  mnemonic: LD B,B
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.B, ctx.r.B);
+            return 4;
+        }
+        int opcode_0x41(core::Context& ctx) {
+            /*  mnemonic: LD B,C
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.B, ctx.r.C);
+            return 4;
+        }
+        int opcode_0x42(core::Context& ctx) {
+            /*  mnemonic: LD B,D
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.B, ctx.r.D);
+            return 4;
+        }
+        int opcode_0x43(core::Context& ctx) {
+            /*  mnemonic: LD B,E
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.B, ctx.r.E);
+            return 4;
+        }
+        int opcode_0x44(core::Context& ctx) {
+            /*  mnemonic: LD B,H
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.B, ctx.r.H);
+            return 4;
+        }
+        int opcode_0x45(core::Context& ctx) {
+            /*  mnemonic: LD B,L
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.B, ctx.r.L);
+            return 4;
+        }
+        int opcode_0x46(core::Context& ctx) {
+            /*  mnemonic: LD B,(HL)
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.B, ctx.read8(ctx.r.HL));
+            return 8;
+        }
+        int opcode_0x47(core::Context& ctx) {
+            /*  mnemonic: LD B,A
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.B, ctx.r.A);
+            return 4;
+        }
+        int opcode_0x48(core::Context& ctx) {
+            /*  mnemonic: LD C,B
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.C, ctx.r.B);
+            return 4;
+        }
+        int opcode_0x49(core::Context& ctx) {
+            /*  mnemonic: LD C,C
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.C, ctx.r.C);
+            return 4;
+        }
+        int opcode_0x4a(core::Context& ctx) {
+            /*  mnemonic: LD C,D
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.C, ctx.r.D);
+            return 4;
+        }
+        int opcode_0x4b(core::Context& ctx) {
+            /*  mnemonic: LD C,E
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.C, ctx.r.E);
+            return 4;
+        }
+        int opcode_0x4c(core::Context& ctx) {
+            /*  mnemonic: LD C,H
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.C, ctx.r.H);
+            return 4;
+        }
+        int opcode_0x4d(core::Context& ctx) {
+            /*  mnemonic: LD C,L
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.C, ctx.r.L);
+            return 4;
+        }
+        int opcode_0x4e(core::Context& ctx) {
+            /*  mnemonic: LD C,(HL)
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.C, ctx.read8(ctx.r.HL));
+            return 8;
+        }
+        int opcode_0x4f(core::Context& ctx) {
+            /*  mnemonic: LD C,A
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.C, ctx.r.A);
+            return 4;
+        }
+        int opcode_0x50(core::Context& ctx) {
+            /*  mnemonic: LD D,B
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.D, ctx.r.B);
+            return 4;
+        }
+        int opcode_0x51(core::Context& ctx) {
+            /*  mnemonic: LD D,C
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.D, ctx.r.C);
+            return 4;
+        }
+        int opcode_0x52(core::Context& ctx) {
+            /*  mnemonic: LD D,D
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.D, ctx.r.D);
+            return 4;
+        }
+        int opcode_0x53(core::Context& ctx) {
+            /*  mnemonic: LD D,E
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.D, ctx.r.E);
+            return 4;
+        }
+        int opcode_0x54(core::Context& ctx) {
+            /*  mnemonic: LD D,H
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.D, ctx.r.H);
+            return 4;
+        }
+        int opcode_0x55(core::Context& ctx) {
+            /*  mnemonic: LD D,L
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.D, ctx.r.L);
+            return 4;
+        }
+        int opcode_0x56(core::Context& ctx) {
+            /*  mnemonic: LD D,(HL)
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.D, ctx.read8(ctx.r.HL));
+            return 8;
+        }
+        int opcode_0x57(core::Context& ctx) {
+            /*  mnemonic: LD D,A
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.D, ctx.r.A);
+            return 4;
+        }
+        int opcode_0x58(core::Context& ctx) {
+            /*  mnemonic: LD E,B
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.E, ctx.r.B);
+            return 4;
+        }
+        int opcode_0x59(core::Context& ctx) {
+            /*  mnemonic: LD E,C
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.E, ctx.r.C);
+            return 4;
+        }
+        int opcode_0x5a(core::Context& ctx) {
+            /*  mnemonic: LD E,D
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.E, ctx.r.D);
+            return 4;
+        }
+        int opcode_0x5b(core::Context& ctx) {
+            /*  mnemonic: LD E,E
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.E, ctx.r.E);
+            return 4;
+        }
+        int opcode_0x5c(core::Context& ctx) {
+            /*  mnemonic: LD E,H
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.E, ctx.r.H);
+            return 4;
+        }
+        int opcode_0x5d(core::Context& ctx) {
+            /*  mnemonic: LD E,L
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.E, ctx.r.L);
+            return 4;
+        }
+        int opcode_0x5e(core::Context& ctx) {
+            /*  mnemonic: LD E,(HL)
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.E, ctx.read8(ctx.r.HL));
+            return 8;
+        }
+        int opcode_0x5f(core::Context& ctx) {
+            /*  mnemonic: LD E,A
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.E, ctx.r.A);
+            return 4;
+        }
+        int opcode_0x60(core::Context& ctx) {
+            /*  mnemonic: LD H,B
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.H, ctx.r.B);
+            return 4;
+        }
+        int opcode_0x61(core::Context& ctx) {
+            /*  mnemonic: LD H,C
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.H, ctx.r.C);
+            return 4;
+        }
+        int opcode_0x62(core::Context& ctx) {
+            /*  mnemonic: LD H,D
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.H, ctx.r.D);
+            return 4;
+        }
+        int opcode_0x63(core::Context& ctx) {
+            /*  mnemonic: LD H,E
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.H, ctx.r.E);
+            return 4;
+        }
+        int opcode_0x64(core::Context& ctx) {
+            /*  mnemonic: LD H,H
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.H, ctx.r.H);
+            return 4;
+        }
+        int opcode_0x65(core::Context& ctx) {
+            /*  mnemonic: LD H,L
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.H, ctx.r.L);
+            return 4;
+        }
+        int opcode_0x66(core::Context& ctx) {
+            /*  mnemonic: LD H,(HL)
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.H, ctx.read8(ctx.r.HL));
+            return 8;
+        }
+        int opcode_0x67(core::Context& ctx) {
+            /*  mnemonic: LD H,A
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.H, ctx.r.A);
+            return 4;
+        }
+        int opcode_0x68(core::Context& ctx) {
+            /*  mnemonic: LD L,B
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.L, ctx.r.B);
+            return 4;
+        }
+        int opcode_0x69(core::Context& ctx) {
+            /*  mnemonic: LD L,C
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.L, ctx.r.C);
+            return 4;
+        }
+        int opcode_0x6a(core::Context& ctx) {
+            /*  mnemonic: LD L,D
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.L, ctx.r.D);
+            return 4;
+        }
+        int opcode_0x6b(core::Context& ctx) {
+            /*  mnemonic: LD L,E
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.L, ctx.r.E);
+            return 4;
+        }
+        int opcode_0x6c(core::Context& ctx) {
+            /*  mnemonic: LD L,H
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.L, ctx.r.H);
+            return 4;
+        }
+        int opcode_0x6d(core::Context& ctx) {
+            /*  mnemonic: LD L,L
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.L, ctx.r.L);
+            return 4;
+        }
+        int opcode_0x6e(core::Context& ctx) {
+            /*  mnemonic: LD L,(HL)
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.L, ctx.read8(ctx.r.HL));
+            return 8;
+        }
+        int opcode_0x6f(core::Context& ctx) {
+            /*  mnemonic: LD L,A
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.L, ctx.r.A);
+            return 4;
+        }
+        int opcode_0x70(core::Context& ctx) {
+            /*  mnemonic: LD (HL),B
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            uint8_t temp;
+            LD(temp, ctx.r.B);
+            ctx.write8(ctx.r.HL, temp);
+            return 8;
+        }
+        int opcode_0x71(core::Context& ctx) {
+            /*  mnemonic: LD (HL),C
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            uint8_t temp;
+            LD(temp, ctx.r.C);
+            ctx.write8(ctx.r.HL, temp);
+            return 8;
+        }
+        int opcode_0x72(core::Context& ctx) {
+            /*  mnemonic: LD (HL),D
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            uint8_t temp;
+            LD(temp, ctx.r.D);
+            ctx.write8(ctx.r.HL, temp);
+            return 8;
+        }
+        int opcode_0x73(core::Context& ctx) {
+            /*  mnemonic: LD (HL),E
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            uint8_t temp;
+            LD(temp, ctx.r.E);
+            ctx.write8(ctx.r.HL, temp);
+            return 8;
+        }
+        int opcode_0x74(core::Context& ctx) {
+            /*  mnemonic: LD (HL),H
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            uint8_t temp;
+            LD(temp, ctx.r.H);
+            ctx.write8(ctx.r.HL, temp);
+            return 8;
+        }
+        int opcode_0x75(core::Context& ctx) {
+            /*  mnemonic: LD (HL),L
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            uint8_t temp;
+            LD(temp, ctx.r.L);
+            ctx.write8(ctx.r.HL, temp);
+            return 8;
+        }
+        int opcode_0x76([[maybe_unused]] core::Context& ctx) {
+            /*  mnemonic: HALT
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            ctx.halted = true;
+            return 4;
+        }
+        int opcode_0x77(core::Context& ctx) {
+            /*  mnemonic: LD (HL),A
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            uint8_t temp;
+            LD(temp, ctx.r.A);
+            ctx.write8(ctx.r.HL, temp);
+            return 8;
+        }
+        int opcode_0x78(core::Context& ctx) {
+            /*  mnemonic: LD A,B
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.A, ctx.r.B);
+            return 4;
+        }
+        int opcode_0x79(core::Context& ctx) {
+            /*  mnemonic: LD A,C
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.A, ctx.r.C);
+            return 4;
+        }
+        int opcode_0x7a(core::Context& ctx) {
+            /*  mnemonic: LD A,D
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.A, ctx.r.D);
+            return 4;
+        }
+        int opcode_0x7b(core::Context& ctx) {
+            /*  mnemonic: LD A,E
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.A, ctx.r.E);
+            return 4;
+        }
+        int opcode_0x7c(core::Context& ctx) {
+            /*  mnemonic: LD A,H
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.A, ctx.r.H);
+            return 4;
+        }
+        int opcode_0x7d(core::Context& ctx) {
+            /*  mnemonic: LD A,L
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.A, ctx.r.L);
+            return 4;
+        }
+        int opcode_0x7e(core::Context& ctx) {
+            /*  mnemonic: LD A,(HL)
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.A, ctx.read8(ctx.r.HL));
+            return 8;
+        }
+        int opcode_0x7f(core::Context& ctx) {
+            /*  mnemonic: LD A,A
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            LD(ctx.r.A, ctx.r.A);
+            return 4;
+        }
+        int opcode_0x80(core::Context& ctx) {
+            /*  mnemonic: ADD A,B
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H C
+			*/
+            ADD(ctx, ctx.r.A, ctx.r.B);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x81(core::Context& ctx) {
+            /*  mnemonic: ADD A,C
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H C
+			*/
+            ADD(ctx, ctx.r.A, ctx.r.C);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x82(core::Context& ctx) {
+            /*  mnemonic: ADD A,D
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H C
+			*/
+            ADD(ctx, ctx.r.A, ctx.r.D);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x83(core::Context& ctx) {
+            /*  mnemonic: ADD A,E
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H C
+			*/
+            ADD(ctx, ctx.r.A, ctx.r.E);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x84(core::Context& ctx) {
+            /*  mnemonic: ADD A,H
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H C
+			*/
+            ADD(ctx, ctx.r.A, ctx.r.H);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x85(core::Context& ctx) {
+            /*  mnemonic: ADD A,L
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H C
+			*/
+            ADD(ctx, ctx.r.A, ctx.r.L);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x86(core::Context& ctx) {
+            /*  mnemonic: ADD A,(HL)
+			*  length: 1
+			*  cycles: 8
+			*  affects: Z 0 H C
+			*/
+            ADD(ctx, ctx.r.A, ctx.read8(ctx.r.HL));
+            ctx.r.reset_sub();
+            return 8;
+        }
+        int opcode_0x87(core::Context& ctx) {
+            /*  mnemonic: ADD A,A
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H C
+			*/
+            ADD(ctx, ctx.r.A, ctx.r.A);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x88(core::Context& ctx) {
+            /*  mnemonic: ADC A,B
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H C
+			*/
+            ADC(ctx, ctx.r.A, ctx.r.B);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x89(core::Context& ctx) {
+            /*  mnemonic: ADC A,C
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H C
+			*/
+            ADC(ctx, ctx.r.A, ctx.r.C);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x8a(core::Context& ctx) {
+            /*  mnemonic: ADC A,D
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H C
+			*/
+            ADC(ctx, ctx.r.A, ctx.r.D);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x8b(core::Context& ctx) {
+            /*  mnemonic: ADC A,E
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H C
+			*/
+            ADC(ctx, ctx.r.A, ctx.r.E);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x8c(core::Context& ctx) {
+            /*  mnemonic: ADC A,H
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H C
+			*/
+            ADC(ctx, ctx.r.A, ctx.r.H);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x8d(core::Context& ctx) {
+            /*  mnemonic: ADC A,L
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H C
+			*/
+            ADC(ctx, ctx.r.A, ctx.r.L);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x8e(core::Context& ctx) {
+            /*  mnemonic: ADC A,(HL)
+			*  length: 1
+			*  cycles: 8
+			*  affects: Z 0 H C
+			*/
+            ADC(ctx, ctx.r.A, ctx.read8(ctx.r.HL));
+            ctx.r.reset_sub();
+            return 8;
+        }
+        int opcode_0x8f(core::Context& ctx) {
+            /*  mnemonic: ADC A,A
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 H C
+			*/
+            ADC(ctx, ctx.r.A, ctx.r.A);
+            ctx.r.reset_sub();
+            return 4;
+        }
+        int opcode_0x90(core::Context& ctx) {
+            /*  mnemonic: SUB B
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            SUB(ctx, ctx.r.B);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x91(core::Context& ctx) {
+            /*  mnemonic: SUB C
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            SUB(ctx, ctx.r.C);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x92(core::Context& ctx) {
+            /*  mnemonic: SUB D
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            SUB(ctx, ctx.r.D);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x93(core::Context& ctx) {
+            /*  mnemonic: SUB E
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            SUB(ctx, ctx.r.E);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x94(core::Context& ctx) {
+            /*  mnemonic: SUB H
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            SUB(ctx, ctx.r.H);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x95(core::Context& ctx) {
+            /*  mnemonic: SUB L
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            SUB(ctx, ctx.r.L);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x96(core::Context& ctx) {
+            /*  mnemonic: SUB (HL)
+			*  length: 1
+			*  cycles: 8
+			*  affects: Z 1 H C
+			*/
+            SUB(ctx, ctx.read8(ctx.r.HL));
+            ctx.r.set_sub();
+            return 8;
+        }
+        int opcode_0x97(core::Context& ctx) {
+            /*  mnemonic: SUB A
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            SUB(ctx, ctx.r.A);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x98(core::Context& ctx) {
+            /*  mnemonic: SBC A,B
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            SBC(ctx, ctx.r.A, ctx.r.B);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x99(core::Context& ctx) {
+            /*  mnemonic: SBC A,C
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            SBC(ctx, ctx.r.A, ctx.r.C);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x9a(core::Context& ctx) {
+            /*  mnemonic: SBC A,D
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            SBC(ctx, ctx.r.A, ctx.r.D);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x9b(core::Context& ctx) {
+            /*  mnemonic: SBC A,E
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            SBC(ctx, ctx.r.A, ctx.r.E);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x9c(core::Context& ctx) {
+            /*  mnemonic: SBC A,H
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            SBC(ctx, ctx.r.A, ctx.r.H);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x9d(core::Context& ctx) {
+            /*  mnemonic: SBC A,L
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            SBC(ctx, ctx.r.A, ctx.r.L);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0x9e(core::Context& ctx) {
+            /*  mnemonic: SBC A,(HL)
+			*  length: 1
+			*  cycles: 8
+			*  affects: Z 1 H C
+			*/
+            SBC(ctx, ctx.r.A, ctx.read8(ctx.r.HL));
+            ctx.r.set_sub();
+            return 8;
+        }
+        int opcode_0x9f(core::Context& ctx) {
+            /*  mnemonic: SBC A,A
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            SBC(ctx, ctx.r.A, ctx.r.A);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0xa0(core::Context& ctx) {
+            /*  mnemonic: AND B
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 1 0
+			*/
+
+            AND(ctx, ctx.r.B);
+
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xa1(core::Context& ctx) {
+            /*  mnemonic: AND C
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 1 0
+			*/
+            AND(ctx, ctx.r.C);
+
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xa2(core::Context& ctx) {
+            /*  mnemonic: AND D
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 1 0
+			*/
+            AND(ctx, ctx.r.D);
+
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xa3(core::Context& ctx) {
+            /*  mnemonic: AND E
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 1 0
+			*/
+            AND(ctx, ctx.r.E);
+
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xa4(core::Context& ctx) {
+            /*  mnemonic: AND H
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 1 0
+			*/
+            AND(ctx, ctx.r.H);
+
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xa5(core::Context& ctx) {
+            /*  mnemonic: AND L
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 1 0
+			*/
+            AND(ctx, ctx.r.L);
+
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xa6(core::Context& ctx) {
+            /*  mnemonic: AND (HL)
+			*  length: 1
+			*  cycles: 8
+			*  affects: Z 0 1 0
+			*/
+            AND(ctx, ctx.read8(ctx.r.HL));
+
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            ctx.r.reset_carry();
+            return 8;
+        }
+        int opcode_0xa7(core::Context& ctx) {
+            /*  mnemonic: AND A
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 1 0
+			*/
+            AND(ctx, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xa8(core::Context& ctx) {
+            /*  mnemonic: XOR B
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 0 0
+			*/
+            XOR(ctx, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xa9(core::Context& ctx) {
+            /*  mnemonic: XOR C
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 0 0
+			*/
+            XOR(ctx, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xaa(core::Context& ctx) {
+            /*  mnemonic: XOR D
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 0 0
+			*/
+            XOR(ctx, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xab(core::Context& ctx) {
+            /*  mnemonic: XOR E
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 0 0
+			*/
+            XOR(ctx, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xac(core::Context& ctx) {
+            /*  mnemonic: XOR H
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 0 0
+			*/
+            XOR(ctx, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xad(core::Context& ctx) {
+            /*  mnemonic: XOR L
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 0 0
+			*/
+            XOR(ctx, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xae(core::Context& ctx) {
+            /*  mnemonic: XOR (HL)
+			*  length: 1
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            XOR(ctx, ctx.read8(ctx.r.HL));
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 8;
+        }
+        int opcode_0xaf(core::Context& ctx) {
+            /*  mnemonic: XOR A
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 0 0
+			*/
+            XOR(ctx, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xb0(core::Context& ctx) {
+            /*  mnemonic: OR B
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 0 0
+			*/
+            OR(ctx, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xb1(core::Context& ctx) {
+            /*  mnemonic: OR C
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 0 0
+			*/
+            OR(ctx, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xb2(core::Context& ctx) {
+            /*  mnemonic: OR D
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 0 0
+			*/
+            OR(ctx, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xb3(core::Context& ctx) {
+            /*  mnemonic: OR E
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 0 0
+			*/
+            OR(ctx, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xb4(core::Context& ctx) {
+            /*  mnemonic: OR H
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 0 0
+			*/
+            OR(ctx, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xb5(core::Context& ctx) {
+            /*  mnemonic: OR L
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 0 0
+			*/
+            OR(ctx, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xb6(core::Context& ctx) {
+            /*  mnemonic: OR (HL)
+			*  length: 1
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            OR(ctx, ctx.read8(ctx.r.HL));
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 8;
+        }
+        int opcode_0xb7(core::Context& ctx) {
+            /*  mnemonic: OR A
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 0 0 0
+			*/
+            OR(ctx, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 4;
+        }
+        int opcode_0xb8(core::Context& ctx) {
+            /*  mnemonic: CP B
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            CP(ctx, ctx.r.B);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0xb9(core::Context& ctx) {
+            /*  mnemonic: CP C
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            CP(ctx, ctx.r.C);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0xba(core::Context& ctx) {
+            /*  mnemonic: CP D
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            CP(ctx, ctx.r.D);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0xbb(core::Context& ctx) {
+            /*  mnemonic: CP E
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            CP(ctx, ctx.r.E);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0xbc(core::Context& ctx) {
+            /*  mnemonic: CP H
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            CP(ctx, ctx.r.H);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0xbd(core::Context& ctx) {
+            /*  mnemonic: CP L
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            CP(ctx, ctx.r.L);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0xbe(core::Context& ctx) {
+            /*  mnemonic: CP (HL)
+			*  length: 1
+			*  cycles: 8
+			*  affects: Z 1 H C
+			*/
+            CP(ctx, ctx.read8(ctx.r.HL));
+            ctx.r.set_sub();
+            return 8;
+        }
+        int opcode_0xbf(core::Context& ctx) {
+            /*  mnemonic: CP A
+			*  length: 1
+			*  cycles: 4
+			*  affects: Z 1 H C
+			*/
+            CP(ctx, ctx.r.A);
+            ctx.r.set_sub();
+            return 4;
+        }
+        int opcode_0xc0(core::Context& ctx) {
+            /*  mnemonic: RET NZ
+			*  length: 1
+			*  cycles: 20/8
+			*  affects: - - - -
+			*/
+            return RET(ctx, !ctx.r.get_zero(), 20, 8);
+        }
+        int opcode_0xc1(core::Context& ctx) {
+            /*  mnemonic: POP BC
+			*  length: 1
+			*  cycles: 12
+			*  affects: - - - -
+			*/
+            POP(ctx, ctx.r.BC);
+            return 12;
+        }
+        int opcode_0xc2(core::Context& ctx) {
+            /*  mnemonic: JP NZ,a16
+			*  length: 3
+			*  cycles: 16/12
+			*  affects: - - - -
+			*/
+            return JP(ctx, !ctx.r.get_zero(), ctx.imm16(), 16, 12);
+        }
+        int opcode_0xc3(core::Context& ctx) {
+            /*  mnemonic: JP a16
+			*  length: 3
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            JP(ctx, ctx.imm16());
+            return 16;
+        }
+        int opcode_0xc4(core::Context& ctx) {
+            /*  mnemonic: CALL NZ,a16
+			*  length: 3
+			*  cycles: 24/12
+			*  affects: - - - -
+			*/
+            return CALL(ctx, !ctx.r.get_zero(), ctx.imm16(), 24, 12);
+        }
+        int opcode_0xc5(core::Context& ctx) {
+            /*  mnemonic: PUSH BC
+			*  length: 1
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            PUSH(ctx, ctx.r.BC);
+            return 16;
+        }
+        int opcode_0xc6(core::Context& ctx) {
+            /*  mnemonic: ADD A,d8
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 H C
+			*/
+            ADD(ctx, ctx.r.A, ctx.imm8());
+            ctx.r.reset_sub();
+            return 8;
+        }
+        int opcode_0xc7(core::Context& ctx) {
+            /*  mnemonic: RST 00H
+			*  length: 1
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            RST(ctx, 0x00);
+            return 16;
+        }
+        int opcode_0xc8(core::Context& ctx) {
+            /*  mnemonic: RET Z
+			*  length: 1
+			*  cycles: 20/8
+			*  affects: - - - -
+			*/
+            return RET(ctx, ctx.r.get_zero(), 20, 8);
+        }
+        int opcode_0xc9(core::Context& ctx) {
+            /*  mnemonic: RET
+			*  length: 1
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            RET(ctx);
+            return 16;
+        }
+        int opcode_0xca(core::Context& ctx) {
+            /*  mnemonic: JP Z,a16
+			*  length: 3
+			*  cycles: 16/12
+			*  affects: - - - -
+			*/
+            return JP(ctx, ctx.r.get_zero(), ctx.imm16(), 16, 12);
+        }
+        int opcode_0xcc(core::Context& ctx) {
+            /*  mnemonic: CALL Z,a16
+			*  length: 3
+			*  cycles: 24/12
+			*  affects: - - - -
+			*/
+            return CALL(ctx, ctx.r.get_zero(), ctx.imm16(), 24, 12);
+        }
+        int opcode_0xcd(core::Context& ctx) {
+            /*  mnemonic: CALL a16
+			*  length: 3
+			*  cycles: 24
+			*  affects: - - - -
+			*/
+            CALL(ctx, ctx.imm16());
+            return 24;
+        }
+        int opcode_0xce(core::Context& ctx) {
+            /*  mnemonic: ADC A,d8
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 H C
+			*/
+            ADC(ctx, ctx.r.A, ctx.imm8());
+            ctx.r.reset_sub();
+            return 8;
+        }
+        int opcode_0xcf(core::Context& ctx) {
+            /*  mnemonic: RST 08H
+			*  length: 1
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            RST(ctx, 0x08);
+            return 16;
+        }
+        int opcode_0xd0(core::Context& ctx) {
+            /*  mnemonic: RET NC
+			*  length: 1
+			*  cycles: 20/8
+			*  affects: - - - -
+			*/
+            return RET(ctx, !ctx.r.get_carry(), 20, 8);
+        }
+        int opcode_0xd1(core::Context& ctx) {
+            /*  mnemonic: POP DE
+			*  length: 1
+			*  cycles: 12
+			*  affects: - - - -
+			*/
+            POP(ctx, ctx.r.DE);
+            return 12;
+        }
+        int opcode_0xd2(core::Context& ctx) {
+            /*  mnemonic: JP NC,a16
+			*  length: 3
+			*  cycles: 16/12
+			*  affects: - - - -
+			*/
+            return JP(ctx, !ctx.r.get_carry(), ctx.imm16(), 16, 12);
+        }
+        int opcode_0xd3([[maybe_unused]] core::Context& ctx) {
+            throw std::runtime_error("invalid instruction");
+        }
+        int opcode_0xd4(core::Context& ctx) {
+            /*  mnemonic: CALL NC,a16
+			*  length: 3
+			*  cycles: 24/12
+			*  affects: - - - -
+			*/
+            return CALL(ctx, !ctx.r.get_carry(), ctx.imm16(), 24, 12);
+        }
+        int opcode_0xd5(core::Context& ctx) {
+            /*  mnemonic: PUSH DE
+			*  length: 1
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            PUSH(ctx, ctx.r.DE);
+            return 16;
+        }
+        int opcode_0xd6(core::Context& ctx) {
+            /*  mnemonic: SUB d8
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 1 H C
+			*/
+            SUB(ctx, ctx.imm8());
+            ctx.r.set_sub();
+            return 8;
+        }
+        int opcode_0xd7(core::Context& ctx) {
+            /*  mnemonic: RST 10H
+			*  length: 1
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            RST(ctx, 0x10);
+            return 16;
+        }
+        int opcode_0xd8(core::Context& ctx) {
+            /*  mnemonic: RET C
+			*  length: 1
+			*  cycles: 20/8
+			*  affects: - - - -
+			*/
+            return RET(ctx, ctx.r.get_carry(), 20, 8);
+        }
+        int opcode_0xd9(core::Context& ctx) {
+            /*  mnemonic: RETI
+			*  length: 1
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            RETI(ctx);
+            return 16;
+        }
+        int opcode_0xda(core::Context& ctx) {
+            /*  mnemonic: JP C,a16
+			*  length: 3
+			*  cycles: 16/12
+			*  affects: - - - -
+			*/
+            return JP(ctx, ctx.r.get_carry(), ctx.imm16(), 16, 12);
+        }
+        int opcode_0xdb([[maybe_unused]] core::Context& ctx) {
+            throw std::runtime_error("invalid instruction");
+        }
+        int opcode_0xdc(core::Context& ctx) {
+            /*  mnemonic: CALL C,a16
+			*  length: 3
+			*  cycles: 24/12
+			*  affects: - - - -
+			*/
+            return CALL(ctx, ctx.r.get_carry(), ctx.imm16(), 24, 12);
+        }
+        int opcode_0xdd([[maybe_unused]] core::Context& ctx) {
+            throw std::runtime_error("invalid instruction");
+        }
+        int opcode_0xde(core::Context& ctx) {
+            /*  mnemonic: SBC A,d8
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 1 H C
+			*/
+            SBC(ctx, ctx.r.A, ctx.imm8());
+            ctx.r.set_sub();
+            return 8;
+        }
+        int opcode_0xdf(core::Context& ctx) {
+            /*  mnemonic: RST 18H
+			*  length: 1
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            RST(ctx, 0x18);
+            return 16;
+        }
+        int opcode_0xe0(core::Context& ctx) {
+            /*  mnemonic: LDH (a8),A
+			*  length: 2
+			*  cycles: 12
+			*  affects: - - - -
+			*/
+            uint8_t temp;
+            LD(temp, ctx.r.A);
+            ctx.write8(0xFF00 + ctx.imm8(), temp);
+            return 12;
+        }
+        int opcode_0xe1(core::Context& ctx) {
+            /*  mnemonic: POP HL
+			*  length: 1
+			*  cycles: 12
+			*  affects: - - - -
+			*/
+            POP(ctx, ctx.r.HL);
+            return 12;
+        }
+        int opcode_0xe2(core::Context& ctx) {
+            /*  mnemonic: LD (C),A
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            uint8_t temp;
+            LD(temp, ctx.r.A);
+            ctx.write8(0xFF00 + ctx.r.C, temp);
+            return 8;
+        }
+        int opcode_0xe3([[maybe_unused]] core::Context& ctx) {
+            throw std::runtime_error("invalid instruction");
+        }
+        int opcode_0xe4([[maybe_unused]] core::Context& ctx) {
+            throw std::runtime_error("invalid instruction");
+        }
+        int opcode_0xe5(core::Context& ctx) {
+            /*  mnemonic: PUSH HL
+			*  length: 1
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            PUSH(ctx, ctx.r.HL);
+            return 16;
+        }
+        int opcode_0xe6(core::Context& ctx) {
+            /*  mnemonic: AND d8
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 0
+			*/
+            AND(ctx, ctx.imm8());
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            ctx.r.reset_carry();
+            return 8;
+        }
+        int opcode_0xe7(core::Context& ctx) {
+            /*  mnemonic: RST 20H
+			*  length: 1
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            RST(ctx, 0x20);
+            return 16;
+        }
+        int opcode_0xe8(core::Context& ctx) {
+            /*  mnemonic: ADD SP,r8
+			*  length: 2
+			*  cycles: 16
+			*  affects: 0 0 H C
+			*/
+            ADD(ctx, ctx.r.SP, ctx.imm8_signed());
+            ctx.r.reset_zero();
+            ctx.r.reset_sub();
+            return 16;
+        }
+        int opcode_0xe9(core::Context& ctx) {
+            /*  mnemonic: JP (HL)
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            JP(ctx, ctx.r.HL);
+            return 4;
+        }
+        int opcode_0xea(core::Context& ctx) {
+            /*  mnemonic: LD (a16),A
+			*  length: 3
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+
+            uint8_t temp;
+            LD(temp, ctx.r.A);
+            ctx.write8(ctx.imm16(), temp);
+            return 16;
+        }
+        int opcode_0xeb([[maybe_unused]] core::Context& ctx) {
+            throw std::runtime_error("invalid instruction");
+        }
+        int opcode_0xec([[maybe_unused]] core::Context& ctx) {
+            throw std::runtime_error("invalid instruction");
+        }
+        int opcode_0xed([[maybe_unused]] core::Context& ctx) {
+            throw std::runtime_error("invalid instruction");
+        }
+        int opcode_0xee(core::Context& ctx) {
+            /*  mnemonic: XOR d8
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            XOR(ctx, ctx.imm8());
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 8;
+        }
+        int opcode_0xef(core::Context& ctx) {
+            /*  mnemonic: RST 28H
+			*  length: 1
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            RST(ctx, 0x28);
+            return 16;
+        }
+        int opcode_0xf0(core::Context& ctx) {
+            /*  mnemonic: LDH A,(a8)
+			*  length: 2
+			*  cycles: 12
+			*  affects: - - - -
+			*/
+            LD(ctx.r.A, ctx.read8(0xFF00 + ctx.imm8()));
+            return 12;
+        }
+        int opcode_0xf1(core::Context& ctx) {
+            /*  mnemonic: POP AF
+			*  length: 1
+			*  cycles: 12
+			*  affects: Z N H C
+			*/
+            POP(ctx, ctx.r.AF);
+            ctx.r.AF &= 0xFFF0;
+            return 12;
+        }
+        int opcode_0xf2(core::Context& ctx) {
+            /*  mnemonic: LD A,(C)
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.A, ctx.read8(0xFF00 + ctx.r.C));
+            return 8;
+        }
+        int opcode_0xf3(core::Context& ctx) {
+            /*  mnemonic: DI
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            DI(ctx);
+            return 4;
+        }
+        int opcode_0xf4([[maybe_unused]] core::Context& ctx) {
+            throw std::runtime_error("invalid instruction");
+        }
+        int opcode_0xf5(core::Context& ctx) {
+            /*  mnemonic: PUSH AF
+			*  length: 1
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            PUSH(ctx, ctx.r.AF);
+            return 16;
+        }
+        int opcode_0xf6(core::Context& ctx) {
+            /*  mnemonic: OR d8
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            OR(ctx, ctx.imm8());
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 8;
+        }
+        int opcode_0xf7(core::Context& ctx) {
+            /*  mnemonic: RST 30H
+			*  length: 1
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            RST(ctx, 0x30);
+            return 16;
+        }
+        int opcode_0xf8(core::Context& ctx) {
+            /*  mnemonic: LD HL,SP+r8
+			*  length: 2
+			*  cycles: 12
+			*  affects: 0 0 H C
+			*/
+            auto offset = ctx.imm8_signed();
+
+            if (((ctx.r.SP & 0xF) + (offset & 0xF)) > 0xF) {
+                ctx.r.set_halfcarry();
+            }
+            else {
+                ctx.r.reset_halfcarry();
+            }
+
+            if (((ctx.r.SP & 0xFF) + (offset & 0xFF)) > 0xFF) {
+                ctx.r.set_carry();
+            }
+            else {
+                ctx.r.reset_carry();
+            }
+
+            LD(ctx.r.HL, ctx.r.SP + offset);
+            ctx.r.reset_zero();
+            ctx.r.reset_sub();
+            return 12;
+        }
+        int opcode_0xf9(core::Context& ctx) {
+            /*  mnemonic: LD SP,HL
+			*  length: 1
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            LD(ctx.r.SP, ctx.r.HL);
+            return 8;
+        }
+        int opcode_0xfa(core::Context& ctx) {
+            /*  mnemonic: LD A,(a16)
+			*  length: 3
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            LD(ctx.r.A, ctx.read8(ctx.imm16()));
+            return 16;
+        }
+        int opcode_0xfb(core::Context& ctx) {
+            /*  mnemonic: EI
+			*  length: 1
+			*  cycles: 4
+			*  affects: - - - -
+			*/
+            EI(ctx);
+            return 4;
+        }
+        int opcode_0xfc([[maybe_unused]] core::Context& ctx) {
+            throw std::runtime_error("invalid instruction");
+        }
+        int opcode_0xfd([[maybe_unused]] core::Context& ctx) {
+            throw std::runtime_error("invalid instruction");
+        }
+        int opcode_0xfe(core::Context& ctx) {
+            /*  mnemonic: CP d8
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 1 H C
+			*/
+            CP(ctx, ctx.imm8());
+            ctx.r.set_sub();
+            return 8;
+        }
+        int opcode_0xff(core::Context& ctx) {
+            /*  mnemonic: RST 38H
+			*  length: 1
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            RST(ctx, 0x38);
+            return 16;
+        }
+        int opcode_0xcb00(core::Context& ctx) {
+            /*  mnemonic: RLC B
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RLC(ctx, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb01(core::Context& ctx) {
+            /*  mnemonic: RLC C
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RLC(ctx, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb02(core::Context& ctx) {
+            /*  mnemonic: RLC D
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RLC(ctx, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb03(core::Context& ctx) {
+            /*  mnemonic: RLC E
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RLC(ctx, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb04(core::Context& ctx) {
+            /*  mnemonic: RLC H
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RLC(ctx, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb05(core::Context& ctx) {
+            /*  mnemonic: RLC L
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RLC(ctx, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb06(core::Context& ctx) {
+            /*  mnemonic: RLC (HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: Z 0 0 C
+			*/
+            uint8_t temp = ctx.read8(ctx.r.HL);
+            RLC(ctx, temp);
+            ctx.write8(ctx.r.HL, temp);
+
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 16;
+        }
+        int opcode_0xcb07(core::Context& ctx) {
+            /*  mnemonic: RLC A
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RLC(ctx, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb08(core::Context& ctx) {
+            /*  mnemonic: RRC B
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RRC(ctx, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb09(core::Context& ctx) {
+            /*  mnemonic: RRC C
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RRC(ctx, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb0a(core::Context& ctx) {
+            /*  mnemonic: RRC D
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RRC(ctx, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb0b(core::Context& ctx) {
+            /*  mnemonic: RRC E
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RRC(ctx, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb0c(core::Context& ctx) {
+            /*  mnemonic: RRC H
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RRC(ctx, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb0d(core::Context& ctx) {
+            /*  mnemonic: RRC L
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RRC(ctx, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb0e(core::Context& ctx) {
+            /*  mnemonic: RRC (HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: Z 0 0 C
+			*/
+            uint8_t temp = ctx.read8(ctx.r.HL);
+
+            RRC(ctx, temp);
+
+            ctx.write8(ctx.r.HL, temp);
+
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 16;
+        }
+        int opcode_0xcb0f(core::Context& ctx) {
+            /*  mnemonic: RRC A
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RRC(ctx, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb10(core::Context& ctx) {
+            /*  mnemonic: RL B
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RL(ctx, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb11(core::Context& ctx) {
+            /*  mnemonic: RL C
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RL(ctx, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb12(core::Context& ctx) {
+            /*  mnemonic: RL D
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RL(ctx, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb13(core::Context& ctx) {
+            /*  mnemonic: RL E
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RL(ctx, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb14(core::Context& ctx) {
+            /*  mnemonic: RL H
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RL(ctx, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb15(core::Context& ctx) {
+            /*  mnemonic: RL L
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RL(ctx, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb16(core::Context& ctx) {
+            /*  mnemonic: RL (HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: Z 0 0 C
+			*/
+            uint8_t temp = ctx.read8(ctx.r.HL);
+            RL(ctx, temp);
+            ctx.write8(ctx.r.HL, temp);
+
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 16;
+        }
+        int opcode_0xcb17(core::Context& ctx) {
+            /*  mnemonic: RL A
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RL(ctx, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb18(core::Context& ctx) {
+            /*  mnemonic: RR B
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RR(ctx, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb19(core::Context& ctx) {
+            /*  mnemonic: RR C
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RR(ctx, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb1a(core::Context& ctx) {
+            /*  mnemonic: RR D
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RR(ctx, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb1b(core::Context& ctx) {
+            /*  mnemonic: RR E
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RR(ctx, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb1c(core::Context& ctx) {
+            /*  mnemonic: RR H
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RR(ctx, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb1d(core::Context& ctx) {
+            /*  mnemonic: RR L
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RR(ctx, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb1e(core::Context& ctx) {
+            /*  mnemonic: RR (HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: Z 0 0 C
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            RR(ctx, temp);
+            ctx.write8(ctx.r.HL, temp);
+
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 16;
+        }
+        int opcode_0xcb1f(core::Context& ctx) {
+            /*  mnemonic: RR A
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            RR(ctx, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb20(core::Context& ctx) {
+            /*  mnemonic: SLA B
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            SLA(ctx, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb21(core::Context& ctx) {
+            /*  mnemonic: SLA C
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            SLA(ctx, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb22(core::Context& ctx) {
+            /*  mnemonic: SLA D
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            SLA(ctx, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb23(core::Context& ctx) {
+            /*  mnemonic: SLA E
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            SLA(ctx, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb24(core::Context& ctx) {
+            /*  mnemonic: SLA H
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            SLA(ctx, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb25(core::Context& ctx) {
+            /*  mnemonic: SLA L
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            SLA(ctx, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb26(core::Context& ctx) {
+            /*  mnemonic: SLA (HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: Z 0 0 C
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            SLA(ctx, temp);
+            ctx.write8(ctx.r.HL, temp);
+
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 16;
+        }
+        int opcode_0xcb27(core::Context& ctx) {
+            /*  mnemonic: SLA A
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            SLA(ctx, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb28(core::Context& ctx) {
+            /*  mnemonic: SRA B
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            SRA(ctx, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb29(core::Context& ctx) {
+            /*  mnemonic: SRA C
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            SRA(ctx, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb2a(core::Context& ctx) {
+            /*  mnemonic: SRA D
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            SRA(ctx, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb2b(core::Context& ctx) {
+            /*  mnemonic: SRA E
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            SRA(ctx, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb2c(core::Context& ctx) {
+            /*  mnemonic: SRA H
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            SRA(ctx, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb2d(core::Context& ctx) {
+            /*  mnemonic: SRA L
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            SRA(ctx, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb2e(core::Context& ctx) {
+            /*  mnemonic: SRA (HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: Z 0 0 0
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            SRA(ctx, temp);
+            ctx.write8(ctx.r.HL, temp);
+
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 16;
+        }
+        int opcode_0xcb2f(core::Context& ctx) {
+            /*  mnemonic: SRA A
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            SRA(ctx, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb30(core::Context& ctx) {
+            /*  mnemonic: SWAP B
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            SWAP(ctx, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 8;
+        }
+        int opcode_0xcb31(core::Context& ctx) {
+            /*  mnemonic: SWAP C
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            SWAP(ctx, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 8;
+        }
+        int opcode_0xcb32(core::Context& ctx) {
+            /*  mnemonic: SWAP D
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            SWAP(ctx, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 8;
+        }
+        int opcode_0xcb33(core::Context& ctx) {
+            /*  mnemonic: SWAP E
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            SWAP(ctx, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 8;
+        }
+        int opcode_0xcb34(core::Context& ctx) {
+            /*  mnemonic: SWAP H
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            SWAP(ctx, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 8;
+        }
+        int opcode_0xcb35(core::Context& ctx) {
+            /*  mnemonic: SWAP L
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            SWAP(ctx, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 8;
+        }
+        int opcode_0xcb36(core::Context& ctx) {
+            /*  mnemonic: SWAP (HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: Z 0 0 0
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            SWAP(ctx, temp);
+            ctx.write8(ctx.r.HL, temp);
+
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 16;
+        }
+        int opcode_0xcb37(core::Context& ctx) {
+            /*  mnemonic: SWAP A
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 0
+			*/
+            SWAP(ctx, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            ctx.r.reset_carry();
+            return 8;
+        }
+        int opcode_0xcb38(core::Context& ctx) {
+            /*  mnemonic: SRL B
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            SRL(ctx, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb39(core::Context& ctx) {
+            /*  mnemonic: SRL C
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            SRL(ctx, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb3a(core::Context& ctx) {
+            /*  mnemonic: SRL D
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            SRL(ctx, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb3b(core::Context& ctx) {
+            /*  mnemonic: SRL E
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            SRL(ctx, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb3c(core::Context& ctx) {
+            /*  mnemonic: SRL H
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            SRL(ctx, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb3d(core::Context& ctx) {
+            /*  mnemonic: SRL L
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            SRL(ctx, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb3e(core::Context& ctx) {
+            /*  mnemonic: SRL (HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: Z 0 0 C
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            SRL(ctx, temp);
+            ctx.write8(ctx.r.HL, temp);
+
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 16;
+        }
+        int opcode_0xcb3f(core::Context& ctx) {
+            /*  mnemonic: SRL A
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 0 C
+			*/
+            SRL(ctx, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.reset_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb40(core::Context& ctx) {
+            /*  mnemonic: BIT 0,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 0, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb41(core::Context& ctx) {
+            /*  mnemonic: BIT 0,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 0, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb42(core::Context& ctx) {
+            /*  mnemonic: BIT 0,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 0, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb43(core::Context& ctx) {
+            /*  mnemonic: BIT 0,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 0, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb44(core::Context& ctx) {
+            /*  mnemonic: BIT 0,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 0, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb45(core::Context& ctx) {
+            /*  mnemonic: BIT 0,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 0, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb46(core::Context& ctx) {
+            /*  mnemonic: BIT 0,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 0, ctx.read8(ctx.r.HL));
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 16;
+        }
+        int opcode_0xcb47(core::Context& ctx) {
+            /*  mnemonic: BIT 0,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 0, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb48(core::Context& ctx) {
+            /*  mnemonic: BIT 1,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 1, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb49(core::Context& ctx) {
+            /*  mnemonic: BIT 1,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 1, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb4a(core::Context& ctx) {
+            /*  mnemonic: BIT 1,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 1, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb4b(core::Context& ctx) {
+            /*  mnemonic: BIT 1,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 1, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb4c(core::Context& ctx) {
+            /*  mnemonic: BIT 1,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 1, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb4d(core::Context& ctx) {
+            /*  mnemonic: BIT 1,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 1, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb4e(core::Context& ctx) {
+            /*  mnemonic: BIT 1,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 1, ctx.read8(ctx.r.HL));
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 16;
+        }
+        int opcode_0xcb4f(core::Context& ctx) {
+            /*  mnemonic: BIT 1,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 1, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb50(core::Context& ctx) {
+            /*  mnemonic: BIT 2,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 2, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb51(core::Context& ctx) {
+            /*  mnemonic: BIT 2,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 2, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb52(core::Context& ctx) {
+            /*  mnemonic: BIT 2,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 2, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb53(core::Context& ctx) {
+            /*  mnemonic: BIT 2,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 2, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb54(core::Context& ctx) {
+            /*  mnemonic: BIT 2,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 2, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb55(core::Context& ctx) {
+            /*  mnemonic: BIT 2,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 2, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb56(core::Context& ctx) {
+            /*  mnemonic: BIT 2,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 2, ctx.read8(ctx.r.HL));
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 16;
+        }
+        int opcode_0xcb57(core::Context& ctx) {
+            /*  mnemonic: BIT 2,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 2, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb58(core::Context& ctx) {
+            /*  mnemonic: BIT 3,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 3, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb59(core::Context& ctx) {
+            /*  mnemonic: BIT 3,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 3, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb5a(core::Context& ctx) {
+            /*  mnemonic: BIT 3,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 3, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb5b(core::Context& ctx) {
+            /*  mnemonic: BIT 3,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 3, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb5c(core::Context& ctx) {
+            /*  mnemonic: BIT 3,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 3, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb5d(core::Context& ctx) {
+            /*  mnemonic: BIT 3,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 3, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb5e(core::Context& ctx) {
+            /*  mnemonic: BIT 3,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 3, ctx.read8(ctx.r.HL));
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 16;
+        }
+        int opcode_0xcb5f(core::Context& ctx) {
+            /*  mnemonic: BIT 3,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 3, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb60(core::Context& ctx) {
+            /*  mnemonic: BIT 4,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 4, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb61(core::Context& ctx) {
+            /*  mnemonic: BIT 4,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 4, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb62(core::Context& ctx) {
+            /*  mnemonic: BIT 4,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 4, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb63(core::Context& ctx) {
+            /*  mnemonic: BIT 4,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 4, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb64(core::Context& ctx) {
+            /*  mnemonic: BIT 4,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 4, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb65(core::Context& ctx) {
+            /*  mnemonic: BIT 4,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 4, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb66(core::Context& ctx) {
+            /*  mnemonic: BIT 4,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 4, ctx.read8(ctx.r.HL));
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 16;
+        }
+        int opcode_0xcb67(core::Context& ctx) {
+            /*  mnemonic: BIT 4,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 4, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb68(core::Context& ctx) {
+            /*  mnemonic: BIT 5,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 5, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb69(core::Context& ctx) {
+            /*  mnemonic: BIT 5,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 5, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb6a(core::Context& ctx) {
+            /*  mnemonic: BIT 5,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 5, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb6b(core::Context& ctx) {
+            /*  mnemonic: BIT 5,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 5, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb6c(core::Context& ctx) {
+            /*  mnemonic: BIT 5,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 5, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb6d(core::Context& ctx) {
+            /*  mnemonic: BIT 5,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 5, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb6e(core::Context& ctx) {
+            /*  mnemonic: BIT 5,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 5, ctx.read8(ctx.r.HL));
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 16;
+        }
+        int opcode_0xcb6f(core::Context& ctx) {
+            /*  mnemonic: BIT 5,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 5, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb70(core::Context& ctx) {
+            /*  mnemonic: BIT 6,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 6, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb71(core::Context& ctx) {
+            /*  mnemonic: BIT 6,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 6, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb72(core::Context& ctx) {
+            /*  mnemonic: BIT 6,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 6, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb73(core::Context& ctx) {
+            /*  mnemonic: BIT 6,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 6, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb74(core::Context& ctx) {
+            /*  mnemonic: BIT 6,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 6, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb75(core::Context& ctx) {
+            /*  mnemonic: BIT 6,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 6, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb76(core::Context& ctx) {
+            /*  mnemonic: BIT 6,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 6, ctx.read8(ctx.r.HL));
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 16;
+        }
+        int opcode_0xcb77(core::Context& ctx) {
+            /*  mnemonic: BIT 6,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 6, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb78(core::Context& ctx) {
+            /*  mnemonic: BIT 7,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 7, ctx.r.B);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb79(core::Context& ctx) {
+            /*  mnemonic: BIT 7,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 7, ctx.r.C);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb7a(core::Context& ctx) {
+            /*  mnemonic: BIT 7,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 7, ctx.r.D);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb7b(core::Context& ctx) {
+            /*  mnemonic: BIT 7,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 7, ctx.r.E);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb7c(core::Context& ctx) {
+            /*  mnemonic: BIT 7,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 7, ctx.r.H);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb7d(core::Context& ctx) {
+            /*  mnemonic: BIT 7,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 7, ctx.r.L);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb7e(core::Context& ctx) {
+            /*  mnemonic: BIT 7,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 7, ctx.read8(ctx.r.HL));
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 16;
+        }
+        int opcode_0xcb7f(core::Context& ctx) {
+            /*  mnemonic: BIT 7,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: Z 0 1 -
+			*/
+            BIT(ctx, 7, ctx.r.A);
+            ctx.r.reset_sub();
+            ctx.r.set_halfcarry();
+            return 8;
+        }
+        int opcode_0xcb80(core::Context& ctx) {
+            /*  mnemonic: RES 0,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(0, ctx.r.B);
+            return 8;
+        }
+        int opcode_0xcb81(core::Context& ctx) {
+            /*  mnemonic: RES 0,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(0, ctx.r.C);
+            return 8;
+        }
+        int opcode_0xcb82(core::Context& ctx) {
+            /*  mnemonic: RES 0,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(0, ctx.r.D);
+            return 8;
+        }
+        int opcode_0xcb83(core::Context& ctx) {
+            /*  mnemonic: RES 0,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(0, ctx.r.E);
+            return 8;
+        }
+        int opcode_0xcb84(core::Context& ctx) {
+            /*  mnemonic: RES 0,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(0, ctx.r.H);
+            return 8;
+        }
+        int opcode_0xcb85(core::Context& ctx) {
+            /*  mnemonic: RES 0,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(0, ctx.r.L);
+            return 8;
+        }
+        int opcode_0xcb86(core::Context& ctx) {
+            /*  mnemonic: RES 0,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            RES(0, temp);
+            ctx.write8(ctx.r.HL, temp);
+            return 16;
+        }
+        int opcode_0xcb87(core::Context& ctx) {
+            /*  mnemonic: RES 0,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(0, ctx.r.A);
+            return 8;
+        }
+        int opcode_0xcb88(core::Context& ctx) {
+            /*  mnemonic: RES 1,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(1, ctx.r.B);
+            return 8;
+        }
+        int opcode_0xcb89(core::Context& ctx) {
+            /*  mnemonic: RES 1,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(1, ctx.r.C);
+            return 8;
+        }
+        int opcode_0xcb8a(core::Context& ctx) {
+            /*  mnemonic: RES 1,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(1, ctx.r.D);
+            return 8;
+        }
+        int opcode_0xcb8b(core::Context& ctx) {
+            /*  mnemonic: RES 1,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(1, ctx.r.E);
+            return 8;
+        }
+        int opcode_0xcb8c(core::Context& ctx) {
+            /*  mnemonic: RES 1,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(1, ctx.r.H);
+            return 8;
+        }
+        int opcode_0xcb8d(core::Context& ctx) {
+            /*  mnemonic: RES 1,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(1, ctx.r.L);
+            return 8;
+        }
+        int opcode_0xcb8e(core::Context& ctx) {
+            /*  mnemonic: RES 1,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            RES(1, temp);
+            ctx.write8(ctx.r.HL, temp);
+            return 16;
+        }
+        int opcode_0xcb8f(core::Context& ctx) {
+            /*  mnemonic: RES 1,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(1, ctx.r.A);
+            return 8;
+        }
+        int opcode_0xcb90(core::Context& ctx) {
+            /*  mnemonic: RES 2,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(2, ctx.r.B);
+            return 8;
+        }
+        int opcode_0xcb91(core::Context& ctx) {
+            /*  mnemonic: RES 2,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(2, ctx.r.C);
+            return 8;
+        }
+        int opcode_0xcb92(core::Context& ctx) {
+            /*  mnemonic: RES 2,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(2, ctx.r.D);
+            return 8;
+        }
+        int opcode_0xcb93(core::Context& ctx) {
+            /*  mnemonic: RES 2,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(2, ctx.r.E);
+            return 8;
+        }
+        int opcode_0xcb94(core::Context& ctx) {
+            /*  mnemonic: RES 2,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(2, ctx.r.H);
+            return 8;
+        }
+        int opcode_0xcb95(core::Context& ctx) {
+            /*  mnemonic: RES 2,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(2, ctx.r.L);
+            return 8;
+        }
+        int opcode_0xcb96(core::Context& ctx) {
+            /*  mnemonic: RES 2,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            RES(2, temp);
+            ctx.write8(ctx.r.HL, temp);
+            return 16;
+        }
+        int opcode_0xcb97(core::Context& ctx) {
+            /*  mnemonic: RES 2,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(2, ctx.r.A);
+            return 8;
+        }
+        int opcode_0xcb98(core::Context& ctx) {
+            /*  mnemonic: RES 3,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(3, ctx.r.B);
+            return 8;
+        }
+        int opcode_0xcb99(core::Context& ctx) {
+            /*  mnemonic: RES 3,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(3, ctx.r.C);
+            return 8;
+        }
+        int opcode_0xcb9a(core::Context& ctx) {
+            /*  mnemonic: RES 3,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(3, ctx.r.D);
+            return 8;
+        }
+        int opcode_0xcb9b(core::Context& ctx) {
+            /*  mnemonic: RES 3,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(3, ctx.r.E);
+            return 8;
+        }
+        int opcode_0xcb9c(core::Context& ctx) {
+            /*  mnemonic: RES 3,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(3, ctx.r.H);
+            return 8;
+        }
+        int opcode_0xcb9d(core::Context& ctx) {
+            /*  mnemonic: RES 3,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(3, ctx.r.L);
+            return 8;
+        }
+        int opcode_0xcb9e(core::Context& ctx) {
+            /*  mnemonic: RES 3,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            RES(3, temp);
+            ctx.write8(ctx.r.HL, temp);
+            return 16;
+        }
+        int opcode_0xcb9f(core::Context& ctx) {
+            /*  mnemonic: RES 3,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(3, ctx.r.A);
+            return 8;
+        }
+        int opcode_0xcba0(core::Context& ctx) {
+            /*  mnemonic: RES 4,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(4, ctx.r.B);
+            return 8;
+        }
+        int opcode_0xcba1(core::Context& ctx) {
+            /*  mnemonic: RES 4,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(4, ctx.r.C);
+            return 8;
+        }
+        int opcode_0xcba2(core::Context& ctx) {
+            /*  mnemonic: RES 4,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(4, ctx.r.D);
+            return 8;
+        }
+        int opcode_0xcba3(core::Context& ctx) {
+            /*  mnemonic: RES 4,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(4, ctx.r.E);
+            return 8;
+        }
+        int opcode_0xcba4(core::Context& ctx) {
+            /*  mnemonic: RES 4,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(4, ctx.r.H);
+            return 8;
+        }
+        int opcode_0xcba5(core::Context& ctx) {
+            /*  mnemonic: RES 4,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(4, ctx.r.L);
+            return 8;
+        }
+        int opcode_0xcba6(core::Context& ctx) {
+            /*  mnemonic: RES 4,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            RES(4, temp);
+            ctx.write8(ctx.r.HL, temp);
+            return 16;
+        }
+        int opcode_0xcba7(core::Context& ctx) {
+            /*  mnemonic: RES 4,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(4, ctx.r.A);
+            return 8;
+        }
+        int opcode_0xcba8(core::Context& ctx) {
+            /*  mnemonic: RES 5,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(5, ctx.r.B);
+            return 8;
+        }
+        int opcode_0xcba9(core::Context& ctx) {
+            /*  mnemonic: RES 5,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(5, ctx.r.C);
+            return 8;
+        }
+        int opcode_0xcbaa(core::Context& ctx) {
+            /*  mnemonic: RES 5,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(5, ctx.r.D);
+            return 8;
+        }
+        int opcode_0xcbab(core::Context& ctx) {
+            /*  mnemonic: RES 5,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(5, ctx.r.E);
+            return 8;
+        }
+        int opcode_0xcbac(core::Context& ctx) {
+            /*  mnemonic: RES 5,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(5, ctx.r.H);
+            return 8;
+        }
+        int opcode_0xcbad(core::Context& ctx) {
+            /*  mnemonic: RES 5,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(5, ctx.r.L);
+            return 8;
+        }
+        int opcode_0xcbae(core::Context& ctx) {
+            /*  mnemonic: RES 5,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            RES(5, temp);
+            ctx.write8(ctx.r.HL, temp);
+            return 16;
+        }
+        int opcode_0xcbaf(core::Context& ctx) {
+            /*  mnemonic: RES 5,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(5, ctx.r.A);
+            return 8;
+        }
+        int opcode_0xcbb0(core::Context& ctx) {
+            /*  mnemonic: RES 6,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(6, ctx.r.B);
+            return 8;
+        }
+        int opcode_0xcbb1(core::Context& ctx) {
+            /*  mnemonic: RES 6,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(6, ctx.r.C);
+            return 8;
+        }
+        int opcode_0xcbb2(core::Context& ctx) {
+            /*  mnemonic: RES 6,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(6, ctx.r.D);
+            return 8;
+        }
+        int opcode_0xcbb3(core::Context& ctx) {
+            /*  mnemonic: RES 6,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(6, ctx.r.E);
+            return 8;
+        }
+        int opcode_0xcbb4(core::Context& ctx) {
+            /*  mnemonic: RES 6,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(6, ctx.r.H);
+            return 8;
+        }
+        int opcode_0xcbb5(core::Context& ctx) {
+            /*  mnemonic: RES 6,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(6, ctx.r.L);
+            return 8;
+        }
+        int opcode_0xcbb6(core::Context& ctx) {
+            /*  mnemonic: RES 6,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            RES(6, temp);
+            ctx.write8(ctx.r.HL, temp);
+            return 16;
+        }
+        int opcode_0xcbb7(core::Context& ctx) {
+            /*  mnemonic: RES 6,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(6, ctx.r.A);
+            return 8;
+        }
+        int opcode_0xcbb8(core::Context& ctx) {
+            /*  mnemonic: RES 7,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(7, ctx.r.B);
+            return 8;
+        }
+        int opcode_0xcbb9(core::Context& ctx) {
+            /*  mnemonic: RES 7,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(7, ctx.r.C);
+            return 8;
+        }
+        int opcode_0xcbba(core::Context& ctx) {
+            /*  mnemonic: RES 7,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(7, ctx.r.D);
+            return 8;
+        }
+        int opcode_0xcbbb(core::Context& ctx) {
+            /*  mnemonic: RES 7,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(7, ctx.r.E);
+            return 8;
+        }
+        int opcode_0xcbbc(core::Context& ctx) {
+            /*  mnemonic: RES 7,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(7, ctx.r.H);
+            return 8;
+        }
+        int opcode_0xcbbd(core::Context& ctx) {
+            /*  mnemonic: RES 7,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(7, ctx.r.L);
+            return 8;
+        }
+        int opcode_0xcbbe(core::Context& ctx) {
+            /*  mnemonic: RES 7,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            RES(7, temp);
+            ctx.write8(ctx.r.HL, temp);
+            return 16;
+        }
+        int opcode_0xcbbf(core::Context& ctx) {
+            /*  mnemonic: RES 7,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            RES(7, ctx.r.A);
+            return 8;
+        }
+        int opcode_0xcbc0(core::Context& ctx) {
+            /*  mnemonic: SET 0,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(0, ctx.r.B);
+            return 8;
+        }
+        int opcode_0xcbc1(core::Context& ctx) {
+            /*  mnemonic: SET 0,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(0, ctx.r.C);
+            return 8;
+        }
+        int opcode_0xcbc2(core::Context& ctx) {
+            /*  mnemonic: SET 0,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(0, ctx.r.D);
+            return 8;
+        }
+        int opcode_0xcbc3(core::Context& ctx) {
+            /*  mnemonic: SET 0,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(0, ctx.r.E);
+            return 8;
+        }
+        int opcode_0xcbc4(core::Context& ctx) {
+            /*  mnemonic: SET 0,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(0, ctx.r.H);
+            return 8;
+        }
+        int opcode_0xcbc5(core::Context& ctx) {
+            /*  mnemonic: SET 0,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(0, ctx.r.L);
+            return 8;
+        }
+        int opcode_0xcbc6(core::Context& ctx) {
+            /*  mnemonic: SET 0,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            SET(0, temp);
+            ctx.write8(ctx.r.HL, temp);
+            return 16;
+        }
+        int opcode_0xcbc7(core::Context& ctx) {
+            /*  mnemonic: SET 0,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(0, ctx.r.A);
+            return 8;
+        }
+        int opcode_0xcbc8(core::Context& ctx) {
+            /*  mnemonic: SET 1,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(1, ctx.r.B);
+            return 8;
+        }
+        int opcode_0xcbc9(core::Context& ctx) {
+            /*  mnemonic: SET 1,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(1, ctx.r.C);
+            return 8;
+        }
+        int opcode_0xcbca(core::Context& ctx) {
+            /*  mnemonic: SET 1,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(1, ctx.r.D);
+            return 8;
+        }
+        int opcode_0xcbcb(core::Context& ctx) {
+            /*  mnemonic: SET 1,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(1, ctx.r.E);
+            return 8;
+        }
+        int opcode_0xcbcc(core::Context& ctx) {
+            /*  mnemonic: SET 1,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(1, ctx.r.H);
+            return 8;
+        }
+        int opcode_0xcbcd(core::Context& ctx) {
+            /*  mnemonic: SET 1,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(1, ctx.r.L);
+            return 8;
+        }
+        int opcode_0xcbce(core::Context& ctx) {
+            /*  mnemonic: SET 1,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            SET(1, temp);
+            ctx.write8(ctx.r.HL, temp);
+            return 16;
+        }
+        int opcode_0xcbcf(core::Context& ctx) {
+            /*  mnemonic: SET 1,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(1, ctx.r.A);
+            return 8;
+        }
+        int opcode_0xcbd0(core::Context& ctx) {
+            /*  mnemonic: SET 2,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(2, ctx.r.B);
+            return 8;
+        }
+        int opcode_0xcbd1(core::Context& ctx) {
+            /*  mnemonic: SET 2,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(2, ctx.r.C);
+            return 8;
+        }
+        int opcode_0xcbd2(core::Context& ctx) {
+            /*  mnemonic: SET 2,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(2, ctx.r.D);
+            return 8;
+        }
+        int opcode_0xcbd3(core::Context& ctx) {
+            /*  mnemonic: SET 2,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(2, ctx.r.E);
+            return 8;
+        }
+        int opcode_0xcbd4(core::Context& ctx) {
+            /*  mnemonic: SET 2,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(2, ctx.r.H);
+            return 8;
+        }
+        int opcode_0xcbd5(core::Context& ctx) {
+            /*  mnemonic: SET 2,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(2, ctx.r.L);
+            return 8;
+        }
+        int opcode_0xcbd6(core::Context& ctx) {
+            /*  mnemonic: SET 2,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            SET(2, temp);
+            ctx.write8(ctx.r.HL, temp);
+            return 16;
+        }
+        int opcode_0xcbd7(core::Context& ctx) {
+            /*  mnemonic: SET 2,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(2, ctx.r.A);
+            return 8;
+        }
+        int opcode_0xcbd8(core::Context& ctx) {
+            /*  mnemonic: SET 3,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(3, ctx.r.B);
+            return 8;
+        }
+        int opcode_0xcbd9(core::Context& ctx) {
+            /*  mnemonic: SET 3,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(3, ctx.r.C);
+            return 8;
+        }
+        int opcode_0xcbda(core::Context& ctx) {
+            /*  mnemonic: SET 3,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(3, ctx.r.D);
+            return 8;
+        }
+        int opcode_0xcbdb(core::Context& ctx) {
+            /*  mnemonic: SET 3,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(3, ctx.r.E);
+            return 8;
+        }
+        int opcode_0xcbdc(core::Context& ctx) {
+            /*  mnemonic: SET 3,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(3, ctx.r.H);
+            return 8;
+        }
+        int opcode_0xcbdd(core::Context& ctx) {
+            /*  mnemonic: SET 3,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(3, ctx.r.L);
+            return 8;
+        }
+        int opcode_0xcbde(core::Context& ctx) {
+            /*  mnemonic: SET 3,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            SET(3, temp);
+            ctx.write8(ctx.r.HL, temp);
+            return 16;
+        }
+        int opcode_0xcbdf(core::Context& ctx) {
+            /*  mnemonic: SET 3,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(3, ctx.r.A);
+            return 8;
+        }
+        int opcode_0xcbe0(core::Context& ctx) {
+            /*  mnemonic: SET 4,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(4, ctx.r.B);
+            return 8;
+        }
+        int opcode_0xcbe1(core::Context& ctx) {
+            /*  mnemonic: SET 4,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(4, ctx.r.C);
+            return 8;
+        }
+        int opcode_0xcbe2(core::Context& ctx) {
+            /*  mnemonic: SET 4,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(4, ctx.r.D);
+            return 8;
+        }
+        int opcode_0xcbe3(core::Context& ctx) {
+            /*  mnemonic: SET 4,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(4, ctx.r.E);
+            return 8;
+        }
+        int opcode_0xcbe4(core::Context& ctx) {
+            /*  mnemonic: SET 4,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(4, ctx.r.H);
+            return 8;
+        }
+        int opcode_0xcbe5(core::Context& ctx) {
+            /*  mnemonic: SET 4,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(4, ctx.r.L);
+            return 8;
+        }
+        int opcode_0xcbe6(core::Context& ctx) {
+            /*  mnemonic: SET 4,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            SET(4, temp);
+            ctx.write8(ctx.r.HL, temp);
+            return 16;
+        }
+        int opcode_0xcbe7(core::Context& ctx) {
+            /*  mnemonic: SET 4,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(4, ctx.r.A);
+            return 8;
+        }
+        int opcode_0xcbe8(core::Context& ctx) {
+            /*  mnemonic: SET 5,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(5, ctx.r.B);
+            return 8;
+        }
+        int opcode_0xcbe9(core::Context& ctx) {
+            /*  mnemonic: SET 5,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(5, ctx.r.C);
+            return 8;
+        }
+        int opcode_0xcbea(core::Context& ctx) {
+            /*  mnemonic: SET 5,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(5, ctx.r.D);
+            return 8;
+        }
+        int opcode_0xcbeb(core::Context& ctx) {
+            /*  mnemonic: SET 5,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(5, ctx.r.E);
+            return 8;
+        }
+        int opcode_0xcbec(core::Context& ctx) {
+            /*  mnemonic: SET 5,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(5, ctx.r.H);
+            return 8;
+        }
+        int opcode_0xcbed(core::Context& ctx) {
+            /*  mnemonic: SET 5,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(5, ctx.r.L);
+            return 8;
+        }
+        int opcode_0xcbee(core::Context& ctx) {
+            /*  mnemonic: SET 5,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            SET(5, temp);
+            ctx.write8(ctx.r.HL, temp);
+            return 16;
+        }
+        int opcode_0xcbef(core::Context& ctx) {
+            /*  mnemonic: SET 5,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(5, ctx.r.A);
+            return 8;
+        }
+        int opcode_0xcbf0(core::Context& ctx) {
+            /*  mnemonic: SET 6,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(6, ctx.r.B);
+            return 8;
+        }
+        int opcode_0xcbf1(core::Context& ctx) {
+            /*  mnemonic: SET 6,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(6, ctx.r.C);
+            return 8;
+        }
+        int opcode_0xcbf2(core::Context& ctx) {
+            /*  mnemonic: SET 6,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(6, ctx.r.D);
+            return 8;
+        }
+        int opcode_0xcbf3(core::Context& ctx) {
+            /*  mnemonic: SET 6,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(6, ctx.r.E);
+            return 8;
+        }
+        int opcode_0xcbf4(core::Context& ctx) {
+            /*  mnemonic: SET 6,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(6, ctx.r.H);
+            return 8;
+        }
+        int opcode_0xcbf5(core::Context& ctx) {
+            /*  mnemonic: SET 6,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(6, ctx.r.L);
+            return 8;
+        }
+        int opcode_0xcbf6(core::Context& ctx) {
+            /*  mnemonic: SET 6,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            SET(6, temp);
+            ctx.write8(ctx.r.HL, temp);
+            return 16;
+        }
+        int opcode_0xcbf7(core::Context& ctx) {
+            /*  mnemonic: SET 6,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(6, ctx.r.A);
+            return 8;
+        }
+        int opcode_0xcbf8(core::Context& ctx) {
+            /*  mnemonic: SET 7,B
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(7, ctx.r.B);
+            return 8;
+        }
+        int opcode_0xcbf9(core::Context& ctx) {
+            /*  mnemonic: SET 7,C
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(7, ctx.r.C);
+            return 8;
+        }
+        int opcode_0xcbfa(core::Context& ctx) {
+            /*  mnemonic: SET 7,D
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(7, ctx.r.D);
+            return 8;
+        }
+        int opcode_0xcbfb(core::Context& ctx) {
+            /*  mnemonic: SET 7,E
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(7, ctx.r.E);
+            return 8;
+        }
+        int opcode_0xcbfc(core::Context& ctx) {
+            /*  mnemonic: SET 7,H
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(7, ctx.r.H);
+            return 8;
+        }
+        int opcode_0xcbfd(core::Context& ctx) {
+            /*  mnemonic: SET 7,L
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(7, ctx.r.L);
+            return 8;
+        }
+        int opcode_0xcbfe(core::Context& ctx) {
+            /*  mnemonic: SET 7,(HL)
+			*  length: 2
+			*  cycles: 16
+			*  affects: - - - -
+			*/
+            auto temp = ctx.read8(ctx.r.HL);
+            SET(7, temp);
+            ctx.write8(ctx.r.HL, temp);
+            return 16;
+        }
+        int opcode_0xcbff(core::Context& ctx) {
+            /*  mnemonic: SET 7,A
+			*  length: 2
+			*  cycles: 8
+			*  affects: - - - -
+			*/
+            SET(7, ctx.r.A);
+            return 8;
+        }
+    } // namespace
 } // namespace
 
 // create table
@@ -834,5077 +5906,4 @@ std::array<int (*)(core::Context&), 256> create_cb_table() {
     ret[254] = opcode_0xcbfe;
     ret[255] = opcode_0xcbff;
     return ret;
-}
-
-int opcode_0x00([[maybe_unused]] core::Context& ctx) {
-    /*  mnemonic: NOP
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    return 4;
-}
-int opcode_0x01(core::Context& ctx) {
-    /*  mnemonic: LD BC,d16
-	*  length: 3
-	*  cycles: 12
-	*  affects: - - - -
-	*/
-    LD(ctx.r.BC, ctx.imm16());
-    return 12;
-}
-int opcode_0x02(core::Context& ctx) {
-    /*  mnemonic: LD (BC),A
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    uint16_t temp;
-    LD(temp, ctx.r.A);
-    ctx.write8(ctx.r.BC, temp);
-    return 8;
-}
-int opcode_0x03(core::Context& ctx) {
-    /*  mnemonic: INC BC
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    INC(ctx, ctx.r.BC);
-    return 8;
-}
-int opcode_0x04(core::Context& ctx) {
-    /*  mnemonic: INC B
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H -
-	*/
-    INC(ctx, ctx.r.B);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x05(core::Context& ctx) {
-    /*  mnemonic: DEC B
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H -
-	*/
-    DEC(ctx, ctx.r.B);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x06(core::Context& ctx) {
-    /*  mnemonic: LD B,d8
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.B, ctx.imm8());
-    return 8;
-}
-int opcode_0x07(core::Context& ctx) {
-    /*  mnemonic: RLCA
-	*  length: 1
-	*  cycles: 4
-	*  affects: 0 0 0 C
-	*/
-    RLCA(ctx);
-    ctx.r.reset_zero();
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 4;
-}
-int opcode_0x08(core::Context& ctx) {
-    /*  mnemonic: LD (a16),SP
-	*  length: 3
-	*  cycles: 20
-	*  affects: - - - -
-	*/
-    uint16_t temp;
-    LD(temp, ctx.r.SP);
-    ctx.write16(ctx.imm16(), temp);
-    return 20;
-}
-int opcode_0x09(core::Context& ctx) {
-    /*  mnemonic: ADD HL,BC
-	*  length: 1
-	*  cycles: 8
-	*  affects: - 0 H C
-	*/
-    ADD(ctx, ctx.r.HL, ctx.r.BC);
-    ctx.r.reset_sub();
-    return 8;
-}
-int opcode_0x0a(core::Context& ctx) {
-    /*  mnemonic: LD A,(BC)
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.A, ctx.read8(ctx.r.BC));
-    return 8;
-}
-int opcode_0x0b(core::Context& ctx) {
-    /*  mnemonic: DEC BC
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    DEC(ctx, ctx.r.BC);
-    return 8;
-}
-int opcode_0x0c(core::Context& ctx) {
-    /*  mnemonic: INC C
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H -
-	*/
-    INC(ctx, ctx.r.C);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x0d(core::Context& ctx) {
-    /*  mnemonic: DEC C
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H -
-	*/
-    DEC(ctx, ctx.r.C);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x0e(core::Context& ctx) {
-    /*  mnemonic: LD C,d8
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.C, ctx.imm8());
-    return 8;
-}
-int opcode_0x0f(core::Context& ctx) {
-    /*  mnemonic: RRCA
-	*  length: 1
-	*  cycles: 4
-	*  affects: 0 0 0 C
-	*/
-    RRCA(ctx);
-    ctx.r.reset_zero();
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 4;
-}
-int opcode_0x10(core::Context& ctx) {
-    /*  mnemonic: STOP 0
-	*  length: 2
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    STOP(ctx);
-    return 4;
-}
-int opcode_0x11(core::Context& ctx) {
-    /*  mnemonic: LD DE,d16
-	*  length: 3
-	*  cycles: 12
-	*  affects: - - - -
-	*/
-    LD(ctx.r.DE, ctx.imm16());
-    return 12;
-}
-int opcode_0x12(core::Context& ctx) {
-    /*  mnemonic: LD (DE),A
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    uint8_t temp;
-    LD(temp, ctx.r.A);
-    ctx.write8(ctx.r.DE, temp);
-    return 8;
-}
-int opcode_0x13(core::Context& ctx) {
-    /*  mnemonic: INC DE
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    INC(ctx, ctx.r.DE);
-    return 8;
-}
-int opcode_0x14(core::Context& ctx) {
-    /*  mnemonic: INC D
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H -
-	*/
-    INC(ctx, ctx.r.D);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x15(core::Context& ctx) {
-    /*  mnemonic: DEC D
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H -
-	*/
-    DEC(ctx, ctx.r.D);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x16(core::Context& ctx) {
-    /*  mnemonic: LD D,d8
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.D, ctx.imm8());
-    return 8;
-}
-int opcode_0x17(core::Context& ctx) {
-    /*  mnemonic: RLA
-	*  length: 1
-	*  cycles: 4
-	*  affects: 0 0 0 C
-	*/
-    RLA(ctx);
-    ctx.r.reset_zero();
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 4;
-}
-int opcode_0x18(core::Context& ctx) {
-    /*  mnemonic: JR r8
-	*  length: 2
-	*  cycles: 12
-	*  affects: - - - -
-	*/
-    JR(ctx, ctx.imm8_signed());
-    return 12;
-}
-int opcode_0x19(core::Context& ctx) {
-    /*  mnemonic: ADD HL,DE
-	*  length: 1
-	*  cycles: 8
-	*  affects: - 0 H C
-	*/
-    ADD(ctx, ctx.r.HL, ctx.r.DE);
-    ctx.r.reset_sub();
-    return 8;
-}
-int opcode_0x1a(core::Context& ctx) {
-    /*  mnemonic: LD A,(DE)
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.A, ctx.read8(ctx.r.DE));
-    return 8;
-}
-int opcode_0x1b(core::Context& ctx) {
-    /*  mnemonic: DEC DE
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    DEC(ctx, ctx.r.DE);
-    return 8;
-}
-int opcode_0x1c(core::Context& ctx) {
-    /*  mnemonic: INC E
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H -
-	*/
-    INC(ctx, ctx.r.E);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x1d(core::Context& ctx) {
-    /*  mnemonic: DEC E
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H -
-	*/
-    DEC(ctx, ctx.r.E);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x1e(core::Context& ctx) {
-    /*  mnemonic: LD E,d8
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.E, ctx.imm8());
-    return 8;
-}
-int opcode_0x1f(core::Context& ctx) {
-    /*  mnemonic: RRA
-	*  length: 1
-	*  cycles: 4
-	*  affects: 0 0 0 C
-	*/
-    RRA(ctx);
-    ctx.r.reset_zero();
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 4;
-}
-int opcode_0x20(core::Context& ctx) {
-    /*  mnemonic: JR NZ,r8
-	*  length: 2
-	*  cycles: 12/8
-	*  affects: - - - -
-	*/
-    return JR(ctx, !ctx.r.get_zero(), ctx.imm8_signed(), 12, 8);
-}
-int opcode_0x21(core::Context& ctx) {
-    /*  mnemonic: LD HL,d16
-	*  length: 3
-	*  cycles: 12
-	*  affects: - - - -
-	*/
-    LD(ctx.r.HL, ctx.imm16());
-    return 12;
-}
-int opcode_0x22(core::Context& ctx) {
-    /*  mnemonic: LD (HL+),A
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    uint8_t temp;
-    LD(temp, ctx.r.A);
-    ctx.write8(ctx.r.HL++, temp);
-    return 8;
-}
-int opcode_0x23(core::Context& ctx) {
-    /*  mnemonic: INC HL
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    INC(ctx, ctx.r.HL);
-    return 8;
-}
-int opcode_0x24(core::Context& ctx) {
-    /*  mnemonic: INC H
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H -
-	*/
-    INC(ctx, ctx.r.H);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x25(core::Context& ctx) {
-    /*  mnemonic: DEC H
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H -
-	*/
-    DEC(ctx, ctx.r.H);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x26(core::Context& ctx) {
-    /*  mnemonic: LD H,d8
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.H, ctx.imm8());
-    return 8;
-}
-int opcode_0x27(core::Context& ctx) {
-    /*  mnemonic: DAA
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z - 0 C
-	*/
-    DAA(ctx);
-    ctx.r.reset_halfcarry();
-    return 4;
-}
-int opcode_0x28(core::Context& ctx) {
-    /*  mnemonic: JR Z,r8
-	*  length: 2
-	*  cycles: 12/8
-	*  affects: - - - -
-	*/
-    return JR(ctx, ctx.r.get_zero(), ctx.imm8_signed(), 12, 8);
-}
-int opcode_0x29(core::Context& ctx) {
-    /*  mnemonic: ADD HL,HL
-	*  length: 1
-	*  cycles: 8
-	*  affects: - 0 H C
-	*/
-    ADD(ctx, ctx.r.HL, ctx.r.HL);
-    ctx.r.reset_sub();
-    return 8;
-}
-int opcode_0x2a(core::Context& ctx) {
-    /*  mnemonic: LD A,(HL+)
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.A, ctx.read16(ctx.r.HL++));
-    return 8;
-}
-int opcode_0x2b(core::Context& ctx) {
-    /*  mnemonic: DEC HL
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    DEC(ctx, ctx.r.HL);
-    return 8;
-}
-int opcode_0x2c(core::Context& ctx) {
-    /*  mnemonic: INC L
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H -
-	*/
-    INC(ctx, ctx.r.L);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x2d(core::Context& ctx) {
-    /*  mnemonic: DEC L
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H -
-	*/
-    DEC(ctx, ctx.r.L);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x2e(core::Context& ctx) {
-    /*  mnemonic: LD L,d8
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.L, ctx.imm8());
-    return 8;
-}
-int opcode_0x2f(core::Context& ctx) {
-    /*  mnemonic: CPL
-	*  length: 1
-	*  cycles: 4
-	*  affects: - 1 1 -
-	*/
-    CPL(ctx);
-    ctx.r.set_sub();
-    ctx.r.set_halfcarry();
-    return 4;
-}
-int opcode_0x30(core::Context& ctx) {
-    /*  mnemonic: JR NC,r8
-	*  length: 2
-	*  cycles: 12/8
-	*  affects: - - - -
-	*/
-    return JR(ctx, !ctx.r.get_carry(), ctx.imm8_signed(), 12, 8);
-}
-int opcode_0x31(core::Context& ctx) {
-    /*  mnemonic: LD SP,d16
-	*  length: 3
-	*  cycles: 12
-	*  affects: - - - -
-	*/
-    LD(ctx.r.SP, ctx.imm16());
-    return 12;
-}
-int opcode_0x32(core::Context& ctx) {
-    /*  mnemonic: LD (HL-),A
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    uint8_t temp;
-    LD(temp, ctx.r.A);
-    ctx.write8(ctx.r.HL--, temp);
-    return 8;
-}
-int opcode_0x33(core::Context& ctx) {
-    /*  mnemonic: INC SP
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    INC(ctx, ctx.r.SP);
-    return 8;
-}
-int opcode_0x34(core::Context& ctx) {
-    /*  mnemonic: INC (HL)
-	*  length: 1
-	*  cycles: 12
-	*  affects: Z 0 H -
-	*/
-    uint8_t temp = ctx.read8(ctx.r.HL);
-    INC(ctx, temp);
-    ctx.write8(ctx.r.HL, temp);
-
-    ctx.r.reset_sub();
-    return 12;
-}
-int opcode_0x35(core::Context& ctx) {
-    /*  mnemonic: DEC (HL)
-	*  length: 1
-	*  cycles: 12
-	*  affects: Z 1 H -
-	*/
-    uint8_t temp = ctx.read8(ctx.r.HL);
-    DEC(ctx, temp);
-    ctx.write8(ctx.r.HL, temp);
-
-    ctx.r.set_sub();
-    return 12;
-}
-int opcode_0x36(core::Context& ctx) {
-    /*  mnemonic: LD (HL),d8
-	*  length: 2
-	*  cycles: 12
-	*  affects: - - - -
-	*/
-    uint8_t temp;
-    LD(temp, ctx.imm8());
-    ctx.write8(ctx.r.HL, temp);
-    return 12;
-}
-int opcode_0x37(core::Context& ctx) {
-    /*  mnemonic: SCF
-	*  length: 1
-	*  cycles: 4
-	*  affects: - 0 0 1
-	*/
-    SCF(ctx);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.set_carry();
-    return 4;
-}
-int opcode_0x38(core::Context& ctx) {
-    /*  mnemonic: JR C,r8
-	*  length: 2
-	*  cycles: 12/8
-	*  affects: - - - -
-	*/
-    return JR(ctx, ctx.r.get_carry(), ctx.imm8_signed(), 12, 8);
-}
-int opcode_0x39(core::Context& ctx) {
-    /*  mnemonic: ADD HL,SP
-	*  length: 1
-	*  cycles: 8
-	*  affects: - 0 H C
-	*/
-    ADD(ctx, ctx.r.HL, ctx.r.SP);
-    ctx.r.reset_sub();
-    return 8;
-}
-int opcode_0x3a(core::Context& ctx) {
-    /*  mnemonic: LD A,(HL-)
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.A, ctx.read16(ctx.r.HL--));
-    return 8;
-}
-int opcode_0x3b(core::Context& ctx) {
-    /*  mnemonic: DEC SP
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    DEC(ctx, ctx.r.SP);
-    return 8;
-}
-int opcode_0x3c(core::Context& ctx) {
-    /*  mnemonic: INC A
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H -
-	*/
-    INC(ctx, ctx.r.A);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x3d(core::Context& ctx) {
-    /*  mnemonic: DEC A
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H -
-	*/
-    DEC(ctx, ctx.r.A);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x3e(core::Context& ctx) {
-    /*  mnemonic: LD A,d8
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.A, ctx.imm8());
-    return 8;
-}
-int opcode_0x3f(core::Context& ctx) {
-    /*  mnemonic: CCF
-	*  length: 1
-	*  cycles: 4
-	*  affects: - 0 0 C
-	*/
-    CCF(ctx);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 4;
-}
-int opcode_0x40(core::Context& ctx) {
-    /*  mnemonic: LD B,B
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.B, ctx.r.B);
-    return 4;
-}
-int opcode_0x41(core::Context& ctx) {
-    /*  mnemonic: LD B,C
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.B, ctx.r.C);
-    return 4;
-}
-int opcode_0x42(core::Context& ctx) {
-    /*  mnemonic: LD B,D
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.B, ctx.r.D);
-    return 4;
-}
-int opcode_0x43(core::Context& ctx) {
-    /*  mnemonic: LD B,E
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.B, ctx.r.E);
-    return 4;
-}
-int opcode_0x44(core::Context& ctx) {
-    /*  mnemonic: LD B,H
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.B, ctx.r.H);
-    return 4;
-}
-int opcode_0x45(core::Context& ctx) {
-    /*  mnemonic: LD B,L
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.B, ctx.r.L);
-    return 4;
-}
-int opcode_0x46(core::Context& ctx) {
-    /*  mnemonic: LD B,(HL)
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.B, ctx.read8(ctx.r.HL));
-    return 8;
-}
-int opcode_0x47(core::Context& ctx) {
-    /*  mnemonic: LD B,A
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.B, ctx.r.A);
-    return 4;
-}
-int opcode_0x48(core::Context& ctx) {
-    /*  mnemonic: LD C,B
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.C, ctx.r.B);
-    return 4;
-}
-int opcode_0x49(core::Context& ctx) {
-    /*  mnemonic: LD C,C
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.C, ctx.r.C);
-    return 4;
-}
-int opcode_0x4a(core::Context& ctx) {
-    /*  mnemonic: LD C,D
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.C, ctx.r.D);
-    return 4;
-}
-int opcode_0x4b(core::Context& ctx) {
-    /*  mnemonic: LD C,E
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.C, ctx.r.E);
-    return 4;
-}
-int opcode_0x4c(core::Context& ctx) {
-    /*  mnemonic: LD C,H
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.C, ctx.r.H);
-    return 4;
-}
-int opcode_0x4d(core::Context& ctx) {
-    /*  mnemonic: LD C,L
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.C, ctx.r.L);
-    return 4;
-}
-int opcode_0x4e(core::Context& ctx) {
-    /*  mnemonic: LD C,(HL)
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.C, ctx.read8(ctx.r.HL));
-    return 8;
-}
-int opcode_0x4f(core::Context& ctx) {
-    /*  mnemonic: LD C,A
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.C, ctx.r.A);
-    return 4;
-}
-int opcode_0x50(core::Context& ctx) {
-    /*  mnemonic: LD D,B
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.D, ctx.r.B);
-    return 4;
-}
-int opcode_0x51(core::Context& ctx) {
-    /*  mnemonic: LD D,C
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.D, ctx.r.C);
-    return 4;
-}
-int opcode_0x52(core::Context& ctx) {
-    /*  mnemonic: LD D,D
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.D, ctx.r.D);
-    return 4;
-}
-int opcode_0x53(core::Context& ctx) {
-    /*  mnemonic: LD D,E
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.D, ctx.r.E);
-    return 4;
-}
-int opcode_0x54(core::Context& ctx) {
-    /*  mnemonic: LD D,H
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.D, ctx.r.H);
-    return 4;
-}
-int opcode_0x55(core::Context& ctx) {
-    /*  mnemonic: LD D,L
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.D, ctx.r.L);
-    return 4;
-}
-int opcode_0x56(core::Context& ctx) {
-    /*  mnemonic: LD D,(HL)
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.D, ctx.read8(ctx.r.HL));
-    return 8;
-}
-int opcode_0x57(core::Context& ctx) {
-    /*  mnemonic: LD D,A
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.D, ctx.r.A);
-    return 4;
-}
-int opcode_0x58(core::Context& ctx) {
-    /*  mnemonic: LD E,B
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.E, ctx.r.B);
-    return 4;
-}
-int opcode_0x59(core::Context& ctx) {
-    /*  mnemonic: LD E,C
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.E, ctx.r.C);
-    return 4;
-}
-int opcode_0x5a(core::Context& ctx) {
-    /*  mnemonic: LD E,D
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.E, ctx.r.D);
-    return 4;
-}
-int opcode_0x5b(core::Context& ctx) {
-    /*  mnemonic: LD E,E
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.E, ctx.r.E);
-    return 4;
-}
-int opcode_0x5c(core::Context& ctx) {
-    /*  mnemonic: LD E,H
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.E, ctx.r.H);
-    return 4;
-}
-int opcode_0x5d(core::Context& ctx) {
-    /*  mnemonic: LD E,L
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.E, ctx.r.L);
-    return 4;
-}
-int opcode_0x5e(core::Context& ctx) {
-    /*  mnemonic: LD E,(HL)
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.E, ctx.read8(ctx.r.HL));
-    return 8;
-}
-int opcode_0x5f(core::Context& ctx) {
-    /*  mnemonic: LD E,A
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.E, ctx.r.A);
-    return 4;
-}
-int opcode_0x60(core::Context& ctx) {
-    /*  mnemonic: LD H,B
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.H, ctx.r.B);
-    return 4;
-}
-int opcode_0x61(core::Context& ctx) {
-    /*  mnemonic: LD H,C
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.H, ctx.r.C);
-    return 4;
-}
-int opcode_0x62(core::Context& ctx) {
-    /*  mnemonic: LD H,D
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.H, ctx.r.D);
-    return 4;
-}
-int opcode_0x63(core::Context& ctx) {
-    /*  mnemonic: LD H,E
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.H, ctx.r.E);
-    return 4;
-}
-int opcode_0x64(core::Context& ctx) {
-    /*  mnemonic: LD H,H
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.H, ctx.r.H);
-    return 4;
-}
-int opcode_0x65(core::Context& ctx) {
-    /*  mnemonic: LD H,L
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.H, ctx.r.L);
-    return 4;
-}
-int opcode_0x66(core::Context& ctx) {
-    /*  mnemonic: LD H,(HL)
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.H, ctx.read8(ctx.r.HL));
-    return 8;
-}
-int opcode_0x67(core::Context& ctx) {
-    /*  mnemonic: LD H,A
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.H, ctx.r.A);
-    return 4;
-}
-int opcode_0x68(core::Context& ctx) {
-    /*  mnemonic: LD L,B
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.L, ctx.r.B);
-    return 4;
-}
-int opcode_0x69(core::Context& ctx) {
-    /*  mnemonic: LD L,C
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.L, ctx.r.C);
-    return 4;
-}
-int opcode_0x6a(core::Context& ctx) {
-    /*  mnemonic: LD L,D
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.L, ctx.r.D);
-    return 4;
-}
-int opcode_0x6b(core::Context& ctx) {
-    /*  mnemonic: LD L,E
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.L, ctx.r.E);
-    return 4;
-}
-int opcode_0x6c(core::Context& ctx) {
-    /*  mnemonic: LD L,H
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.L, ctx.r.H);
-    return 4;
-}
-int opcode_0x6d(core::Context& ctx) {
-    /*  mnemonic: LD L,L
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.L, ctx.r.L);
-    return 4;
-}
-int opcode_0x6e(core::Context& ctx) {
-    /*  mnemonic: LD L,(HL)
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.L, ctx.read8(ctx.r.HL));
-    return 8;
-}
-int opcode_0x6f(core::Context& ctx) {
-    /*  mnemonic: LD L,A
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.L, ctx.r.A);
-    return 4;
-}
-int opcode_0x70(core::Context& ctx) {
-    /*  mnemonic: LD (HL),B
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    uint8_t temp;
-    LD(temp, ctx.r.B);
-    ctx.write8(ctx.r.HL, temp);
-    return 8;
-}
-int opcode_0x71(core::Context& ctx) {
-    /*  mnemonic: LD (HL),C
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    uint8_t temp;
-    LD(temp, ctx.r.C);
-    ctx.write8(ctx.r.HL, temp);
-    return 8;
-}
-int opcode_0x72(core::Context& ctx) {
-    /*  mnemonic: LD (HL),D
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    uint8_t temp;
-    LD(temp, ctx.r.D);
-    ctx.write8(ctx.r.HL, temp);
-    return 8;
-}
-int opcode_0x73(core::Context& ctx) {
-    /*  mnemonic: LD (HL),E
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    uint8_t temp;
-    LD(temp, ctx.r.E);
-    ctx.write8(ctx.r.HL, temp);
-    return 8;
-}
-int opcode_0x74(core::Context& ctx) {
-    /*  mnemonic: LD (HL),H
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    uint8_t temp;
-    LD(temp, ctx.r.H);
-    ctx.write8(ctx.r.HL, temp);
-    return 8;
-}
-int opcode_0x75(core::Context& ctx) {
-    /*  mnemonic: LD (HL),L
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    uint8_t temp;
-    LD(temp, ctx.r.L);
-    ctx.write8(ctx.r.HL, temp);
-    return 8;
-}
-int opcode_0x76([[maybe_unused]] core::Context& ctx) {
-    /*  mnemonic: HALT
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    ctx.halted = true;
-    return 4;
-}
-int opcode_0x77(core::Context& ctx) {
-    /*  mnemonic: LD (HL),A
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    uint8_t temp;
-    LD(temp, ctx.r.A);
-    ctx.write8(ctx.r.HL, temp);
-    return 8;
-}
-int opcode_0x78(core::Context& ctx) {
-    /*  mnemonic: LD A,B
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.A, ctx.r.B);
-    return 4;
-}
-int opcode_0x79(core::Context& ctx) {
-    /*  mnemonic: LD A,C
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.A, ctx.r.C);
-    return 4;
-}
-int opcode_0x7a(core::Context& ctx) {
-    /*  mnemonic: LD A,D
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.A, ctx.r.D);
-    return 4;
-}
-int opcode_0x7b(core::Context& ctx) {
-    /*  mnemonic: LD A,E
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.A, ctx.r.E);
-    return 4;
-}
-int opcode_0x7c(core::Context& ctx) {
-    /*  mnemonic: LD A,H
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.A, ctx.r.H);
-    return 4;
-}
-int opcode_0x7d(core::Context& ctx) {
-    /*  mnemonic: LD A,L
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.A, ctx.r.L);
-    return 4;
-}
-int opcode_0x7e(core::Context& ctx) {
-    /*  mnemonic: LD A,(HL)
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.A, ctx.read8(ctx.r.HL));
-    return 8;
-}
-int opcode_0x7f(core::Context& ctx) {
-    /*  mnemonic: LD A,A
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    LD(ctx.r.A, ctx.r.A);
-    return 4;
-}
-int opcode_0x80(core::Context& ctx) {
-    /*  mnemonic: ADD A,B
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H C
-	*/
-    ADD(ctx, ctx.r.A, ctx.r.B);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x81(core::Context& ctx) {
-    /*  mnemonic: ADD A,C
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H C
-	*/
-    ADD(ctx, ctx.r.A, ctx.r.C);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x82(core::Context& ctx) {
-    /*  mnemonic: ADD A,D
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H C
-	*/
-    ADD(ctx, ctx.r.A, ctx.r.D);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x83(core::Context& ctx) {
-    /*  mnemonic: ADD A,E
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H C
-	*/
-    ADD(ctx, ctx.r.A, ctx.r.E);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x84(core::Context& ctx) {
-    /*  mnemonic: ADD A,H
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H C
-	*/
-    ADD(ctx, ctx.r.A, ctx.r.H);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x85(core::Context& ctx) {
-    /*  mnemonic: ADD A,L
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H C
-	*/
-    ADD(ctx, ctx.r.A, ctx.r.L);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x86(core::Context& ctx) {
-    /*  mnemonic: ADD A,(HL)
-	*  length: 1
-	*  cycles: 8
-	*  affects: Z 0 H C
-	*/
-    ADD(ctx, ctx.r.A, ctx.read8(ctx.r.HL));
-    ctx.r.reset_sub();
-    return 8;
-}
-int opcode_0x87(core::Context& ctx) {
-    /*  mnemonic: ADD A,A
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H C
-	*/
-    ADD(ctx, ctx.r.A, ctx.r.A);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x88(core::Context& ctx) {
-    /*  mnemonic: ADC A,B
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H C
-	*/
-    ADC(ctx, ctx.r.A, ctx.r.B);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x89(core::Context& ctx) {
-    /*  mnemonic: ADC A,C
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H C
-	*/
-    ADC(ctx, ctx.r.A, ctx.r.C);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x8a(core::Context& ctx) {
-    /*  mnemonic: ADC A,D
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H C
-	*/
-    ADC(ctx, ctx.r.A, ctx.r.D);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x8b(core::Context& ctx) {
-    /*  mnemonic: ADC A,E
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H C
-	*/
-    ADC(ctx, ctx.r.A, ctx.r.E);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x8c(core::Context& ctx) {
-    /*  mnemonic: ADC A,H
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H C
-	*/
-    ADC(ctx, ctx.r.A, ctx.r.H);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x8d(core::Context& ctx) {
-    /*  mnemonic: ADC A,L
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H C
-	*/
-    ADC(ctx, ctx.r.A, ctx.r.L);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x8e(core::Context& ctx) {
-    /*  mnemonic: ADC A,(HL)
-	*  length: 1
-	*  cycles: 8
-	*  affects: Z 0 H C
-	*/
-    ADC(ctx, ctx.r.A, ctx.read8(ctx.r.HL));
-    ctx.r.reset_sub();
-    return 8;
-}
-int opcode_0x8f(core::Context& ctx) {
-    /*  mnemonic: ADC A,A
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 H C
-	*/
-    ADC(ctx, ctx.r.A, ctx.r.A);
-    ctx.r.reset_sub();
-    return 4;
-}
-int opcode_0x90(core::Context& ctx) {
-    /*  mnemonic: SUB B
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    SUB(ctx, ctx.r.B);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x91(core::Context& ctx) {
-    /*  mnemonic: SUB C
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    SUB(ctx, ctx.r.C);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x92(core::Context& ctx) {
-    /*  mnemonic: SUB D
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    SUB(ctx, ctx.r.D);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x93(core::Context& ctx) {
-    /*  mnemonic: SUB E
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    SUB(ctx, ctx.r.E);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x94(core::Context& ctx) {
-    /*  mnemonic: SUB H
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    SUB(ctx, ctx.r.H);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x95(core::Context& ctx) {
-    /*  mnemonic: SUB L
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    SUB(ctx, ctx.r.L);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x96(core::Context& ctx) {
-    /*  mnemonic: SUB (HL)
-	*  length: 1
-	*  cycles: 8
-	*  affects: Z 1 H C
-	*/
-    SUB(ctx, ctx.read8(ctx.r.HL));
-    ctx.r.set_sub();
-    return 8;
-}
-int opcode_0x97(core::Context& ctx) {
-    /*  mnemonic: SUB A
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    SUB(ctx, ctx.r.A);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x98(core::Context& ctx) {
-    /*  mnemonic: SBC A,B
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    SBC(ctx, ctx.r.A, ctx.r.B);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x99(core::Context& ctx) {
-    /*  mnemonic: SBC A,C
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    SBC(ctx, ctx.r.A, ctx.r.C);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x9a(core::Context& ctx) {
-    /*  mnemonic: SBC A,D
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    SBC(ctx, ctx.r.A, ctx.r.D);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x9b(core::Context& ctx) {
-    /*  mnemonic: SBC A,E
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    SBC(ctx, ctx.r.A, ctx.r.E);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x9c(core::Context& ctx) {
-    /*  mnemonic: SBC A,H
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    SBC(ctx, ctx.r.A, ctx.r.H);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x9d(core::Context& ctx) {
-    /*  mnemonic: SBC A,L
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    SBC(ctx, ctx.r.A, ctx.r.L);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0x9e(core::Context& ctx) {
-    /*  mnemonic: SBC A,(HL)
-	*  length: 1
-	*  cycles: 8
-	*  affects: Z 1 H C
-	*/
-    SBC(ctx, ctx.r.A, ctx.read8(ctx.r.HL));
-    ctx.r.set_sub();
-    return 8;
-}
-int opcode_0x9f(core::Context& ctx) {
-    /*  mnemonic: SBC A,A
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    SBC(ctx, ctx.r.A, ctx.r.A);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0xa0(core::Context& ctx) {
-    /*  mnemonic: AND B
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 1 0
-	*/
-
-    AND(ctx, ctx.r.B);
-
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xa1(core::Context& ctx) {
-    /*  mnemonic: AND C
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 1 0
-	*/
-    AND(ctx, ctx.r.C);
-
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xa2(core::Context& ctx) {
-    /*  mnemonic: AND D
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 1 0
-	*/
-    AND(ctx, ctx.r.D);
-
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xa3(core::Context& ctx) {
-    /*  mnemonic: AND E
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 1 0
-	*/
-    AND(ctx, ctx.r.E);
-
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xa4(core::Context& ctx) {
-    /*  mnemonic: AND H
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 1 0
-	*/
-    AND(ctx, ctx.r.H);
-
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xa5(core::Context& ctx) {
-    /*  mnemonic: AND L
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 1 0
-	*/
-    AND(ctx, ctx.r.L);
-
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xa6(core::Context& ctx) {
-    /*  mnemonic: AND (HL)
-	*  length: 1
-	*  cycles: 8
-	*  affects: Z 0 1 0
-	*/
-    AND(ctx, ctx.read8(ctx.r.HL));
-
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    ctx.r.reset_carry();
-    return 8;
-}
-int opcode_0xa7(core::Context& ctx) {
-    /*  mnemonic: AND A
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 1 0
-	*/
-    AND(ctx, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xa8(core::Context& ctx) {
-    /*  mnemonic: XOR B
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 0 0
-	*/
-    XOR(ctx, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xa9(core::Context& ctx) {
-    /*  mnemonic: XOR C
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 0 0
-	*/
-    XOR(ctx, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xaa(core::Context& ctx) {
-    /*  mnemonic: XOR D
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 0 0
-	*/
-    XOR(ctx, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xab(core::Context& ctx) {
-    /*  mnemonic: XOR E
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 0 0
-	*/
-    XOR(ctx, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xac(core::Context& ctx) {
-    /*  mnemonic: XOR H
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 0 0
-	*/
-    XOR(ctx, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xad(core::Context& ctx) {
-    /*  mnemonic: XOR L
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 0 0
-	*/
-    XOR(ctx, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xae(core::Context& ctx) {
-    /*  mnemonic: XOR (HL)
-	*  length: 1
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    XOR(ctx, ctx.read8(ctx.r.HL));
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 8;
-}
-int opcode_0xaf(core::Context& ctx) {
-    /*  mnemonic: XOR A
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 0 0
-	*/
-    XOR(ctx, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xb0(core::Context& ctx) {
-    /*  mnemonic: OR B
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 0 0
-	*/
-    OR(ctx, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xb1(core::Context& ctx) {
-    /*  mnemonic: OR C
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 0 0
-	*/
-    OR(ctx, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xb2(core::Context& ctx) {
-    /*  mnemonic: OR D
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 0 0
-	*/
-    OR(ctx, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xb3(core::Context& ctx) {
-    /*  mnemonic: OR E
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 0 0
-	*/
-    OR(ctx, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xb4(core::Context& ctx) {
-    /*  mnemonic: OR H
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 0 0
-	*/
-    OR(ctx, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xb5(core::Context& ctx) {
-    /*  mnemonic: OR L
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 0 0
-	*/
-    OR(ctx, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xb6(core::Context& ctx) {
-    /*  mnemonic: OR (HL)
-	*  length: 1
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    OR(ctx, ctx.read8(ctx.r.HL));
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 8;
-}
-int opcode_0xb7(core::Context& ctx) {
-    /*  mnemonic: OR A
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 0 0 0
-	*/
-    OR(ctx, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 4;
-}
-int opcode_0xb8(core::Context& ctx) {
-    /*  mnemonic: CP B
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    CP(ctx, ctx.r.B);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0xb9(core::Context& ctx) {
-    /*  mnemonic: CP C
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    CP(ctx, ctx.r.C);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0xba(core::Context& ctx) {
-    /*  mnemonic: CP D
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    CP(ctx, ctx.r.D);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0xbb(core::Context& ctx) {
-    /*  mnemonic: CP E
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    CP(ctx, ctx.r.E);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0xbc(core::Context& ctx) {
-    /*  mnemonic: CP H
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    CP(ctx, ctx.r.H);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0xbd(core::Context& ctx) {
-    /*  mnemonic: CP L
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    CP(ctx, ctx.r.L);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0xbe(core::Context& ctx) {
-    /*  mnemonic: CP (HL)
-	*  length: 1
-	*  cycles: 8
-	*  affects: Z 1 H C
-	*/
-    CP(ctx, ctx.read8(ctx.r.HL));
-    ctx.r.set_sub();
-    return 8;
-}
-int opcode_0xbf(core::Context& ctx) {
-    /*  mnemonic: CP A
-	*  length: 1
-	*  cycles: 4
-	*  affects: Z 1 H C
-	*/
-    CP(ctx, ctx.r.A);
-    ctx.r.set_sub();
-    return 4;
-}
-int opcode_0xc0(core::Context& ctx) {
-    /*  mnemonic: RET NZ
-	*  length: 1
-	*  cycles: 20/8
-	*  affects: - - - -
-	*/
-    return RET(ctx, !ctx.r.get_zero(), 20, 8);
-}
-int opcode_0xc1(core::Context& ctx) {
-    /*  mnemonic: POP BC
-	*  length: 1
-	*  cycles: 12
-	*  affects: - - - -
-	*/
-    POP(ctx, ctx.r.BC);
-    return 12;
-}
-int opcode_0xc2(core::Context& ctx) {
-    /*  mnemonic: JP NZ,a16
-	*  length: 3
-	*  cycles: 16/12
-	*  affects: - - - -
-	*/
-    return JP(ctx, !ctx.r.get_zero(), ctx.imm16(), 16, 12);
-}
-int opcode_0xc3(core::Context& ctx) {
-    /*  mnemonic: JP a16
-	*  length: 3
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    JP(ctx, ctx.imm16());
-    return 16;
-}
-int opcode_0xc4(core::Context& ctx) {
-    /*  mnemonic: CALL NZ,a16
-	*  length: 3
-	*  cycles: 24/12
-	*  affects: - - - -
-	*/
-    return CALL(ctx, !ctx.r.get_zero(), ctx.imm16(), 24, 12);
-}
-int opcode_0xc5(core::Context& ctx) {
-    /*  mnemonic: PUSH BC
-	*  length: 1
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    PUSH(ctx, ctx.r.BC);
-    return 16;
-}
-int opcode_0xc6(core::Context& ctx) {
-    /*  mnemonic: ADD A,d8
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 H C
-	*/
-    ADD(ctx, ctx.r.A, ctx.imm8());
-    ctx.r.reset_sub();
-    return 8;
-}
-int opcode_0xc7(core::Context& ctx) {
-    /*  mnemonic: RST 00H
-	*  length: 1
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    RST(ctx, 0x00);
-    return 16;
-}
-int opcode_0xc8(core::Context& ctx) {
-    /*  mnemonic: RET Z
-	*  length: 1
-	*  cycles: 20/8
-	*  affects: - - - -
-	*/
-    return RET(ctx, ctx.r.get_zero(), 20, 8);
-}
-int opcode_0xc9(core::Context& ctx) {
-    /*  mnemonic: RET
-	*  length: 1
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    RET(ctx);
-    return 16;
-}
-int opcode_0xca(core::Context& ctx) {
-    /*  mnemonic: JP Z,a16
-	*  length: 3
-	*  cycles: 16/12
-	*  affects: - - - -
-	*/
-    return JP(ctx, ctx.r.get_zero(), ctx.imm16(), 16, 12);
-}
-int opcode_0xcc(core::Context& ctx) {
-    /*  mnemonic: CALL Z,a16
-	*  length: 3
-	*  cycles: 24/12
-	*  affects: - - - -
-	*/
-    return CALL(ctx, ctx.r.get_zero(), ctx.imm16(), 24, 12);
-}
-int opcode_0xcd(core::Context& ctx) {
-    /*  mnemonic: CALL a16
-	*  length: 3
-	*  cycles: 24
-	*  affects: - - - -
-	*/
-    CALL(ctx, ctx.imm16());
-    return 24;
-}
-int opcode_0xce(core::Context& ctx) {
-    /*  mnemonic: ADC A,d8
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 H C
-	*/
-    ADC(ctx, ctx.r.A, ctx.imm8());
-    ctx.r.reset_sub();
-    return 8;
-}
-int opcode_0xcf(core::Context& ctx) {
-    /*  mnemonic: RST 08H
-	*  length: 1
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    RST(ctx, 0x08);
-    return 16;
-}
-int opcode_0xd0(core::Context& ctx) {
-    /*  mnemonic: RET NC
-	*  length: 1
-	*  cycles: 20/8
-	*  affects: - - - -
-	*/
-    return RET(ctx, !ctx.r.get_carry(), 20, 8);
-}
-int opcode_0xd1(core::Context& ctx) {
-    /*  mnemonic: POP DE
-	*  length: 1
-	*  cycles: 12
-	*  affects: - - - -
-	*/
-    POP(ctx, ctx.r.DE);
-    return 12;
-}
-int opcode_0xd2(core::Context& ctx) {
-    /*  mnemonic: JP NC,a16
-	*  length: 3
-	*  cycles: 16/12
-	*  affects: - - - -
-	*/
-    return JP(ctx, !ctx.r.get_carry(), ctx.imm16(), 16, 12);
-}
-int opcode_0xd3([[maybe_unused]] core::Context& ctx) {
-    throw std::runtime_error("invalid instruction");
-}
-int opcode_0xd4(core::Context& ctx) {
-    /*  mnemonic: CALL NC,a16
-	*  length: 3
-	*  cycles: 24/12
-	*  affects: - - - -
-	*/
-    return CALL(ctx, !ctx.r.get_carry(), ctx.imm16(), 24, 12);
-}
-int opcode_0xd5(core::Context& ctx) {
-    /*  mnemonic: PUSH DE
-	*  length: 1
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    PUSH(ctx, ctx.r.DE);
-    return 16;
-}
-int opcode_0xd6(core::Context& ctx) {
-    /*  mnemonic: SUB d8
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 1 H C
-	*/
-    SUB(ctx, ctx.imm8());
-    ctx.r.set_sub();
-    return 8;
-}
-int opcode_0xd7(core::Context& ctx) {
-    /*  mnemonic: RST 10H
-	*  length: 1
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    RST(ctx, 0x10);
-    return 16;
-}
-int opcode_0xd8(core::Context& ctx) {
-    /*  mnemonic: RET C
-	*  length: 1
-	*  cycles: 20/8
-	*  affects: - - - -
-	*/
-    return RET(ctx, ctx.r.get_carry(), 20, 8);
-}
-int opcode_0xd9(core::Context& ctx) {
-    /*  mnemonic: RETI
-	*  length: 1
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    RETI(ctx);
-    return 16;
-}
-int opcode_0xda(core::Context& ctx) {
-    /*  mnemonic: JP C,a16
-	*  length: 3
-	*  cycles: 16/12
-	*  affects: - - - -
-	*/
-    return JP(ctx, ctx.r.get_carry(), ctx.imm16(), 16, 12);
-}
-int opcode_0xdb([[maybe_unused]] core::Context& ctx) {
-    throw std::runtime_error("invalid instruction");
-}
-int opcode_0xdc(core::Context& ctx) {
-    /*  mnemonic: CALL C,a16
-	*  length: 3
-	*  cycles: 24/12
-	*  affects: - - - -
-	*/
-    return CALL(ctx, ctx.r.get_carry(), ctx.imm16(), 24, 12);
-}
-int opcode_0xdd([[maybe_unused]] core::Context& ctx) {
-    throw std::runtime_error("invalid instruction");
-}
-int opcode_0xde(core::Context& ctx) {
-    /*  mnemonic: SBC A,d8
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 1 H C
-	*/
-    SBC(ctx, ctx.r.A, ctx.imm8());
-    ctx.r.set_sub();
-    return 8;
-}
-int opcode_0xdf(core::Context& ctx) {
-    /*  mnemonic: RST 18H
-	*  length: 1
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    RST(ctx, 0x18);
-    return 16;
-}
-int opcode_0xe0(core::Context& ctx) {
-    /*  mnemonic: LDH (a8),A
-	*  length: 2
-	*  cycles: 12
-	*  affects: - - - -
-	*/
-    uint8_t temp;
-    LD(temp, ctx.r.A);
-    ctx.write8(0xFF00 + ctx.imm8(), temp);
-    return 12;
-}
-int opcode_0xe1(core::Context& ctx) {
-    /*  mnemonic: POP HL
-	*  length: 1
-	*  cycles: 12
-	*  affects: - - - -
-	*/
-    POP(ctx, ctx.r.HL);
-    return 12;
-}
-int opcode_0xe2(core::Context& ctx) {
-    /*  mnemonic: LD (C),A
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    uint8_t temp;
-    LD(temp, ctx.r.A);
-    ctx.write8(0xFF00 + ctx.r.C, temp);
-    return 8;
-}
-int opcode_0xe3([[maybe_unused]] core::Context& ctx) {
-    throw std::runtime_error("invalid instruction");
-}
-int opcode_0xe4([[maybe_unused]] core::Context& ctx) {
-    throw std::runtime_error("invalid instruction");
-}
-int opcode_0xe5(core::Context& ctx) {
-    /*  mnemonic: PUSH HL
-	*  length: 1
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    PUSH(ctx, ctx.r.HL);
-    return 16;
-}
-int opcode_0xe6(core::Context& ctx) {
-    /*  mnemonic: AND d8
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 0
-	*/
-    AND(ctx, ctx.imm8());
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    ctx.r.reset_carry();
-    return 8;
-}
-int opcode_0xe7(core::Context& ctx) {
-    /*  mnemonic: RST 20H
-	*  length: 1
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    RST(ctx, 0x20);
-    return 16;
-}
-int opcode_0xe8(core::Context& ctx) {
-    /*  mnemonic: ADD SP,r8
-	*  length: 2
-	*  cycles: 16
-	*  affects: 0 0 H C
-	*/
-    ADD(ctx, ctx.r.SP, ctx.imm8_signed());
-    ctx.r.reset_zero();
-    ctx.r.reset_sub();
-    return 16;
-}
-int opcode_0xe9(core::Context& ctx) {
-    /*  mnemonic: JP (HL)
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    JP(ctx, ctx.r.HL);
-    return 4;
-}
-int opcode_0xea(core::Context& ctx) {
-    /*  mnemonic: LD (a16),A
-	*  length: 3
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-
-    uint8_t temp;
-    LD(temp, ctx.r.A);
-    ctx.write8(ctx.imm16(), temp);
-    return 16;
-}
-int opcode_0xeb([[maybe_unused]] core::Context& ctx) {
-    throw std::runtime_error("invalid instruction");
-}
-int opcode_0xec([[maybe_unused]] core::Context& ctx) {
-    throw std::runtime_error("invalid instruction");
-}
-int opcode_0xed([[maybe_unused]] core::Context& ctx) {
-    throw std::runtime_error("invalid instruction");
-}
-int opcode_0xee(core::Context& ctx) {
-    /*  mnemonic: XOR d8
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    XOR(ctx, ctx.imm8());
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 8;
-}
-int opcode_0xef(core::Context& ctx) {
-    /*  mnemonic: RST 28H
-	*  length: 1
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    RST(ctx, 0x28);
-    return 16;
-}
-int opcode_0xf0(core::Context& ctx) {
-    /*  mnemonic: LDH A,(a8)
-	*  length: 2
-	*  cycles: 12
-	*  affects: - - - -
-	*/
-    LD(ctx.r.A, ctx.read8(0xFF00 + ctx.imm8()));
-    return 12;
-}
-int opcode_0xf1(core::Context& ctx) {
-    /*  mnemonic: POP AF
-	*  length: 1
-	*  cycles: 12
-	*  affects: Z N H C
-	*/
-    POP(ctx, ctx.r.AF);
-    ctx.r.AF &= 0xFFF0;
-    return 12;
-}
-int opcode_0xf2(core::Context& ctx) {
-    /*  mnemonic: LD A,(C)
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.A, ctx.read8(0xFF00 + ctx.r.C));
-    return 8;
-}
-int opcode_0xf3(core::Context& ctx) {
-    /*  mnemonic: DI
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    DI(ctx);
-    return 4;
-}
-int opcode_0xf4([[maybe_unused]] core::Context& ctx) {
-    throw std::runtime_error("invalid instruction");
-}
-int opcode_0xf5(core::Context& ctx) {
-    /*  mnemonic: PUSH AF
-	*  length: 1
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    PUSH(ctx, ctx.r.AF);
-    return 16;
-}
-int opcode_0xf6(core::Context& ctx) {
-    /*  mnemonic: OR d8
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    OR(ctx, ctx.imm8());
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 8;
-}
-int opcode_0xf7(core::Context& ctx) {
-    /*  mnemonic: RST 30H
-	*  length: 1
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    RST(ctx, 0x30);
-    return 16;
-}
-int opcode_0xf8(core::Context& ctx) {
-    /*  mnemonic: LD HL,SP+r8
-	*  length: 2
-	*  cycles: 12
-	*  affects: 0 0 H C
-	*/
-    auto offset = ctx.imm8_signed();
-
-    if (((ctx.r.SP & 0xF) + (offset & 0xF)) > 0xF) {
-        ctx.r.set_halfcarry();
-    }
-    else {
-        ctx.r.reset_halfcarry();
-    }
-
-    if (((ctx.r.SP & 0xFF) + (offset & 0xFF)) > 0xFF) {
-        ctx.r.set_carry();
-    }
-    else {
-        ctx.r.reset_carry();
-    }
-
-    LD(ctx.r.HL, ctx.r.SP + offset);
-    ctx.r.reset_zero();
-    ctx.r.reset_sub();
-    return 12;
-}
-int opcode_0xf9(core::Context& ctx) {
-    /*  mnemonic: LD SP,HL
-	*  length: 1
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    LD(ctx.r.SP, ctx.r.HL);
-    return 8;
-}
-int opcode_0xfa(core::Context& ctx) {
-    /*  mnemonic: LD A,(a16)
-	*  length: 3
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    LD(ctx.r.A, ctx.read8(ctx.imm16()));
-    return 16;
-}
-int opcode_0xfb(core::Context& ctx) {
-    /*  mnemonic: EI
-	*  length: 1
-	*  cycles: 4
-	*  affects: - - - -
-	*/
-    EI(ctx);
-    return 4;
-}
-int opcode_0xfc([[maybe_unused]] core::Context& ctx) {
-    throw std::runtime_error("invalid instruction");
-}
-int opcode_0xfd([[maybe_unused]] core::Context& ctx) {
-    throw std::runtime_error("invalid instruction");
-}
-int opcode_0xfe(core::Context& ctx) {
-    /*  mnemonic: CP d8
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 1 H C
-	*/
-    CP(ctx, ctx.imm8());
-    ctx.r.set_sub();
-    return 8;
-}
-int opcode_0xff(core::Context& ctx) {
-    /*  mnemonic: RST 38H
-	*  length: 1
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    RST(ctx, 0x38);
-    return 16;
-}
-int opcode_0xcb00(core::Context& ctx) {
-    /*  mnemonic: RLC B
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RLC(ctx, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb01(core::Context& ctx) {
-    /*  mnemonic: RLC C
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RLC(ctx, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb02(core::Context& ctx) {
-    /*  mnemonic: RLC D
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RLC(ctx, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb03(core::Context& ctx) {
-    /*  mnemonic: RLC E
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RLC(ctx, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb04(core::Context& ctx) {
-    /*  mnemonic: RLC H
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RLC(ctx, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb05(core::Context& ctx) {
-    /*  mnemonic: RLC L
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RLC(ctx, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb06(core::Context& ctx) {
-    /*  mnemonic: RLC (HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: Z 0 0 C
-	*/
-    uint8_t temp = ctx.read8(ctx.r.HL);
-    RLC(ctx, temp);
-    ctx.write8(ctx.r.HL, temp);
-
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 16;
-}
-int opcode_0xcb07(core::Context& ctx) {
-    /*  mnemonic: RLC A
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RLC(ctx, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb08(core::Context& ctx) {
-    /*  mnemonic: RRC B
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RRC(ctx, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb09(core::Context& ctx) {
-    /*  mnemonic: RRC C
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RRC(ctx, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb0a(core::Context& ctx) {
-    /*  mnemonic: RRC D
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RRC(ctx, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb0b(core::Context& ctx) {
-    /*  mnemonic: RRC E
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RRC(ctx, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb0c(core::Context& ctx) {
-    /*  mnemonic: RRC H
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RRC(ctx, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb0d(core::Context& ctx) {
-    /*  mnemonic: RRC L
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RRC(ctx, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb0e(core::Context& ctx) {
-    /*  mnemonic: RRC (HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: Z 0 0 C
-	*/
-    uint8_t temp = ctx.read8(ctx.r.HL);
-
-    RRC(ctx, temp);
-
-    ctx.write8(ctx.r.HL, temp);
-
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 16;
-}
-int opcode_0xcb0f(core::Context& ctx) {
-    /*  mnemonic: RRC A
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RRC(ctx, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb10(core::Context& ctx) {
-    /*  mnemonic: RL B
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RL(ctx, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb11(core::Context& ctx) {
-    /*  mnemonic: RL C
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RL(ctx, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb12(core::Context& ctx) {
-    /*  mnemonic: RL D
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RL(ctx, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb13(core::Context& ctx) {
-    /*  mnemonic: RL E
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RL(ctx, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb14(core::Context& ctx) {
-    /*  mnemonic: RL H
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RL(ctx, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb15(core::Context& ctx) {
-    /*  mnemonic: RL L
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RL(ctx, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb16(core::Context& ctx) {
-    /*  mnemonic: RL (HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: Z 0 0 C
-	*/
-    uint8_t temp = ctx.read8(ctx.r.HL);
-    RL(ctx, temp);
-    ctx.write8(ctx.r.HL, temp);
-
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 16;
-}
-int opcode_0xcb17(core::Context& ctx) {
-    /*  mnemonic: RL A
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RL(ctx, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb18(core::Context& ctx) {
-    /*  mnemonic: RR B
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RR(ctx, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb19(core::Context& ctx) {
-    /*  mnemonic: RR C
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RR(ctx, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb1a(core::Context& ctx) {
-    /*  mnemonic: RR D
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RR(ctx, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb1b(core::Context& ctx) {
-    /*  mnemonic: RR E
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RR(ctx, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb1c(core::Context& ctx) {
-    /*  mnemonic: RR H
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RR(ctx, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb1d(core::Context& ctx) {
-    /*  mnemonic: RR L
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RR(ctx, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb1e(core::Context& ctx) {
-    /*  mnemonic: RR (HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: Z 0 0 C
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    RR(ctx, temp);
-    ctx.write8(ctx.r.HL, temp);
-
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 16;
-}
-int opcode_0xcb1f(core::Context& ctx) {
-    /*  mnemonic: RR A
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    RR(ctx, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb20(core::Context& ctx) {
-    /*  mnemonic: SLA B
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    SLA(ctx, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb21(core::Context& ctx) {
-    /*  mnemonic: SLA C
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    SLA(ctx, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb22(core::Context& ctx) {
-    /*  mnemonic: SLA D
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    SLA(ctx, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb23(core::Context& ctx) {
-    /*  mnemonic: SLA E
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    SLA(ctx, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb24(core::Context& ctx) {
-    /*  mnemonic: SLA H
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    SLA(ctx, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb25(core::Context& ctx) {
-    /*  mnemonic: SLA L
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    SLA(ctx, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb26(core::Context& ctx) {
-    /*  mnemonic: SLA (HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: Z 0 0 C
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    SLA(ctx, temp);
-    ctx.write8(ctx.r.HL, temp);
-
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 16;
-}
-int opcode_0xcb27(core::Context& ctx) {
-    /*  mnemonic: SLA A
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    SLA(ctx, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb28(core::Context& ctx) {
-    /*  mnemonic: SRA B
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    SRA(ctx, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb29(core::Context& ctx) {
-    /*  mnemonic: SRA C
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    SRA(ctx, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb2a(core::Context& ctx) {
-    /*  mnemonic: SRA D
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    SRA(ctx, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb2b(core::Context& ctx) {
-    /*  mnemonic: SRA E
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    SRA(ctx, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb2c(core::Context& ctx) {
-    /*  mnemonic: SRA H
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    SRA(ctx, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb2d(core::Context& ctx) {
-    /*  mnemonic: SRA L
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    SRA(ctx, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb2e(core::Context& ctx) {
-    /*  mnemonic: SRA (HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: Z 0 0 0
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    SRA(ctx, temp);
-    ctx.write8(ctx.r.HL, temp);
-
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 16;
-}
-int opcode_0xcb2f(core::Context& ctx) {
-    /*  mnemonic: SRA A
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    SRA(ctx, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb30(core::Context& ctx) {
-    /*  mnemonic: SWAP B
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    SWAP(ctx, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 8;
-}
-int opcode_0xcb31(core::Context& ctx) {
-    /*  mnemonic: SWAP C
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    SWAP(ctx, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 8;
-}
-int opcode_0xcb32(core::Context& ctx) {
-    /*  mnemonic: SWAP D
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    SWAP(ctx, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 8;
-}
-int opcode_0xcb33(core::Context& ctx) {
-    /*  mnemonic: SWAP E
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    SWAP(ctx, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 8;
-}
-int opcode_0xcb34(core::Context& ctx) {
-    /*  mnemonic: SWAP H
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    SWAP(ctx, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 8;
-}
-int opcode_0xcb35(core::Context& ctx) {
-    /*  mnemonic: SWAP L
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    SWAP(ctx, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 8;
-}
-int opcode_0xcb36(core::Context& ctx) {
-    /*  mnemonic: SWAP (HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: Z 0 0 0
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    SWAP(ctx, temp);
-    ctx.write8(ctx.r.HL, temp);
-
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 16;
-}
-int opcode_0xcb37(core::Context& ctx) {
-    /*  mnemonic: SWAP A
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 0
-	*/
-    SWAP(ctx, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    ctx.r.reset_carry();
-    return 8;
-}
-int opcode_0xcb38(core::Context& ctx) {
-    /*  mnemonic: SRL B
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    SRL(ctx, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb39(core::Context& ctx) {
-    /*  mnemonic: SRL C
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    SRL(ctx, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb3a(core::Context& ctx) {
-    /*  mnemonic: SRL D
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    SRL(ctx, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb3b(core::Context& ctx) {
-    /*  mnemonic: SRL E
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    SRL(ctx, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb3c(core::Context& ctx) {
-    /*  mnemonic: SRL H
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    SRL(ctx, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb3d(core::Context& ctx) {
-    /*  mnemonic: SRL L
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    SRL(ctx, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb3e(core::Context& ctx) {
-    /*  mnemonic: SRL (HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: Z 0 0 C
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    SRL(ctx, temp);
-    ctx.write8(ctx.r.HL, temp);
-
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 16;
-}
-int opcode_0xcb3f(core::Context& ctx) {
-    /*  mnemonic: SRL A
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 0 C
-	*/
-    SRL(ctx, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.reset_halfcarry();
-    return 8;
-}
-int opcode_0xcb40(core::Context& ctx) {
-    /*  mnemonic: BIT 0,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 0, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb41(core::Context& ctx) {
-    /*  mnemonic: BIT 0,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 0, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb42(core::Context& ctx) {
-    /*  mnemonic: BIT 0,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 0, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb43(core::Context& ctx) {
-    /*  mnemonic: BIT 0,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 0, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb44(core::Context& ctx) {
-    /*  mnemonic: BIT 0,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 0, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb45(core::Context& ctx) {
-    /*  mnemonic: BIT 0,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 0, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb46(core::Context& ctx) {
-    /*  mnemonic: BIT 0,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 0, ctx.read8(ctx.r.HL));
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 16;
-}
-int opcode_0xcb47(core::Context& ctx) {
-    /*  mnemonic: BIT 0,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 0, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb48(core::Context& ctx) {
-    /*  mnemonic: BIT 1,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 1, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb49(core::Context& ctx) {
-    /*  mnemonic: BIT 1,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 1, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb4a(core::Context& ctx) {
-    /*  mnemonic: BIT 1,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 1, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb4b(core::Context& ctx) {
-    /*  mnemonic: BIT 1,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 1, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb4c(core::Context& ctx) {
-    /*  mnemonic: BIT 1,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 1, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb4d(core::Context& ctx) {
-    /*  mnemonic: BIT 1,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 1, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb4e(core::Context& ctx) {
-    /*  mnemonic: BIT 1,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 1, ctx.read8(ctx.r.HL));
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 16;
-}
-int opcode_0xcb4f(core::Context& ctx) {
-    /*  mnemonic: BIT 1,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 1, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb50(core::Context& ctx) {
-    /*  mnemonic: BIT 2,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 2, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb51(core::Context& ctx) {
-    /*  mnemonic: BIT 2,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 2, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb52(core::Context& ctx) {
-    /*  mnemonic: BIT 2,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 2, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb53(core::Context& ctx) {
-    /*  mnemonic: BIT 2,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 2, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb54(core::Context& ctx) {
-    /*  mnemonic: BIT 2,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 2, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb55(core::Context& ctx) {
-    /*  mnemonic: BIT 2,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 2, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb56(core::Context& ctx) {
-    /*  mnemonic: BIT 2,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 2, ctx.read8(ctx.r.HL));
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 16;
-}
-int opcode_0xcb57(core::Context& ctx) {
-    /*  mnemonic: BIT 2,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 2, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb58(core::Context& ctx) {
-    /*  mnemonic: BIT 3,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 3, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb59(core::Context& ctx) {
-    /*  mnemonic: BIT 3,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 3, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb5a(core::Context& ctx) {
-    /*  mnemonic: BIT 3,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 3, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb5b(core::Context& ctx) {
-    /*  mnemonic: BIT 3,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 3, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb5c(core::Context& ctx) {
-    /*  mnemonic: BIT 3,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 3, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb5d(core::Context& ctx) {
-    /*  mnemonic: BIT 3,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 3, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb5e(core::Context& ctx) {
-    /*  mnemonic: BIT 3,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 3, ctx.read8(ctx.r.HL));
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 16;
-}
-int opcode_0xcb5f(core::Context& ctx) {
-    /*  mnemonic: BIT 3,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 3, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb60(core::Context& ctx) {
-    /*  mnemonic: BIT 4,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 4, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb61(core::Context& ctx) {
-    /*  mnemonic: BIT 4,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 4, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb62(core::Context& ctx) {
-    /*  mnemonic: BIT 4,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 4, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb63(core::Context& ctx) {
-    /*  mnemonic: BIT 4,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 4, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb64(core::Context& ctx) {
-    /*  mnemonic: BIT 4,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 4, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb65(core::Context& ctx) {
-    /*  mnemonic: BIT 4,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 4, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb66(core::Context& ctx) {
-    /*  mnemonic: BIT 4,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 4, ctx.read8(ctx.r.HL));
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 16;
-}
-int opcode_0xcb67(core::Context& ctx) {
-    /*  mnemonic: BIT 4,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 4, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb68(core::Context& ctx) {
-    /*  mnemonic: BIT 5,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 5, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb69(core::Context& ctx) {
-    /*  mnemonic: BIT 5,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 5, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb6a(core::Context& ctx) {
-    /*  mnemonic: BIT 5,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 5, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb6b(core::Context& ctx) {
-    /*  mnemonic: BIT 5,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 5, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb6c(core::Context& ctx) {
-    /*  mnemonic: BIT 5,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 5, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb6d(core::Context& ctx) {
-    /*  mnemonic: BIT 5,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 5, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb6e(core::Context& ctx) {
-    /*  mnemonic: BIT 5,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 5, ctx.read8(ctx.r.HL));
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 16;
-}
-int opcode_0xcb6f(core::Context& ctx) {
-    /*  mnemonic: BIT 5,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 5, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb70(core::Context& ctx) {
-    /*  mnemonic: BIT 6,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 6, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb71(core::Context& ctx) {
-    /*  mnemonic: BIT 6,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 6, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb72(core::Context& ctx) {
-    /*  mnemonic: BIT 6,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 6, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb73(core::Context& ctx) {
-    /*  mnemonic: BIT 6,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 6, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb74(core::Context& ctx) {
-    /*  mnemonic: BIT 6,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 6, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb75(core::Context& ctx) {
-    /*  mnemonic: BIT 6,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 6, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb76(core::Context& ctx) {
-    /*  mnemonic: BIT 6,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 6, ctx.read8(ctx.r.HL));
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 16;
-}
-int opcode_0xcb77(core::Context& ctx) {
-    /*  mnemonic: BIT 6,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 6, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb78(core::Context& ctx) {
-    /*  mnemonic: BIT 7,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 7, ctx.r.B);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb79(core::Context& ctx) {
-    /*  mnemonic: BIT 7,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 7, ctx.r.C);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb7a(core::Context& ctx) {
-    /*  mnemonic: BIT 7,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 7, ctx.r.D);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb7b(core::Context& ctx) {
-    /*  mnemonic: BIT 7,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 7, ctx.r.E);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb7c(core::Context& ctx) {
-    /*  mnemonic: BIT 7,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 7, ctx.r.H);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb7d(core::Context& ctx) {
-    /*  mnemonic: BIT 7,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 7, ctx.r.L);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb7e(core::Context& ctx) {
-    /*  mnemonic: BIT 7,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 7, ctx.read8(ctx.r.HL));
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 16;
-}
-int opcode_0xcb7f(core::Context& ctx) {
-    /*  mnemonic: BIT 7,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: Z 0 1 -
-	*/
-    BIT(ctx, 7, ctx.r.A);
-    ctx.r.reset_sub();
-    ctx.r.set_halfcarry();
-    return 8;
-}
-int opcode_0xcb80(core::Context& ctx) {
-    /*  mnemonic: RES 0,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(0, ctx.r.B);
-    return 8;
-}
-int opcode_0xcb81(core::Context& ctx) {
-    /*  mnemonic: RES 0,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(0, ctx.r.C);
-    return 8;
-}
-int opcode_0xcb82(core::Context& ctx) {
-    /*  mnemonic: RES 0,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(0, ctx.r.D);
-    return 8;
-}
-int opcode_0xcb83(core::Context& ctx) {
-    /*  mnemonic: RES 0,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(0, ctx.r.E);
-    return 8;
-}
-int opcode_0xcb84(core::Context& ctx) {
-    /*  mnemonic: RES 0,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(0, ctx.r.H);
-    return 8;
-}
-int opcode_0xcb85(core::Context& ctx) {
-    /*  mnemonic: RES 0,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(0, ctx.r.L);
-    return 8;
-}
-int opcode_0xcb86(core::Context& ctx) {
-    /*  mnemonic: RES 0,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    RES(0, temp);
-    ctx.write8(ctx.r.HL, temp);
-    return 16;
-}
-int opcode_0xcb87(core::Context& ctx) {
-    /*  mnemonic: RES 0,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(0, ctx.r.A);
-    return 8;
-}
-int opcode_0xcb88(core::Context& ctx) {
-    /*  mnemonic: RES 1,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(1, ctx.r.B);
-    return 8;
-}
-int opcode_0xcb89(core::Context& ctx) {
-    /*  mnemonic: RES 1,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(1, ctx.r.C);
-    return 8;
-}
-int opcode_0xcb8a(core::Context& ctx) {
-    /*  mnemonic: RES 1,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(1, ctx.r.D);
-    return 8;
-}
-int opcode_0xcb8b(core::Context& ctx) {
-    /*  mnemonic: RES 1,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(1, ctx.r.E);
-    return 8;
-}
-int opcode_0xcb8c(core::Context& ctx) {
-    /*  mnemonic: RES 1,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(1, ctx.r.H);
-    return 8;
-}
-int opcode_0xcb8d(core::Context& ctx) {
-    /*  mnemonic: RES 1,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(1, ctx.r.L);
-    return 8;
-}
-int opcode_0xcb8e(core::Context& ctx) {
-    /*  mnemonic: RES 1,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    RES(1, temp);
-    ctx.write8(ctx.r.HL, temp);
-    return 16;
-}
-int opcode_0xcb8f(core::Context& ctx) {
-    /*  mnemonic: RES 1,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(1, ctx.r.A);
-    return 8;
-}
-int opcode_0xcb90(core::Context& ctx) {
-    /*  mnemonic: RES 2,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(2, ctx.r.B);
-    return 8;
-}
-int opcode_0xcb91(core::Context& ctx) {
-    /*  mnemonic: RES 2,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(2, ctx.r.C);
-    return 8;
-}
-int opcode_0xcb92(core::Context& ctx) {
-    /*  mnemonic: RES 2,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(2, ctx.r.D);
-    return 8;
-}
-int opcode_0xcb93(core::Context& ctx) {
-    /*  mnemonic: RES 2,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(2, ctx.r.E);
-    return 8;
-}
-int opcode_0xcb94(core::Context& ctx) {
-    /*  mnemonic: RES 2,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(2, ctx.r.H);
-    return 8;
-}
-int opcode_0xcb95(core::Context& ctx) {
-    /*  mnemonic: RES 2,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(2, ctx.r.L);
-    return 8;
-}
-int opcode_0xcb96(core::Context& ctx) {
-    /*  mnemonic: RES 2,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    RES(2, temp);
-    ctx.write8(ctx.r.HL, temp);
-    return 16;
-}
-int opcode_0xcb97(core::Context& ctx) {
-    /*  mnemonic: RES 2,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(2, ctx.r.A);
-    return 8;
-}
-int opcode_0xcb98(core::Context& ctx) {
-    /*  mnemonic: RES 3,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(3, ctx.r.B);
-    return 8;
-}
-int opcode_0xcb99(core::Context& ctx) {
-    /*  mnemonic: RES 3,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(3, ctx.r.C);
-    return 8;
-}
-int opcode_0xcb9a(core::Context& ctx) {
-    /*  mnemonic: RES 3,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(3, ctx.r.D);
-    return 8;
-}
-int opcode_0xcb9b(core::Context& ctx) {
-    /*  mnemonic: RES 3,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(3, ctx.r.E);
-    return 8;
-}
-int opcode_0xcb9c(core::Context& ctx) {
-    /*  mnemonic: RES 3,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(3, ctx.r.H);
-    return 8;
-}
-int opcode_0xcb9d(core::Context& ctx) {
-    /*  mnemonic: RES 3,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(3, ctx.r.L);
-    return 8;
-}
-int opcode_0xcb9e(core::Context& ctx) {
-    /*  mnemonic: RES 3,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    RES(3, temp);
-    ctx.write8(ctx.r.HL, temp);
-    return 16;
-}
-int opcode_0xcb9f(core::Context& ctx) {
-    /*  mnemonic: RES 3,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(3, ctx.r.A);
-    return 8;
-}
-int opcode_0xcba0(core::Context& ctx) {
-    /*  mnemonic: RES 4,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(4, ctx.r.B);
-    return 8;
-}
-int opcode_0xcba1(core::Context& ctx) {
-    /*  mnemonic: RES 4,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(4, ctx.r.C);
-    return 8;
-}
-int opcode_0xcba2(core::Context& ctx) {
-    /*  mnemonic: RES 4,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(4, ctx.r.D);
-    return 8;
-}
-int opcode_0xcba3(core::Context& ctx) {
-    /*  mnemonic: RES 4,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(4, ctx.r.E);
-    return 8;
-}
-int opcode_0xcba4(core::Context& ctx) {
-    /*  mnemonic: RES 4,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(4, ctx.r.H);
-    return 8;
-}
-int opcode_0xcba5(core::Context& ctx) {
-    /*  mnemonic: RES 4,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(4, ctx.r.L);
-    return 8;
-}
-int opcode_0xcba6(core::Context& ctx) {
-    /*  mnemonic: RES 4,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    RES(4, temp);
-    ctx.write8(ctx.r.HL, temp);
-    return 16;
-}
-int opcode_0xcba7(core::Context& ctx) {
-    /*  mnemonic: RES 4,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(4, ctx.r.A);
-    return 8;
-}
-int opcode_0xcba8(core::Context& ctx) {
-    /*  mnemonic: RES 5,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(5, ctx.r.B);
-    return 8;
-}
-int opcode_0xcba9(core::Context& ctx) {
-    /*  mnemonic: RES 5,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(5, ctx.r.C);
-    return 8;
-}
-int opcode_0xcbaa(core::Context& ctx) {
-    /*  mnemonic: RES 5,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(5, ctx.r.D);
-    return 8;
-}
-int opcode_0xcbab(core::Context& ctx) {
-    /*  mnemonic: RES 5,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(5, ctx.r.E);
-    return 8;
-}
-int opcode_0xcbac(core::Context& ctx) {
-    /*  mnemonic: RES 5,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(5, ctx.r.H);
-    return 8;
-}
-int opcode_0xcbad(core::Context& ctx) {
-    /*  mnemonic: RES 5,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(5, ctx.r.L);
-    return 8;
-}
-int opcode_0xcbae(core::Context& ctx) {
-    /*  mnemonic: RES 5,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    RES(5, temp);
-    ctx.write8(ctx.r.HL, temp);
-    return 16;
-}
-int opcode_0xcbaf(core::Context& ctx) {
-    /*  mnemonic: RES 5,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(5, ctx.r.A);
-    return 8;
-}
-int opcode_0xcbb0(core::Context& ctx) {
-    /*  mnemonic: RES 6,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(6, ctx.r.B);
-    return 8;
-}
-int opcode_0xcbb1(core::Context& ctx) {
-    /*  mnemonic: RES 6,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(6, ctx.r.C);
-    return 8;
-}
-int opcode_0xcbb2(core::Context& ctx) {
-    /*  mnemonic: RES 6,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(6, ctx.r.D);
-    return 8;
-}
-int opcode_0xcbb3(core::Context& ctx) {
-    /*  mnemonic: RES 6,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(6, ctx.r.E);
-    return 8;
-}
-int opcode_0xcbb4(core::Context& ctx) {
-    /*  mnemonic: RES 6,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(6, ctx.r.H);
-    return 8;
-}
-int opcode_0xcbb5(core::Context& ctx) {
-    /*  mnemonic: RES 6,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(6, ctx.r.L);
-    return 8;
-}
-int opcode_0xcbb6(core::Context& ctx) {
-    /*  mnemonic: RES 6,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    RES(6, temp);
-    ctx.write8(ctx.r.HL, temp);
-    return 16;
-}
-int opcode_0xcbb7(core::Context& ctx) {
-    /*  mnemonic: RES 6,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(6, ctx.r.A);
-    return 8;
-}
-int opcode_0xcbb8(core::Context& ctx) {
-    /*  mnemonic: RES 7,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(7, ctx.r.B);
-    return 8;
-}
-int opcode_0xcbb9(core::Context& ctx) {
-    /*  mnemonic: RES 7,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(7, ctx.r.C);
-    return 8;
-}
-int opcode_0xcbba(core::Context& ctx) {
-    /*  mnemonic: RES 7,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(7, ctx.r.D);
-    return 8;
-}
-int opcode_0xcbbb(core::Context& ctx) {
-    /*  mnemonic: RES 7,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(7, ctx.r.E);
-    return 8;
-}
-int opcode_0xcbbc(core::Context& ctx) {
-    /*  mnemonic: RES 7,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(7, ctx.r.H);
-    return 8;
-}
-int opcode_0xcbbd(core::Context& ctx) {
-    /*  mnemonic: RES 7,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(7, ctx.r.L);
-    return 8;
-}
-int opcode_0xcbbe(core::Context& ctx) {
-    /*  mnemonic: RES 7,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    RES(7, temp);
-    ctx.write8(ctx.r.HL, temp);
-    return 16;
-}
-int opcode_0xcbbf(core::Context& ctx) {
-    /*  mnemonic: RES 7,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    RES(7, ctx.r.A);
-    return 8;
-}
-int opcode_0xcbc0(core::Context& ctx) {
-    /*  mnemonic: SET 0,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(0, ctx.r.B);
-    return 8;
-}
-int opcode_0xcbc1(core::Context& ctx) {
-    /*  mnemonic: SET 0,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(0, ctx.r.C);
-    return 8;
-}
-int opcode_0xcbc2(core::Context& ctx) {
-    /*  mnemonic: SET 0,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(0, ctx.r.D);
-    return 8;
-}
-int opcode_0xcbc3(core::Context& ctx) {
-    /*  mnemonic: SET 0,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(0, ctx.r.E);
-    return 8;
-}
-int opcode_0xcbc4(core::Context& ctx) {
-    /*  mnemonic: SET 0,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(0, ctx.r.H);
-    return 8;
-}
-int opcode_0xcbc5(core::Context& ctx) {
-    /*  mnemonic: SET 0,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(0, ctx.r.L);
-    return 8;
-}
-int opcode_0xcbc6(core::Context& ctx) {
-    /*  mnemonic: SET 0,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    SET(0, temp);
-    ctx.write8(ctx.r.HL, temp);
-    return 16;
-}
-int opcode_0xcbc7(core::Context& ctx) {
-    /*  mnemonic: SET 0,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(0, ctx.r.A);
-    return 8;
-}
-int opcode_0xcbc8(core::Context& ctx) {
-    /*  mnemonic: SET 1,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(1, ctx.r.B);
-    return 8;
-}
-int opcode_0xcbc9(core::Context& ctx) {
-    /*  mnemonic: SET 1,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(1, ctx.r.C);
-    return 8;
-}
-int opcode_0xcbca(core::Context& ctx) {
-    /*  mnemonic: SET 1,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(1, ctx.r.D);
-    return 8;
-}
-int opcode_0xcbcb(core::Context& ctx) {
-    /*  mnemonic: SET 1,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(1, ctx.r.E);
-    return 8;
-}
-int opcode_0xcbcc(core::Context& ctx) {
-    /*  mnemonic: SET 1,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(1, ctx.r.H);
-    return 8;
-}
-int opcode_0xcbcd(core::Context& ctx) {
-    /*  mnemonic: SET 1,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(1, ctx.r.L);
-    return 8;
-}
-int opcode_0xcbce(core::Context& ctx) {
-    /*  mnemonic: SET 1,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    SET(1, temp);
-    ctx.write8(ctx.r.HL, temp);
-    return 16;
-}
-int opcode_0xcbcf(core::Context& ctx) {
-    /*  mnemonic: SET 1,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(1, ctx.r.A);
-    return 8;
-}
-int opcode_0xcbd0(core::Context& ctx) {
-    /*  mnemonic: SET 2,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(2, ctx.r.B);
-    return 8;
-}
-int opcode_0xcbd1(core::Context& ctx) {
-    /*  mnemonic: SET 2,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(2, ctx.r.C);
-    return 8;
-}
-int opcode_0xcbd2(core::Context& ctx) {
-    /*  mnemonic: SET 2,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(2, ctx.r.D);
-    return 8;
-}
-int opcode_0xcbd3(core::Context& ctx) {
-    /*  mnemonic: SET 2,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(2, ctx.r.E);
-    return 8;
-}
-int opcode_0xcbd4(core::Context& ctx) {
-    /*  mnemonic: SET 2,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(2, ctx.r.H);
-    return 8;
-}
-int opcode_0xcbd5(core::Context& ctx) {
-    /*  mnemonic: SET 2,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(2, ctx.r.L);
-    return 8;
-}
-int opcode_0xcbd6(core::Context& ctx) {
-    /*  mnemonic: SET 2,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    SET(2, temp);
-    ctx.write8(ctx.r.HL, temp);
-    return 16;
-}
-int opcode_0xcbd7(core::Context& ctx) {
-    /*  mnemonic: SET 2,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(2, ctx.r.A);
-    return 8;
-}
-int opcode_0xcbd8(core::Context& ctx) {
-    /*  mnemonic: SET 3,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(3, ctx.r.B);
-    return 8;
-}
-int opcode_0xcbd9(core::Context& ctx) {
-    /*  mnemonic: SET 3,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(3, ctx.r.C);
-    return 8;
-}
-int opcode_0xcbda(core::Context& ctx) {
-    /*  mnemonic: SET 3,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(3, ctx.r.D);
-    return 8;
-}
-int opcode_0xcbdb(core::Context& ctx) {
-    /*  mnemonic: SET 3,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(3, ctx.r.E);
-    return 8;
-}
-int opcode_0xcbdc(core::Context& ctx) {
-    /*  mnemonic: SET 3,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(3, ctx.r.H);
-    return 8;
-}
-int opcode_0xcbdd(core::Context& ctx) {
-    /*  mnemonic: SET 3,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(3, ctx.r.L);
-    return 8;
-}
-int opcode_0xcbde(core::Context& ctx) {
-    /*  mnemonic: SET 3,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    SET(3, temp);
-    ctx.write8(ctx.r.HL, temp);
-    return 16;
-}
-int opcode_0xcbdf(core::Context& ctx) {
-    /*  mnemonic: SET 3,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(3, ctx.r.A);
-    return 8;
-}
-int opcode_0xcbe0(core::Context& ctx) {
-    /*  mnemonic: SET 4,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(4, ctx.r.B);
-    return 8;
-}
-int opcode_0xcbe1(core::Context& ctx) {
-    /*  mnemonic: SET 4,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(4, ctx.r.C);
-    return 8;
-}
-int opcode_0xcbe2(core::Context& ctx) {
-    /*  mnemonic: SET 4,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(4, ctx.r.D);
-    return 8;
-}
-int opcode_0xcbe3(core::Context& ctx) {
-    /*  mnemonic: SET 4,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(4, ctx.r.E);
-    return 8;
-}
-int opcode_0xcbe4(core::Context& ctx) {
-    /*  mnemonic: SET 4,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(4, ctx.r.H);
-    return 8;
-}
-int opcode_0xcbe5(core::Context& ctx) {
-    /*  mnemonic: SET 4,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(4, ctx.r.L);
-    return 8;
-}
-int opcode_0xcbe6(core::Context& ctx) {
-    /*  mnemonic: SET 4,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    SET(4, temp);
-    ctx.write8(ctx.r.HL, temp);
-    return 16;
-}
-int opcode_0xcbe7(core::Context& ctx) {
-    /*  mnemonic: SET 4,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(4, ctx.r.A);
-    return 8;
-}
-int opcode_0xcbe8(core::Context& ctx) {
-    /*  mnemonic: SET 5,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(5, ctx.r.B);
-    return 8;
-}
-int opcode_0xcbe9(core::Context& ctx) {
-    /*  mnemonic: SET 5,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(5, ctx.r.C);
-    return 8;
-}
-int opcode_0xcbea(core::Context& ctx) {
-    /*  mnemonic: SET 5,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(5, ctx.r.D);
-    return 8;
-}
-int opcode_0xcbeb(core::Context& ctx) {
-    /*  mnemonic: SET 5,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(5, ctx.r.E);
-    return 8;
-}
-int opcode_0xcbec(core::Context& ctx) {
-    /*  mnemonic: SET 5,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(5, ctx.r.H);
-    return 8;
-}
-int opcode_0xcbed(core::Context& ctx) {
-    /*  mnemonic: SET 5,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(5, ctx.r.L);
-    return 8;
-}
-int opcode_0xcbee(core::Context& ctx) {
-    /*  mnemonic: SET 5,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    SET(5, temp);
-    ctx.write8(ctx.r.HL, temp);
-    return 16;
-}
-int opcode_0xcbef(core::Context& ctx) {
-    /*  mnemonic: SET 5,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(5, ctx.r.A);
-    return 8;
-}
-int opcode_0xcbf0(core::Context& ctx) {
-    /*  mnemonic: SET 6,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(6, ctx.r.B);
-    return 8;
-}
-int opcode_0xcbf1(core::Context& ctx) {
-    /*  mnemonic: SET 6,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(6, ctx.r.C);
-    return 8;
-}
-int opcode_0xcbf2(core::Context& ctx) {
-    /*  mnemonic: SET 6,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(6, ctx.r.D);
-    return 8;
-}
-int opcode_0xcbf3(core::Context& ctx) {
-    /*  mnemonic: SET 6,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(6, ctx.r.E);
-    return 8;
-}
-int opcode_0xcbf4(core::Context& ctx) {
-    /*  mnemonic: SET 6,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(6, ctx.r.H);
-    return 8;
-}
-int opcode_0xcbf5(core::Context& ctx) {
-    /*  mnemonic: SET 6,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(6, ctx.r.L);
-    return 8;
-}
-int opcode_0xcbf6(core::Context& ctx) {
-    /*  mnemonic: SET 6,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    SET(6, temp);
-    ctx.write8(ctx.r.HL, temp);
-    return 16;
-}
-int opcode_0xcbf7(core::Context& ctx) {
-    /*  mnemonic: SET 6,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(6, ctx.r.A);
-    return 8;
-}
-int opcode_0xcbf8(core::Context& ctx) {
-    /*  mnemonic: SET 7,B
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(7, ctx.r.B);
-    return 8;
-}
-int opcode_0xcbf9(core::Context& ctx) {
-    /*  mnemonic: SET 7,C
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(7, ctx.r.C);
-    return 8;
-}
-int opcode_0xcbfa(core::Context& ctx) {
-    /*  mnemonic: SET 7,D
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(7, ctx.r.D);
-    return 8;
-}
-int opcode_0xcbfb(core::Context& ctx) {
-    /*  mnemonic: SET 7,E
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(7, ctx.r.E);
-    return 8;
-}
-int opcode_0xcbfc(core::Context& ctx) {
-    /*  mnemonic: SET 7,H
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(7, ctx.r.H);
-    return 8;
-}
-int opcode_0xcbfd(core::Context& ctx) {
-    /*  mnemonic: SET 7,L
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(7, ctx.r.L);
-    return 8;
-}
-int opcode_0xcbfe(core::Context& ctx) {
-    /*  mnemonic: SET 7,(HL)
-	*  length: 2
-	*  cycles: 16
-	*  affects: - - - -
-	*/
-    auto temp = ctx.read8(ctx.r.HL);
-    SET(7, temp);
-    ctx.write8(ctx.r.HL, temp);
-    return 16;
-}
-int opcode_0xcbff(core::Context& ctx) {
-    /*  mnemonic: SET 7,A
-	*  length: 2
-	*  cycles: 8
-	*  affects: - - - -
-	*/
-    SET(7, ctx.r.A);
-    return 8;
 }

@@ -10,7 +10,6 @@ namespace {
     std::unordered_map<uint16_t, std::shared_ptr<core::basic_block>> done;
 
     // check if `val` is an opcode that breaks a basic block
-    bool is_jump_or_ret() { return false; }
 } // namespace
 
 namespace GUI {

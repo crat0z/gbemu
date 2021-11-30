@@ -23,7 +23,7 @@ namespace core {
         Instruction(uint16_t addr) : address{ addr }, opcode{ 0 }, length{ 1 }, mnemonic{} {}
 
         // length = 2 always at this point, change in future
-        Instruction(uint16_t addr, uint16_t opc)
+        Instruction(uint16_t addr, [[maybe_unused]] uint16_t opc)
                 : address{ addr }, opcode{ /*swap_byte_order(opc)*/ }, length{ 2 }, mnemonic{ "" } {}
 
         std::string opcode_string() const noexcept {

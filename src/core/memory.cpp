@@ -7,7 +7,7 @@ namespace {
     constexpr uint8_t Serial = 0x8;
     constexpr uint8_t Joypad = 0x16;
 
-    constexpr uint8_t TAC_select = 0x3;
+    //constexpr uint8_t TAC_select = 0x3;
     constexpr uint8_t TAC_enable = 0x4;
 } // namespace
 

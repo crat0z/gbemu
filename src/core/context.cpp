@@ -39,7 +39,8 @@ namespace core {
             return;
         case 0xFF07:
             uint8_t select = value & 0x3;
-            uint8_t enable = (value >> 2) & 0x1;
+
+            //TIMA_enabled = (value >> 2) & 0x1;
 
             m.TAC = value & 0x7;
 
@@ -59,6 +60,7 @@ namespace core {
             default:
                 break;
             }
+
             TIMA_count = 0;
             return;
         }

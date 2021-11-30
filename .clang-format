@@ -12,18 +12,18 @@
 Language: Cpp
 AccessModifierOffset: -4
 AlignAfterOpenBracket: Align
-AlignConsecutiveAssignments: true
-AlignConsecutiveDeclarations: true
+AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveDeclarations: Consecutive
 AlignConsecutiveBitFields: AcrossEmptyLinesAndComments
 BitFieldColonSpacing: Both
 AlignEscapedNewlines: Left # Unknown to clang-format-4.0
 AlignOperands: true
 AlignTrailingComments: false
-AllowShortLambdasOnASingleLine: true
+AllowShortLambdasOnASingleLine: All
 AllowAllParametersOfDeclarationOnNextLine: false
 AllowShortBlocksOnASingleLine: Empty
 AllowShortCaseLabelsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: true #previously None
+AllowShortFunctionsOnASingleLine: All #previously None
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
 AllowShortEnumsOnASingleLine: false

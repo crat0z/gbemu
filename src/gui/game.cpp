@@ -4,7 +4,7 @@
 
 namespace GUI {
 
-    Game::Game(core::EmuWrapper& e) : GUIComponent(0, true), emu(e) {}
+    Game::Game(core::EmuWrapper& e) : GUIComponent(0, true), emu(e) { emu.reset(); }
 
     void Game::draw_window() {
 
