@@ -3,14 +3,15 @@
 #include "registers.hpp"
 #include "memory.hpp"
 #include <string>
+#include <memory>
 
 namespace core {
 
     struct Context {
 
-        Memory m = {};
+        std::shared_ptr<Memory> m;
 
-        Registers r = {};
+        Registers r;
 
         uint16_t TIMA_count  = 0;
         uint16_t TIMA_factor = 0;
@@ -19,6 +20,8 @@ namespace core {
         bool interrupt_modified = false;
 
         bool interrupt_pending() const;
+
+        Context(std::shared_ptr<Memory> mem);
 
         uint8_t  read8(uint16_t address);
         uint16_t read16(uint16_t address);

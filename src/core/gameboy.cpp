@@ -1,28 +1,22 @@
 #include <chrono>
 #include <iostream>
-#include <bitset>
 #include <fstream>
-#include <ctime>
-#include <thread>
 #include <future>
 #include "core/gameboy.hpp"
 #include "core/gameboy_opcodes.hpp"
-#include "core/str_opcodes.hpp"
 
 namespace core {
     Gameboy::Gameboy()
             : op_table(create_table()),
               cb_table(create_cb_table()),
-              op_str_table(opcode_strings()),
-              op_cb_str_table(cb_opcode_strings()) {
-        is_ready = false;
-    }
+              memory(std::make_shared<Memory>()),
+              ctx(memory) {}
 
     void Gameboy::reset_state() {
         // just in case in future
         is_ready = false;
 
-        ctx = {};
+        *memory = {};
         CPUTimer.reset();
         DIVTimer.reset();
         cycle_count = 0;
@@ -31,6 +25,9 @@ namespace core {
     void Gameboy::cycle() {
         static auto last_cycle = 0;
         static auto result     = 0;
+
+        // check if PC changes at end of this cycle, if not, we're done
+        auto PC = ctx.r.PC;
 
         while (result) {
             // wait for it
@@ -44,20 +41,15 @@ namespace core {
         }
         ctx.TIMA_update(last_cycle);
 
-        //std::cout << ctx.print();
 
         if (!ctx.halted) {
             auto op = ctx.imm8();
 
             if (op == 0xCB) {
                 op = ctx.imm8();
-                //std::cout << op_cb_str_table[op](ctx);
-                //std::cout << '\n';
                 result = cb_table[op](ctx);
             }
             else {
-                //std::cout << op_str_table[op](ctx);
-                //std::cout << '\n';
                 result = op_table[op](ctx);
             }
             last_cycle = result;
@@ -89,28 +81,34 @@ namespace core {
                     ctx.r.PC = val;
                 };
                 // priority is VBlank > ... > Joypad
-                if (ctx.m.get_IF_VBlank()) {
-                    ctx.m.reset_IF_VBlank();
+                if (ctx.m->get_IF_VBlank()) {
+                    ctx.m->reset_IF_VBlank();
                     jump_to_int(0x40);
                 }
-                else if (ctx.m.get_IF_STAT()) {
-                    ctx.m.reset_IF_STAT();
+                else if (ctx.m->get_IF_STAT()) {
+                    ctx.m->reset_IF_STAT();
                     jump_to_int(0x48);
                 }
-                else if (ctx.m.get_IF_Timer()) {
-                    ctx.m.reset_IF_Timer();
+                else if (ctx.m->get_IF_Timer()) {
+                    ctx.m->reset_IF_Timer();
                     jump_to_int(0x50);
                 }
-                else if (ctx.m.get_IF_Serial()) {
-                    ctx.m.reset_IF_Serial();
+                else if (ctx.m->get_IF_Serial()) {
+                    ctx.m->reset_IF_Serial();
                     jump_to_int(0x58);
                 }
-                else if (ctx.m.get_IF_Joypad()) {
-                    ctx.m.reset_IF_Joypad();
+                else if (ctx.m->get_IF_Joypad()) {
+                    ctx.m->reset_IF_Joypad();
                     jump_to_int(0x60);
                 }
             }
         }
         cycle_count += result;
+
+        // ppu logic here
+
+        if (PC == ctx.r.PC) {
+            is_ready = false;
+        }
     }
 } // namespace core

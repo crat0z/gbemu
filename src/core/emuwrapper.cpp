@@ -33,7 +33,7 @@ namespace core {
         proc.reset_state();
         proc.ctx.r.PC = entry;
 
-        read_file(filepath, addr, proc.ctx.m.memory.data());
+        read_file(filepath, addr, proc.ctx.m->memory.data());
 
         proc.is_ready = true;
     }
