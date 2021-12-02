@@ -58,7 +58,7 @@ namespace core {
         uint16_t first  = read8(address);
         auto     second = read8(address + 1);
 
-        return (second << 8) | first;
+        return static_cast<uint16_t>((second << 8) | first);
     }
 
     void Context::TIMA_update(int last_cycle) {
@@ -206,7 +206,7 @@ namespace core {
         return val;
     }
 
-    uint8_t  Context::peek8(int offset) { return m->get8(r.PC + offset); }
+    uint8_t  Context::peek8(int offset) { return m->get8(static_cast<uint16_t>(r.PC + offset)); }
     uint16_t Context::peek16() { return m->get16(r.PC); }
     int8_t   Context::peek8_signed() { return static_cast<int8_t>(m->get8(r.PC)); }
 

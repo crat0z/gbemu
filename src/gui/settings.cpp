@@ -24,13 +24,13 @@ namespace GUI {
         if (ImGui::BeginTable("all keybinds", 4, ImGuiTableFlags_SizingStretchSame)) {
             ImGui::TableNextRow();
 
-            for (auto i = 0; i < 4; ++i) {
+            for (int i = 0; i < 4; ++i) {
                 ImGui::TableNextColumn();
 
                 if (ImGui::BeginTable("inner", 2, ImGuiTableFlags_SizingStretchSame)) {
-                    for (auto j = i; j < 16; j += 4) {
+                    for (int j = i; j < 16; j += 4) {
 
-                        auto& k = global::keymap()[j];
+                        auto& k = global::keymap()[static_cast<size_t>(j)];
                         ImGui::TableNextRow();
 
                         ImGui::TableNextColumn();
@@ -54,10 +54,10 @@ namespace GUI {
 
                             auto& io = ImGui::GetIO();
                             // check every key
-                            for (size_t i = 0; i < sizeof(io.KeysDown); ++i) {
-                                SDL_Scancode scancode = static_cast<SDL_Scancode>(i);
+                            for (int key = 0; key < static_cast<int>(sizeof(io.KeysDown)); ++key) {
+                                SDL_Scancode scancode = static_cast<SDL_Scancode>(key);
 
-                                if (ImGui::IsKeyDown(i)) {
+                                if (ImGui::IsKeyDown(key)) {
                                     // ImGui keys are scancodes
                                     if (scancode == SDL_SCANCODE_ESCAPE) {
                                         ImGui::CloseCurrentPopup();

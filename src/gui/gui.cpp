@@ -44,7 +44,7 @@ namespace GUI {
         ImGui_ImplSDLRenderer_Init(renderer);
 
         // load icon textures, maybe put this in a method later
-        global::icon_textures() = generate_icons(font_size, renderer);
+        global::icon_textures() = generate_icons(static_cast<int>(font_size), renderer);
 
         style();
     }

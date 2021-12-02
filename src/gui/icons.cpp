@@ -42,7 +42,7 @@ namespace GUI {
 
         for (auto& pair : svg_pairs) {
             auto  data = fmt::vformat(pair.second, fmt::make_format_args(font_size));
-            auto* tmp  = SDL_RWFromConstMem(data.c_str(), data.size());
+            auto* tmp  = SDL_RWFromConstMem(data.c_str(), static_cast<int>(data.size()));
             auto* tmp2 = IMG_Load_RW(tmp, 1);
             ret.push_back(SDL_CreateTextureFromSurface(renderer, tmp2));
         }

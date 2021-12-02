@@ -11,7 +11,7 @@ namespace {
         std::ifstream file;
         file.open(name, std::ios_base::binary);
         file.seekg(0, std::ios::end);
-        size_t size = file.tellg();
+        int64_t size = file.tellg();
         file.seekg(0, std::ios::beg);
         file.read(reinterpret_cast<char*>(data + addr), size);
         file.close();
@@ -60,7 +60,7 @@ namespace core {
     }
 
     void EmuWrapper::reset() noexcept {
-        for (auto i = 0; i < 16; ++i) {
+        for (size_t i = 0; i < 16; ++i) {
             reg_changes[i] = false;
         }
 

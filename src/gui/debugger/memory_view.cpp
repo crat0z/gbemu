@@ -40,7 +40,7 @@ namespace GUI {
 
             auto max = ImGui::GetContentRegionMax();
 
-            ImVec2 outer = ImVec2(0.0F, max.y - 3.0 * font_size);
+            ImVec2 outer = ImVec2(0.0F, max.y - 3.0f * font_size);
 
             if (ImGui::BeginTable("memory", count,
                                   ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp |
@@ -82,12 +82,12 @@ namespace GUI {
                 clipper.Begin(8192 / cols);
 
                 std::string var;
-                var.reserve(cols);
+                var.reserve(static_cast<size_t>(cols));
 
                 while (clipper.Step()) {
                     for (auto i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
                         // draw left number base thing
-                        uint16_t base = i * cols;
+                        uint16_t base = static_cast<uint16_t>(i * cols);
                         ImGui::TableNextColumn();
 
                         ImGui::Text("%03X", base);
@@ -112,9 +112,9 @@ namespace GUI {
                         }; */
 
                         //auto real_index = 0;
-                        for (auto i = begin; i < end; ++i) {
+                        for (auto ind = begin; ind < end; ++ind) {
                             ImGui::TableNextColumn();
-                            if (i == brk) {
+                            if (ind == brk) {
                                 ImGui::Text(" ");
                             }
                             else {

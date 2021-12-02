@@ -161,7 +161,7 @@ namespace {
     void OP_INLINE SWAP(core::Context& c, auto& first) {
         auto high = (first & 0xF0) >> 4;
         auto low  = (first & 0x0F) << 4;
-        first     = high | low;
+        first     = static_cast<uint8_t>(high | low);
 
         c.r.set_zero(first == 0);
     }
@@ -332,7 +332,7 @@ namespace {
 			*  cycles: 8
 			*  affects: - - - -
 			*/
-            uint16_t temp;
+            uint8_t temp;
             LD(temp, ctx.r.A);
             ctx.write8(ctx.r.BC, temp);
             return 8;
@@ -724,7 +724,7 @@ namespace {
 			*  cycles: 8
 			*  affects: - - - -
 			*/
-            LD(ctx.r.A, ctx.read16(ctx.r.HL++));
+            LD(ctx.r.A, ctx.read8(ctx.r.HL++));
             return 8;
         }
         int opcode_0x2b(core::Context& ctx) {
@@ -886,7 +886,7 @@ namespace {
 			*  cycles: 8
 			*  affects: - - - -
 			*/
-            LD(ctx.r.A, ctx.read16(ctx.r.HL--));
+            LD(ctx.r.A, ctx.read8(ctx.r.HL--));
             return 8;
         }
         int opcode_0x3b(core::Context& ctx) {
@@ -2291,7 +2291,7 @@ namespace {
 			*  cycles: 16
 			*  affects: - - - -
 			*/
-            RST(ctx, 0x00);
+            RST(ctx, static_cast<uint16_t>(0x00));
             return 16;
         }
         int opcode_0xc8(core::Context& ctx) {
@@ -2352,7 +2352,7 @@ namespace {
 			*  cycles: 16
 			*  affects: - - - -
 			*/
-            RST(ctx, 0x08);
+            RST(ctx, static_cast<uint16_t>(0x08));
             return 16;
         }
         int opcode_0xd0(core::Context& ctx) {
@@ -2416,7 +2416,7 @@ namespace {
 			*  cycles: 16
 			*  affects: - - - -
 			*/
-            RST(ctx, 0x10);
+            RST(ctx, static_cast<uint16_t>(0x10));
             return 16;
         }
         int opcode_0xd8(core::Context& ctx) {
@@ -2474,7 +2474,7 @@ namespace {
 			*  cycles: 16
 			*  affects: - - - -
 			*/
-            RST(ctx, 0x18);
+            RST(ctx, static_cast<uint16_t>(0x18));
             return 16;
         }
         int opcode_0xe0(core::Context& ctx) {
@@ -2541,7 +2541,7 @@ namespace {
 			*  cycles: 16
 			*  affects: - - - -
 			*/
-            RST(ctx, 0x20);
+            RST(ctx, static_cast<uint16_t>(0x20));
             return 16;
         }
         int opcode_0xe8(core::Context& ctx) {
@@ -2603,7 +2603,7 @@ namespace {
 			*  cycles: 16
 			*  affects: - - - -
 			*/
-            RST(ctx, 0x28);
+            RST(ctx, static_cast<uint16_t>(0x28));
             return 16;
         }
         int opcode_0xf0(core::Context& ctx) {
@@ -2673,7 +2673,7 @@ namespace {
 			*  cycles: 16
 			*  affects: - - - -
 			*/
-            RST(ctx, 0x30);
+            RST(ctx, static_cast<uint16_t>(0x30));
             return 16;
         }
         int opcode_0xf8(core::Context& ctx) {
@@ -2698,7 +2698,7 @@ namespace {
                 ctx.r.reset_carry();
             }
 
-            LD(ctx.r.HL, ctx.r.SP + offset);
+            LD(ctx.r.HL, static_cast<uint16_t>(ctx.r.SP + offset));
             ctx.r.reset_zero();
             ctx.r.reset_sub();
             return 12;
@@ -2752,7 +2752,7 @@ namespace {
 			*  cycles: 16
 			*  affects: - - - -
 			*/
-            RST(ctx, 0x38);
+            RST(ctx, static_cast<uint16_t>(0x38));
             return 16;
         }
         int opcode_0xcb00(core::Context& ctx) {

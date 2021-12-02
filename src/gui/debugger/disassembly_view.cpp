@@ -47,7 +47,7 @@ namespace GUI {
 
             auto max = ImGui::GetContentRegionMax();
 
-            ImVec2 outer = ImVec2(0.0f, max.y - 3.0 * font_size);
+            ImVec2 outer = ImVec2(0.0f, max.y - 3.0f * font_size);
 
             if (ImGui::BeginTable("text_table", 5, flags, outer)) {
                 ImGui::TableSetupScrollFreeze(0, 1);
@@ -69,13 +69,13 @@ namespace GUI {
 
                 ImGui::TableHeadersRow();
 
-                clipper.Begin(found_instructions.size());
+                clipper.Begin(static_cast<int>(found_instructions.size()));
 
                 while (clipper.Step()) {
                     for (auto i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
                         ImGui::TableNextRow();
 
-                        auto& ins1 = found_instructions[i];
+                        auto& ins1 = found_instructions[static_cast<size_t>(i)];
 
                         ImGui::TableNextColumn();
 
@@ -264,7 +264,7 @@ namespace GUI {
             // start adding instructions to this basic block
             auto current_address = start_address;
             //auto current_opcode  = emu.fetch(current_address);
-            auto current_opcode = 0x0;
+            uint16_t current_opcode = 0x0;
             // current instruction isnt a jump, add it to list for this block
             while (true) {
 
@@ -282,7 +282,7 @@ namespace GUI {
                     // check to see if it is a call (no branch), process it
                     if (false) {
 
-                        auto call_address = current_opcode & 0xFFF;
+                        uint16_t call_address = current_opcode & 0xFFF;
                         rec_cfg(call_address, current_address);
                     }
 
@@ -469,10 +469,12 @@ namespace GUI {
         };
         // do binary search on found_instructions array to find which index addr is,
         // pass valid first and last index
-        auto find_position = [&](const std::vector<core::Instruction>& v, int begin, int end) {
-            const auto find_position_impl = [&](const std::vector<core::Instruction>& v, int begin,
-                                                int end, const auto& impl) -> uint16_t {
-                auto center_index = (begin + end) / 2;
+        auto find_position = [&](const std::vector<core::Instruction>& v, size_t begin,
+                                 size_t end) {
+            const auto find_position_impl = [&](const std::vector<core::Instruction>& v,
+                                                size_t begin, size_t end,
+                                                const auto& impl) -> uint16_t {
+                uint16_t center_index = static_cast<uint16_t>((begin + end) / 2);
 
                 const auto& ref = v[center_index];
 
@@ -506,7 +508,7 @@ namespace GUI {
             ImGui::SetScrollFromPosY(item_pos_y - ImGui::GetWindowPos().y);
             target_addr = 0;
         }
-        else if (target_scroll) {
+        else if (target_scroll != 0.0f) {
             ImGui::SetScrollY(target_scroll);
             target_scroll = 0.0f;
         }

@@ -103,7 +103,7 @@ namespace core {
                 }
             }
         }
-        cycle_count += result;
+        cycle_count += static_cast<size_t>(result);
 
         // ppu logic here
 

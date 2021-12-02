@@ -98,18 +98,30 @@ target_link_libraries(gbemu PRIVATE SDL2-static SDL2::SDL2main SDL2_image imgui 
 target_compile_features(gbemu PRIVATE cxx_std_20)
 
 # clang/gcc options
-if(USE_CLANG OR USE_GCC)
-    list(APPEND FLAGS "-Wall" "-Wextra" "-Wpedantic" "-fms-extensions")
-    if(RELEASE_BUILD)
-        list(APPEND FLAGS "-Werror")
-    endif()
-else()
-# MSVC/clang-cl options
-    list(APPEND FLAGS "/permissive-" "/W4")
-    if(RELEASE_BUILD)
-        list(APPEND FLAGS "/WX")
-    endif()
-endif()
+if (USE_CLANG OR USE_GCC)
+    # main flags
+    list(APPEND COMPILER_FLAGS "-Wall" "-Wextra" "-Wpedantic")
+    # extra warnings
+    list(APPEND COMPILER_FLAGS "-fms-extensions" "-Wmisleading-indentation" "-Wunused" "-Wuninitialized" "-Wshadow" "-Wconversion")
+    # sanitizer, figure out what to do with these. maybe another config type?
+    # list(APPEND COMPILER_FLAGS "-fsanitize=address,undefined")
+    # list(APPEND LINKER_FLAGS "-fsanitize=address,undefined")
 
-target_compile_options(gbemu PRIVATE ${FLAGS})
+    target_compile_definitions(gbemu PUBLIC -D_GLIBCXX_ASSERTIONS)
 
+    if (RELEASE_BUILD)
+        list(APPEND COMPILER_FLAGS "-Werror")
+    endif ()
+else ()
+    # MSVC/clang-cl options
+    list(APPEND COMPILER_FLAGS "/permissive-" "/W4")
+    # sanitizer, make sure this works on windows actually
+    # apparently this doesn't work for edit and continue, figure out what to do about that
+    # list(APPEND COMPILER_FLAGS "/fsanitize=address")
+    if (RELEASE_BUILD)
+        list(APPEND COMPILER_FLAGS "/WX")
+    endif ()
+endif ()
+
+target_compile_options(gbemu PRIVATE ${COMPILER_FLAGS})
+target_link_options(gbemu PRIVATE ${LINKER_FLAGS})
