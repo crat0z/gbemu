@@ -130,7 +130,7 @@ namespace core {
 
         void set_IF_Timer();
 
-        bool get_TAC_enabled();
+        bool get_TAC_enabled() const;
 
         uint8_t& operator[](uint16_t index);
     };

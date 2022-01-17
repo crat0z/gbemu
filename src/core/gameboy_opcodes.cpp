@@ -33,7 +33,7 @@ namespace {
         c.r.set_halfcarry((first & 0xF) + (second & 0xF) > 0xF);
         c.r.set_carry(((unsigned)first & 0xFF) + ((unsigned)second & 0xFF) > 0xFF);
 
-        first += second;
+        first += static_cast<uint16_t>(second);
     }
 
     void OP_INLINE ADD(core::Context& c, uint16_t& first, uint16_t second) {
@@ -57,7 +57,10 @@ namespace {
     void OP_INLINE ADC(core::Context& c, auto& first, auto second) {
 
         auto orig = first;
-        first += second + c.r.get_carry();
+
+        first = static_cast<uint8_t>(first + second + c.r.get_carry());
+
+        // first += second + c.r.get_carry();
 
         c.r.set_zero(first == 0);
         c.r.set_halfcarry(((orig & 0xF) + (second & 0xF) + c.r.get_carry()) > 0xF);
@@ -67,7 +70,8 @@ namespace {
         // always 8bit
 
         auto orig = first;
-        first -= (second + c.r.get_carry());
+        first     = static_cast<uint8_t>(first - (second + c.r.get_carry()));
+        // first -= (second + c.r.get_carry());
 
         c.r.set_zero(first == 0);
         c.r.set_halfcarry((orig & 0xF) < (second & 0xF) + c.r.get_carry());
@@ -131,7 +135,8 @@ namespace {
         auto flag = c.r.get_carry();
         c.r.set_carry((first & 0x80) >> 7);
         first <<= 1;
-        first |= flag;
+        first = static_cast<uint8_t>(first | flag);
+        //first |= flag;
 
         c.r.set_zero(first == 0);
     }
@@ -139,7 +144,8 @@ namespace {
         auto flag = c.r.get_carry() << 7;
         c.r.set_carry(first & 0x01);
         first >>= 1;
-        first |= flag;
+        first = static_cast<uint8_t>(first | flag);
+        // first |= flag;
 
         c.r.set_zero(first == 0);
     }
@@ -154,7 +160,7 @@ namespace {
         c.r.set_carry(first & 0x01);
         auto msb = first & 0x80;
         first >>= 1;
-        first |= msb;
+        first = static_cast<uint8_t>(first | msb);
 
         c.r.set_zero(first == 0);
     }
@@ -178,11 +184,13 @@ namespace {
     }
     void OP_INLINE RES(auto first, auto& second) {
         auto mask = ~(0x1 << first);
-        second &= mask;
+        second    = static_cast<uint8_t>(second & mask);
+        //second &= mask;
     }
     void OP_INLINE SET(auto first, auto& second) {
         auto mask = (0x1 << first);
-        second |= mask;
+        second    = static_cast<uint8_t>(second | mask);
+        //second |= mask;
     }
     void OP_INLINE RST(core::Context& c, auto first) {
         PUSH(c, c.r.PC);
@@ -208,14 +216,15 @@ namespace {
 
         c.r.set_carry((A & 0x80) >> 7);
         A <<= 1;
-        A |= flag;
+        A = static_cast<uint8_t>(A | flag);
     }
     void OP_INLINE RRA(core::Context& c) {
         auto& A    = c.r.A;
         auto  flag = c.r.get_carry() << 7;
+
         c.r.set_carry(A & 0x1);
         A >>= 1;
-        A |= flag;
+        A = static_cast<uint8_t>(A | flag);
     }
     void OP_INLINE DAA(core::Context& c) {
         // the dumbest instruction i've ever seen
@@ -240,7 +249,7 @@ namespace {
             }
         }
 
-        c.r.A = result & 0xFF;
+        c.r.A = static_cast<uint8_t>(result & 0xFF);
 
         c.r.set_zero(c.r.A == 0);
     }
@@ -265,8 +274,10 @@ namespace {
         }
         return F;
     }
-    void OP_INLINE JR(core::Context& c, auto first) { c.r.PC += static_cast<int8_t>(first); }
-    int OP_INLINE  JR(core::Context& c, auto bit, auto first, auto T, auto F) {
+    void OP_INLINE JR(core::Context& c, auto first) {
+        c.r.PC = static_cast<uint16_t>(c.r.PC + first);
+    }
+    int OP_INLINE JR(core::Context& c, auto bit, auto first, auto T, auto F) {
         if (bit) {
             JR(c, first);
             return T;

@@ -469,12 +469,11 @@ namespace GUI {
         };
         // do binary search on found_instructions array to find which index addr is,
         // pass valid first and last index
-        auto find_position = [&](const std::vector<core::Instruction>& v, size_t begin,
+        auto find_position = [&](const std::vector<core::Instruction>& vec, size_t begin,
                                  size_t end) {
-            const auto find_position_impl = [&](const std::vector<core::Instruction>& v,
-                                                size_t begin, size_t end,
-                                                const auto& impl) -> uint16_t {
-                uint16_t center_index = static_cast<uint16_t>((begin + end) / 2);
+            const auto find_position_impl = [&](const std::vector<core::Instruction>& v, size_t b,
+                                                size_t e, const auto& impl) -> uint16_t {
+                uint16_t center_index = static_cast<uint16_t>((b + e) / 2);
 
                 const auto& ref = v[center_index];
 
@@ -482,16 +481,17 @@ namespace GUI {
 
                 switch (result) {
                 case 1:
-                    return impl(v, center_index + 1, end, impl);
+                    return impl(v, center_index + 1, e, impl);
                 case 0:
                     return center_index;
                 case -1:
-                    return impl(v, begin, center_index - 1, impl);
+                    return impl(v, b, center_index - 1, impl);
                 default: // should never hit here...
                     return 0;
                 }
             };
-            return find_position_impl(v, begin, end, find_position_impl);
+
+            return find_position_impl(vec, begin, end, find_position_impl);
         };
 
         set_value(find_position(found_instructions, 0, found_instructions.size() - 1));

@@ -331,8 +331,8 @@ namespace GUI {
 
         std::future<void> signal = exit.get_future();
 
-        auto gfx_thread = [&](std::future<void> exit) {
-            while (exit.wait_for(std::chrono::nanoseconds(1)) == std::future_status::timeout) {
+        auto gfx_thread = [&](std::future<void> e) {
+            while (e.wait_for(std::chrono::nanoseconds(1)) == std::future_status::timeout) {
                 while (emu.is_ready()) {
                     emu.cycle();
                 }

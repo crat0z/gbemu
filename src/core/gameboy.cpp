@@ -41,12 +41,11 @@ namespace core {
         }
         ctx.TIMA_update(last_cycle);
 
-
         if (!ctx.halted) {
             auto op = ctx.imm8();
 
             if (op == 0xCB) {
-                op = ctx.imm8();
+                op     = ctx.imm8();
                 result = cb_table[op](ctx);
             }
             else {

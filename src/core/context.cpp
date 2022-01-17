@@ -8,7 +8,7 @@ namespace core {
     Context::Context(std::shared_ptr<Memory> mem) : m(mem), r{} {}
 
     uint8_t Context::read8(uint16_t address) {
-        uint8_t first_byte = address >> 8;
+        uint8_t first_byte = static_cast<uint8_t>(address >> 8);
         //uint8_t second_byte = address & 0xFF;
 
         switch (first_byte & 0xF0) {
@@ -45,9 +45,7 @@ namespace core {
             case 0xC:
             case 0xD:
                 return m->memory[address - 0x2000];
-            case 0xE: {
-                return m->memory[address];
-            }
+            case 0xE:
             case 0xF:
                 return m->memory[address];
             }
@@ -62,7 +60,7 @@ namespace core {
     }
 
     void Context::TIMA_update(int last_cycle) {
-        TIMA_count += last_cycle;
+        TIMA_count += static_cast<uint16_t>(last_cycle);
         if (TIMA_count >= TIMA_factor) {
             TIMA_count -= TIMA_factor;
             TIMA_inc();
@@ -95,8 +93,8 @@ namespace core {
 
     void Context::write8(uint16_t address, uint8_t value) {
 
-        uint8_t first_byte  = address >> 8;
-        uint8_t second_byte = address & 0xFF;
+        uint8_t first_byte  = static_cast<uint8_t>(address >> 8);
+        uint8_t second_byte = static_cast<uint8_t>(address & 0xFF);
 
         switch (first_byte & 0xF0) {
         case 0x00:
@@ -192,8 +190,8 @@ namespace core {
     }
 
     void Context::write16(uint16_t address, uint16_t value) {
-        uint8_t first  = value & 0xFF;
-        uint8_t second = value >> 8;
+        uint8_t first  = static_cast<uint8_t>(value & 0xFF);
+        uint8_t second = static_cast<uint8_t>(value >> 8);
 
         write8(address, first);
         write8(address + 1, second);
@@ -206,11 +204,11 @@ namespace core {
         return val;
     }
 
+    int8_t Context::imm8_signed() { return static_cast<int8_t>(read8(r.PC++)); }
+
     uint8_t  Context::peek8(int offset) { return m->get8(static_cast<uint16_t>(r.PC + offset)); }
     uint16_t Context::peek16() { return m->get16(r.PC); }
     int8_t   Context::peek8_signed() { return static_cast<int8_t>(m->get8(r.PC)); }
-
-    int8_t Context::imm8_signed() { return static_cast<int8_t>(read8(r.PC++)); }
 
     /* If a TMA write is executed on the same cycle as the content
        of TMA is transferred to TIMA due to a timer overflow, the old value is transferred to TIMA.
